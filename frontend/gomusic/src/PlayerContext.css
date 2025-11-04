@@ -1,0 +1,126 @@
+/* Contenedor general del audio player */
+.audio-player {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: 90vw;
+  max-width: 420px;
+  background: #0a0a0a;
+  border: 2px solid #00ff7f;
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 0 20px rgba(0, 255, 127, 0.18);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 8px 12px;
+  align-items: center;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* ocultar con transición */
+.audio-player.hidden {
+  opacity: 0;
+  transform: translate(-50%, 50px);
+  pointer-events: none;
+}
+
+/* info de la canción */
+.audio-player .song-info {
+  grid-column: 1 / -1;
+  color: #fff;
+  overflow: hidden;
+}
+
+.audio-player .song-title {
+  font-weight: 700;
+  font-size: 0.98rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  color: #00ff7f;
+}
+
+.audio-player .song-artist {
+  font-size: 0.82rem;
+  color: #cfefd7;
+  opacity: 0.9;
+}
+
+/* barra de progreso */
+.audio-player .progress-wrap {
+  grid-column: 1 / -1;
+  height: 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  touch-action: none; /* permite drag en móviles sin scroll conflict */
+}
+
+.audio-player .progress-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #00ff7f, #17a74a);
+  width: 0%;
+  transition: width 0.05s linear;
+}
+
+/* tiempos */
+.audio-player .time-info {
+  font-size: 0.78rem;
+  color: #cfefd7;
+  opacity: 0.95;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-self: start;
+}
+
+.audio-player .time-current,
+.audio-player .time-duration { font-variant-numeric: tabular-nums; }
+
+/* controles */
+.audio-player .controls {
+  display: flex;
+  gap: 8px;
+  justify-self: end;
+  align-items: center;
+  grid-row: 1 / span 2;
+}
+
+.audio-player button {
+  background: #00ff7f;
+  border: none;
+  color: #0a0a0a;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.audio-player button:hover {
+  transform: translateY(-2px);
+}
+
+/* responsive */
+@media (max-width: 420px) {
+  .audio-player {
+    max-width: 96vw;
+    padding: 10px;
+    gap: 6px;
+  }
+
+  .audio-player .controls {
+    grid-row: 2;
+  }
+
+  .audio-player .time-info {
+    order: 3;
+  }
+}

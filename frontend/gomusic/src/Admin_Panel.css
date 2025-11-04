@@ -1,0 +1,31 @@
+.admin-container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.admin-container h2 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 20px;
+}
+.admin-container p {
+  color: #666;
+  line-height: 1.6;
+}   
+
+.admin-container .btn {
+  display: inline-block;
+  padding: 10px 20px;
+  margin: 10px;
+  border: none;
+  border-radius: 5px;
+  background-color: #1db954;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-decoration: none;
+}

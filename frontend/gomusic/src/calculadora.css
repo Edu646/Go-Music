@@ -1,0 +1,177 @@
+/* Contenedor principal del buscador (ahora section) */
+.search-player-container {
+  max-width: auto;
+  margin: 120px 200px 0 auto;
+  padding: 40px 32px 36px 32px;
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  color: #fff;
+  backdrop-filter: blur(2px);
+  background: rgba(24, 24, 24, 0.97);
+  transition: box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Título */
+.search-player-container h1 {
+  font-size: 2.2rem;
+  margin-bottom: 28px;
+  color: #1db954;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+/* Formulario de búsqueda */
+.search-player-container form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.search-player-container input[type="text"] {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.08rem;
+  outline: none;
+  background: #232323;
+  color: #fff;
+  transition: box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.search-player-container input[type="text"]:focus {
+  box-shadow: 0 0 0 2px #1db95455;
+}
+
+.search-player-container button {
+  background: #1db954;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 1.08rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.search-player-container button:hover,
+.song-result button:hover {
+  background: #17a74a;
+  transform: translateY(-2px) scale(1.04);
+}
+
+/* Resultados de canciones */
+.song-result {
+  background: #232323;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  transition: background 0.2s;
+}
+
+.song-result:hover {
+  background: #282828;
+}
+
+.song-result strong {
+  color: #fff;
+}
+
+.song-result button {
+  margin-left: 16px;
+  padding: 7px 18px;
+  font-size: 1rem;
+  border-radius: 8px;
+  background: #1db954;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.song-result button:hover {
+  background: #17a74a;
+  transform: scale(1.05);
+}
+
+/* Canción actual */
+.current-song {
+  margin-top: 28px;
+  background: #232323;
+  border-radius: 10px;
+  padding: 18px 10px 10px 10px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+}
+
+.current-song h2 {
+  font-size: 1.15rem;
+  color: #1db954;
+  margin-bottom: 14px;
+}
+
+/* Reproductor global fijo */
+audio {
+  background: #232323;
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  padding: 8px 0;
+  outline: none;
+  transition: box-shadow 0.2s;
+  width: 90vw !important;
+  max-width: 420px !important;
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 1000;
+}
+
+audio::-webkit-media-controls-panel {
+  background: #232323;
+  border-radius: 14px;
+}
+
+audio::-webkit-media-controls-play-button,
+audio::-webkit-media-controls-pause-button {
+  filter: invert(60%) sepia(80%) saturate(300%) hue-rotate(80deg);
+}
+
+audio::-webkit-media-controls-current-time-display,
+audio::-webkit-media-controls-time-remaining-display {
+  color: #1db954;
+}
+
+audio::-webkit-media-controls-timeline {
+  background: #444;
+}
+
+audio::-webkit-media-controls-volume-slider {
+  background: #1db954;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .search-player-container {
+    max-width: 98vw;
+    padding: 18px 4vw 24px 4vw;
+    margin-top: 60px;
+  }
+  audio {
+    width: 98vw !important;
+    max-width: 98vw !important;
+    left: 1vw !important;
+    transform: none !important;
+  }
+}
+
