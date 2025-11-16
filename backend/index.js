@@ -23,19 +23,24 @@ const songs = [
   { id: 13, name: "Ed Sheeran - Supermarket Flowers", artist: "Ed Sheeran", audio: "/music/Ed Sheeran - Supermarket Flowers.mp3" }
 ];
 
-// Servir archivos de música
+// Servir archivos de música desde la carpeta backend/music
 app.use("/music", express.static(path.join(__dirname, "music")));
 
 // Endpoint de búsqueda
 app.get("/search", (req, res) => {
-  const { q } = req.query;
+  const q = (req.query.q || "").toString().trim().toLowerCase();
   if (!q) return res.json([]);
   const results = songs.filter(
-    song => song.name.toLowerCase().includes(q.toLowerCase()) ||
-            song.artist.toLowerCase().includes(q.toLowerCase())
+    song =>
+      song.name.toLowerCase().includes(q) ||
+      song.artist.toLowerCase().includes(q)
   );
   res.json(results);
 });
 
+// Ruta de salud (opcional)
+app.get("/health", (req, res) => res.json({ status: "ok" }));
+
+// Puerto
 const port = process.env.PORT || 3001;
 app.listen(port, () => console.log(`Servidor corriendo en puerto ${port}`));
