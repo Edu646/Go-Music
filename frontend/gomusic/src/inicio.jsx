@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import "./Inicio.css";
-import API_URL from "../config";
+import API_URL from "./config";
 
 function Inicio() {
   useEffect(() => {
