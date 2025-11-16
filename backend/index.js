@@ -48,7 +48,18 @@ app.get("/search", (req, res) => {
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 
 // =====================
-// Error handler (al final)
+// Servir frontend React (BUILD)
+// =====================
+const frontendBuildPath = path.join(__dirname, "../frontend/gomusic/build");
+app.use(express.static(frontendBuildPath));
+
+// Para cualquier otra ruta, devolver index.html (React Router)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(frontendBuildPath, "index.html"));
+});
+
+// =====================
+// Error handler
 // =====================
 app.use((err, req, res, next) => {
   console.error(err);
