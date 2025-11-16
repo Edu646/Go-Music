@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Catálogo local de canciones
+// Catálogo de canciones
 const songs = [
   { id: 1, name: "Shape of You", artist: "Ed Sheeran", audio: "/music/Shape-Of-You.mp3" },
   { id: 2, name: "Ed Sheeran - Castle on the Hill", artist: "Ed Sheeran", audio: "/music/Ed-Sheeran-Castle-on-the-Hill.mp3" },
@@ -23,7 +23,7 @@ const songs = [
   { id: 13, name: "Ed Sheeran - Supermarket Flowers", artist: "Ed Sheeran", audio: "/music/Ed Sheeran - Supermarket Flowers.mp3" }
 ];
 
-// Servir archivos de música desde la carpeta backend/music
+// Servir archivos de música
 app.use("/music", express.static(path.join(__dirname, "music")));
 
 // Endpoint de búsqueda
@@ -38,9 +38,18 @@ app.get("/search", (req, res) => {
   res.json(results);
 });
 
-// Ruta de salud (opcional)
+// Ruta de salud
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 
+// Servir frontend React
+const frontendBuildPath = path.join(__dirname, "../frontend/build");
+app.use(express.static(frontendBuildPath));
+
+// Para cualquier otra ruta, devolver index.html
+app.get("*", (req, res) => {
+  res.sendFile(path.join(frontendBuildPath, "index.html"));
+});
+
 // Puerto
-const port = process.env.PORT || 3001;
-app.listen(port, () => console.log(`Servidor corriendo en puerto ${port}`));
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
