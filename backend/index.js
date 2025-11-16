@@ -48,7 +48,7 @@ const handler = serverless(app);
 
 // Si se ejecuta con `node index.js` arranca servidor local
 if (require.main === module) {
-  const port = process.env.PORT || 3001;
+  const port = process.env.PORT || 3000;
   app.listen(port, () => console.log(`Servidor corriendo en puerto ${port}`));
 }
 
