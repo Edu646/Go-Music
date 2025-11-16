@@ -1,6 +1,8 @@
+// ...existing code...
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const serverless = require("serverless-http");
 
 const app = express();
 app.use(cors());
@@ -23,7 +25,7 @@ const songs = [
   { id: 13, name: "Ed Sheeran - Supermarket Flowers", artist: "Ed Sheeran", audio: "/music/Ed Sheeran - Supermarket Flowers.mp3" }
 ];
 
-// Servir archivos de música desde la carpeta backend/music
+// Servir archivos de música desde la carpeta music (usa public/music en Vercel)
 app.use("/music", express.static(path.join(__dirname, "music")));
 
 // Endpoint de búsqueda
@@ -38,9 +40,18 @@ app.get("/search", (req, res) => {
   res.json(results);
 });
 
-// Ruta de salud (opcional)
+// Ruta de salud
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 
-// Puerto
-const port = process.env.PORT || 3001;
-app.listen(port, () => console.log(`Servidor corriendo en puerto ${port}`));
+// Export handler serverless para Vercel / otras plataformas
+const handler = serverless(app);
+
+// Si se ejecuta con `node index.js` arranca servidor local
+if (require.main === module) {
+  const port = process.env.PORT || 3001;
+  app.listen(port, () => console.log(`Servidor corriendo en puerto ${port}`));
+}
+
+// Exportar la función para plataformas serverless (Vercel espera una función default)
+module.exports = handler;
+// ...existing code...
