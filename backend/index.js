@@ -42,7 +42,7 @@ app.use("/music", express.static(path.join(__dirname, "music")));
 // =====================
 // Endpoints API (namespaced bajo /api para evitar colisiones)
 // =====================
-safeGet("/api/search", (req, res) => {
+safeGet("/search", (req, res) => {
   const q = (req.query.q || "").toString().trim().toLowerCase();
   if (!q) return res.json([]);
   const results = songs.filter(
