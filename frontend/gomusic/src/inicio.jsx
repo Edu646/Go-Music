@@ -1,20 +1,20 @@
 import React, { useEffect } from "react";
 import "./Inicio.css";
+import API_URL from "../config";
 
 function Inicio() {
   useEffect(() => {
-    fetch("http://localhost:3001/Inicio")
+    fetch(`${API_URL}/api/health`)
       .then((res) => res.json())
       .then((info) => {
-        console.log(info); // o cualquier otra acción que quieras hacer
+        console.log("Backend OK:", info);
       })
-      .catch((err) => console.error(err));
+      .catch((err) => console.error("Error llamando backend:", err));
   }, []);
 
   return (
     <div className="container">
       <div>
-       
         <div>
           <h3>LO QUE TRATA</h3>
           <p>
