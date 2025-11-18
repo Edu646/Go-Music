@@ -1,3 +1,4 @@
+// ...existing code...
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -8,18 +9,16 @@ const app = express();
 // ===== CORS =====
 // Si defines ALLOWED_ORIGINS en Render (coma-separados) se usará la lista.
 // Si no está definido se permiten todos los orígenes (útil para desarrollo).
-// ===== CORS =====
 const allowedOriginsEnv = process.env.ALLOWED_ORIGINS || ""; // p. ej. "https://go-music-3mgo.onrender.com,https://tu-backend.onrender.com"
 const allowedOrigins = allowedOriginsEnv.split(",").map(s => s.trim()).filter(Boolean);
 
-// quick dev fallback: si no hay ALLOWED_ORIGINS se permite todo (cambiar en prod)
 if (allowedOrigins.length === 0) {
   app.use(cors()); // permite todo
   console.log("CORS: se permiten todos los orígenes (ALLOWED_ORIGINS no definido)");
 } else {
   app.use(cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
+      if (!origin) return callback(null, true); // tools/server-to-server
       if (allowedOrigins.includes(origin)) return callback(null, true);
       return callback(new Error("CORS: origen no permitido"));
     },
@@ -31,6 +30,26 @@ if (allowedOrigins.length === 0) {
 
 // permitir preflight en todas las rutas
 app.options("*", cors());
+
+app.use(express.json());
+
+// Helper seguro para registrar rutas (no borra nada existente)
+function safeGet(routePath, handler) {
+  if (typeof routePath !== "string") {
+    console.error("Ruta no es string, omitiendo:", routePath);
+    return;
+  }
+  // Evitar registrar rutas que sean URLs completas (provocan path-to-regexp error)
+  if (/^https?:\/\//i.test(routePath)) {
+    console.error(`Ruta inválida (URL completa) detectada y omitida: "${routePath}"`);
+    return;
+  }
+  try {
+    app.get(routePath, handler);
+  } catch (err) {
+    console.error(`Error al registrar ruta "${routePath}": ${err.message}`);
+  }
+}
 
 // =====================
 // Catálogo de canciones
@@ -136,3 +155,4 @@ app.use((err, req, res, next) => {
 // =====================
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`✅ Servidor corriendo en puerto ${PORT}`));
+// ...existing code...
