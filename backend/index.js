@@ -8,20 +8,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Multer: subir archivos en memoria
 const upload = multer({ storage: multer.memoryStorage() });
 
 let db = null;
 let bucket = null;
 
 // =====================
-// Inicializar Firebase Admin
+// Inicializar Firebase
 // =====================
 try {
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-    throw new Error("No se encontró FIREBASE_SERVICE_ACCOUNT");
+  const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!serviceAccountEnv) {
+    console.error("❌ No se encontró FIREBASE_SERVICE_ACCOUNT");
+    process.exit(1); // Detener la app si Firebase no está disponible
   }
 
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  const serviceAccount = JSON.parse(serviceAccountEnv);
 
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -36,7 +39,7 @@ try {
 
 } catch (err) {
   console.error("❌ Error inicializando Firebase:", err.message);
-  process.exit(1); // Detener backend si Firebase no funciona
+  process.exit(1);
 }
 
 // =====================
@@ -45,6 +48,7 @@ try {
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No se ha proporcionado ningún archivo" });
+
     const { name, artist, username } = req.body;
     if (!username) return res.status(400).json({ error: "Se requiere el nombre de usuario" });
 
