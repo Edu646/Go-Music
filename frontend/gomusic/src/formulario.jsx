@@ -1,21 +1,11 @@
+// ...existing code...
 import React, { useState } from "react";
 import "./formulario.css";
-import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+// import firebase aquí desde el módulo común en vez de inicializar de nuevo
+import { auth, googleProvider } from "./firebaseconfig";
+import { uploadSongFile } from "./upload_song";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyC7vL_OXxTQ1wqsS_sKdYL-tuL2y-RFSac",
-  authDomain: "go-music-c1fc5.firebaseapp.com",
-  projectId: "go-music-c1fc5",
-  storageBucket: "go-music-c1fc5.firebasestorage.app",
-  messagingSenderId: "254628632147",
-  appId: "1:254628632147:web:9688356f8423ec95db58a6",
-};
-
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
-
+// ...existing code...
 const AuthForm = () => {
   const [isLogin, setIsLogin] = useState(false);
   const [formData, setFormData] = useState({
@@ -95,3 +85,35 @@ const AuthForm = () => {
 }
 
 export default AuthForm;
+
+// ...existing code...
+export function FormularioSubida() {
+  const [file, setFile] = useState(null);
+  const [name, setName] = useState("");
+  const [artist, setArtist] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [msg, setMsg] = useState("");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setMsg("Subiendo...");
+      const result = await uploadSongFile(file, { name, artist }, p => setProgress(p));
+      setMsg(`Subida completa. ID: ${result.id}`);
+    } catch (err) {
+      setMsg("Error: " + err.message);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input type="text" placeholder="Nombre" value={name} onChange={e => setName(e.target.value)} required />
+      <input type="text" placeholder="Artista" value={artist} onChange={e => setArtist(e.target.value)} />
+      <input type="file" accept="audio/*" onChange={e => setFile(e.target.files[0])} required />
+      <button type="submit">Subir canción</button>
+      <div>Progreso: {progress}%</div>
+      <div>{msg}</div>
+    </form>
+  );
+}
+// ...existing code...
