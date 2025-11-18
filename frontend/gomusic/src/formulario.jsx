@@ -101,7 +101,7 @@ function FormularioSubida({ user }) {
 
     try {
       setMsg("Subiendo...");
-      const res = await fetch("https://go-music-3mgo.onrender.com/upload", { // reemplaza con tu URL del backend
+      const res = await fetch("/upload", { // reemplaza con tu URL del backend
         method: "POST",
         body: formData,
       });
