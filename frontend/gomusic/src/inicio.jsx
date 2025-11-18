@@ -1,7 +1,17 @@
-import React from "react";
+import React, { useEffect } from "react";
 import "./Inicio.css";
+import API_URL from "./config";
 
 function Inicio() {
+  useEffect(() => {
+    fetch(`${API_URL}/health`)
+      .then((res) => res.json())
+      .then((info) => {
+        console.log("Backend OK:", info);
+      })
+      .catch((err) => console.error("Error llamando backend:", err));
+  }, []);
+
   return (
     <div className="container">
       <div>
