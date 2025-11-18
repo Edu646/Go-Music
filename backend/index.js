@@ -9,6 +9,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Helper seguro para registrar rutas
+function safeGet(routePath, handler) {
+  try {
+    app.get(routePath, handler);
+  } catch (err) {
+    console.error(`✖ Ruta inválida registrada: "${routePath}" -> ${err.message}`);
+  }
+}
+
 // =====================
 // Inicializar Firebase Admin
 // =====================
@@ -17,12 +26,9 @@ let bucket = null;
 
 try {
   let serviceAccount;
-
-  // Render -> variable FIREBASE_SERVICE_ACCOUNT
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
   } else {
-    // Local
     const localPath = path.join(__dirname, "serviceAccountKey.json");
     if (fs.existsSync(localPath)) {
       serviceAccount = require(localPath);
@@ -32,47 +38,39 @@ try {
   if (serviceAccount) {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      storageBucket:
-        process.env.FIREBASE_STORAGE_BUCKET ||
-        `${serviceAccount.project_id}.appspot.com`,
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.project_id}.appspot.com`
     });
-
     db = admin.firestore();
     bucket = admin.storage().bucket();
-    console.log("🔥 Firebase Admin inicializado. Bucket:", bucket.name);
+    console.log("✅ firebase-admin inicializado. Bucket:", bucket.name);
   } else {
-    console.warn("⚠ No se encontraron credenciales Firebase");
+    console.warn("⚠ No se encontraron credenciales de Firebase. Usando catálogo local.");
   }
 } catch (err) {
-  console.warn("⚠ Error inicializando Firebase:", err.message);
+  console.warn("⚠ Error inicializando firebase-admin:", err.message);
 }
 
 // =====================
-// Multer (buffer upload)
+// Multer setup (para subir archivos)
 // =====================
 const upload = multer({ storage: multer.memoryStorage() });
 
 // =====================
-// SUBIR CANCIONES A FIREBASE STORAGE
+// Endpoint para subir canciones
 // =====================
 app.post("/upload", upload.single("file"), async (req, res) => {
-  if (!req.file)
-    return res.status(400).json({ error: "No file provided" });
+  if (!req.file) return res.status(400).json({ error: "No file provided" });
+  if (!bucket) return res.status(500).json({ error: "Firebase Storage no configurado" });
 
-  if (!bucket)
-    return res
-      .status(500)
-      .json({ error: "Firebase Storage no configurado" });
+  const { name, artist } = req.body;
 
   try {
     const filename = `songs/${Date.now()}_${req.file.originalname}`;
     const file = bucket.file(filename);
 
-    const stream = file.createWriteStream({
-      metadata: { contentType: req.file.mimetype },
-    });
+    const stream = file.createWriteStream({ metadata: { contentType: req.file.mimetype } });
 
-    stream.on("error", (err) => {
+    stream.on("error", err => {
       console.error("Upload error:", err);
       res.status(500).json({ error: err.message });
     });
@@ -81,27 +79,28 @@ app.post("/upload", upload.single("file"), async (req, res) => {
       try {
         const [url] = await file.getSignedUrl({
           action: "read",
-          expires: Date.now() + 1000 * 60 * 60 * 24 * 7,
+          expires: Date.now() + 1000 * 60 * 60 * 24 * 7 // 7 días
         });
 
-        let docId = null;
+        let docRef = null;
         if (db) {
-          const doc = await db.collection("songs").add({
-            name: req.body.name || req.file.originalname,
-            artist: req.body.artist || "",
+          docRef = await db.collection("songs").add({
+            name: name || req.file.originalname,
+            artist: artist || "",
             audio: url,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
           });
-          docId = doc.id;
         }
 
         res.json({
           message: "Canción subida correctamente",
-          id: docId,
+          id: docRef ? docRef.id : null,
           url,
+          name: name || req.file.originalname,
+          artist: artist || ""
         });
       } catch (err) {
-        console.error("Error Firestore/URL:", err);
+        console.error("Error generando URL o guardando en Firestore:", err);
         res.status(500).json({ error: err.message });
       }
     });
@@ -114,16 +113,11 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 });
 
 // =====================
-// Servir frontend
+// Servir frontend React (build)
 // =====================
-const frontendBuildPath = path.join(
-  __dirname,
-  "../frontend/gomusic/build"
-);
-
+const frontendBuildPath = path.join(__dirname, "../frontend/gomusic/build");
 app.use(express.static(frontendBuildPath));
-
-app.get("*", (req, res) => {
+safeGet("*", (req, res) => {
   res.sendFile(path.join(frontendBuildPath, "index.html"));
 });
 
@@ -131,6 +125,4 @@ app.get("*", (req, res) => {
 // Iniciar servidor
 // =====================
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () =>
-  console.log(`🚀 Servidor funcionando en puerto ${PORT}`)
-);
+app.listen(PORT, () => console.log(`✅ Servidor corriendo en puerto ${PORT}`));
