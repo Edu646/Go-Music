@@ -1,8 +1,8 @@
-// ...existing code...
 import React, { useState } from "react";
 import "./calculadora.css";
 import { usePlayer } from "./PlayerContext";
-import API_URL from "./config"; // new: lee REACT_APP_API_URL o usa localhost por defecto
+
+const API_URL = process.env.REACT_APP_API_URL || ""; // Usa la variable de entorno o ruta relativa
 
 function SearchPlayer() {
   const [query, setQuery] = useState("");
@@ -10,31 +10,33 @@ function SearchPlayer() {
   const { play } = usePlayer();
 
   const handleSearch = async () => {
-    setResults([]);
-    const base = API_URL || ""; // si config devuelve vacío usa ruta relativa
-    // intenta el endpoint /api/search (ajusta si tu backend expone /search en vez de /api/search)
-    const endpoints = [`${base}/api/search?q=`, `${base}/search?q=`, `/api/search?q=`, `/search?q=`];
-    let data = null;
-    for (const ep of endpoints) {
-      try {
-        const res = await fetch(`${ep}${encodeURIComponent(query)}`);
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        data = await res.json();
-        break;
-      } catch (err) {
-        // intentar siguiente endpoint
-      }
+    if (!query.trim()) return setResults([]);
+
+    try {
+      const res = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`);
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const data = await res.json();
+
+      // Ajustar URLs de audio para producción
+      const adjustedData = data.map((song) => ({
+        ...song,
+        audio: song.audio.startsWith("http") ? song.audio : `${API_URL}${song.audio}`,
+      }));
+
+      setResults(adjustedData);
+    } catch (err) {
+      console.error("No se pudo conectar al backend:", err.message);
+      setResults([]);
     }
-    if (data) setResults(data);
-    else console.error("Error: no se pudo conectar al backend. Asegúrate de que esté corriendo y la URL en REACT_APP_API_URL sea correcta.");
   };
 
   const handlePlay = (song) => {
     play(song);
   };
 
-  const enterbusca = (event) => {
+  const handleEnter = (event) => {
     if (event.key === "Enter") {
+      event.preventDefault();
       handleSearch();
     }
   };
@@ -53,7 +55,7 @@ function SearchPlayer() {
           placeholder="Escribe nombre o artista"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={enterbusca}
+          onKeyDown={handleEnter}
         />
         <button type="submit">Buscar</button>
       </form>
@@ -73,4 +75,3 @@ function SearchPlayer() {
 }
 
 export default SearchPlayer;
-// ...existing code...  
