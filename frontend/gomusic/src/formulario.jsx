@@ -3,11 +3,7 @@ import "./formulario.css";
 
 export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    password: ""
-  });
+  const [formData, setFormData] = useState({ username: "", email: "", password: "" });
   const [message, setMessage] = useState("");
   const [user, setUser] = useState(null);
 
@@ -15,20 +11,14 @@ export default function AuthForm() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleAuth = async (e) => {
+  const handleAuth = (e) => {
     e.preventDefault();
     setMessage("");
-
-    try {
-      // En este ejemplo, tu backend no tiene endpoints de auth aún, se puede simular
-      const dummyUser = { username: formData.username, email: formData.email };
-      setUser(dummyUser);
-      setMessage(isLogin ? "Sesión iniciada" : "Cuenta creada");
-      setFormData({ username: "", email: "", password: "" });
-    } catch (err) {
-      console.error(err);
-      setMessage("Error de autenticación");
-    }
+    // Login simulado, se puede reemplazar con Firebase Auth
+    const dummyUser = { username: formData.username, email: formData.email };
+    setUser(dummyUser);
+    setMessage(isLogin ? "Sesión iniciada" : "Cuenta creada");
+    setFormData({ username: "", email: "", password: "" });
   };
 
   const toggleForm = () => {
@@ -111,9 +101,9 @@ function FormularioSubida({ user }) {
 
     try {
       setMsg("Subiendo...");
-      const res = await fetch("http://localhost:3001/upload", {
+      const res = await fetch("https://go-music-3mgo.onrender.com/upload", { // reemplaza con tu URL del backend
         method: "POST",
-        body: formData
+        body: formData,
       });
 
       const data = await res.json();
