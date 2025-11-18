@@ -101,7 +101,7 @@ function FormularioSubida({ user }) {
 
     try {
       setMsg("Subiendo...");
-      const res = await fetch("/upload", { // reemplaza con tu URL del backend
+      const res =  fetch("/upload", { // reemplaza con tu URL del backend
         method: "POST",
         body: formData,
       });
