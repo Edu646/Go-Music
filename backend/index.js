@@ -3,17 +3,43 @@ const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
 
-const app = express();
+// ---- START: protección contra rutas que son URLs completas ----
+function isFullUrl(route) {
+  return typeof route === "string" && /^https?:\/\//i.test(route);
+}
 
-// Guard: evita que se registren rutas que sean URLs completas (previene path-to-regexp crash)
-const originalUse = app.use.bind(app);
-app.use = function (route, ...handlers) {
-  if (typeof route === "string" && /^https?:\/\//i.test(route)) {
-    console.error("Omitiendo app.use() con URL completa (inválida):", route);
-    return app;
+const appProto = express.application;
+const routerProto = express.Router ? express.Router.prototype : null;
+
+["use", "get", "post", "put", "delete", "patch", "all"].forEach((method) => {
+  // parchear app.<method>
+  const origAppMethod = appProto[method];
+  if (origAppMethod) {
+    appProto[method] = function (routeOrHandler, ...handlers) {
+      // caso: app.use(handler) -> routeOrHandler no es string
+      if (isFullUrl(routeOrHandler)) {
+        console.error(`Omitiendo app.${method}() con URL completa (inválida):`, routeOrHandler);
+        return this;
+      }
+      return origAppMethod.call(this, routeOrHandler, ...handlers);
+    };
   }
-  return originalUse(route, ...handlers);
-};
+
+  // parchear router.<method>
+  if (routerProto && routerProto[method]) {
+    const origRouterMethod = routerProto[method];
+    routerProto[method] = function (routeOrHandler, ...handlers) {
+      if (isFullUrl(routeOrHandler)) {
+        console.error(`Omitiendo router.${method}() con URL completa (inválida):`, routeOrHandler);
+        return this;
+      }
+      return origRouterMethod.call(this, routeOrHandler, ...handlers);
+    };
+  }
+});
+// ---- END: protección contra rutas que son URLs completas ----
+
+const app = express();
 
 // Asegura CORS para tu frontend en producción (lee ALLOWED_ORIGINS env) o permite todo si no está definido
 const allowedEnv = (process.env.ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
