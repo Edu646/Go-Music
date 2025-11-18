@@ -1,45 +1,37 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-const admin = require("firebase-admin");
 const multer = require("multer");
+const fs = require("fs");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Multer: subir archivos en memoria
 const upload = multer({ storage: multer.memoryStorage() });
 
-let db = null;
-let bucket = null;
+const DATA_FILE = path.join(__dirname, "songs.json");
 
 // =====================
-// Inicializar Firebase
+// Leer canciones existentes
 // =====================
-try {
-  const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!serviceAccountEnv) {
-    console.error("❌ No se encontró FIREBASE_SERVICE_ACCOUNT");
-    process.exit(1); // Detener la app si Firebase no está disponible
+function readSongs() {
+  if (!fs.existsSync(DATA_FILE)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(DATA_FILE));
+  } catch (err) {
+    console.error("Error leyendo songs.json:", err);
+    return [];
   }
+}
 
-  const serviceAccount = JSON.parse(serviceAccountEnv);
-
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.project_id}.appspot.com`
-  });
-
-  db = admin.firestore();
-  bucket = admin.storage().bucket();
-
-  console.log("✅ Firebase inicializado correctamente");
-  console.log("Bucket:", bucket.name);
-
-} catch (err) {
-  console.error("❌ Error inicializando Firebase:", err.message);
-  process.exit(1);
+// =====================
+// Guardar canciones
+// =====================
+function saveSong(song) {
+  const songs = readSongs();
+  songs.push(song);
+  fs.writeFileSync(DATA_FILE, JSON.stringify(songs, null, 2));
 }
 
 // =====================
@@ -52,52 +44,48 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     const { name, artist, username } = req.body;
     if (!username) return res.status(400).json({ error: "Se requiere el nombre de usuario" });
 
+    // Guardar archivo en "storage" local dentro del proyecto
     const timestamp = Date.now();
-    const filename = `songs/${timestamp}_${req.file.originalname}`;
-    const file = bucket.file(filename);
+    const fileName = `${timestamp}_${req.file.originalname}`;
+    const uploadPath = path.join(__dirname, "uploads", fileName);
 
-    console.log("Subiendo archivo:", filename);
+    // Crear carpeta uploads si no existe
+    if (!fs.existsSync(path.join(__dirname, "uploads"))) {
+      fs.mkdirSync(path.join(__dirname, "uploads"));
+    }
 
-    // Subida a Firebase Storage
-    await file.save(req.file.buffer, {
-      metadata: { contentType: req.file.mimetype },
-      public: true, // URL pública
-      resumable: false
-    });
+    fs.writeFileSync(uploadPath, req.file.buffer);
 
-    const audioUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
-    console.log("Archivo subido correctamente. URL:", audioUrl);
+    // Crear URL accesible desde Render (ruta /uploads)
+    const url = `/uploads/${fileName}`;
 
-    // Guardar en Firestore
-    const docRef = await db.collection("songs").add({
+    // Guardar datos en JSON
+    const songData = {
       name: name || req.file.originalname,
       artist: artist || "",
       uploadedBy: username,
-      audio: audioUrl,
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
-    });
+      audio: url,
+      createdAt: new Date().toISOString()
+    };
+    saveSong(songData);
 
     res.json({
       message: "Canción subida correctamente",
-      id: docRef.id,
-      url: audioUrl,
-      name: name || req.file.originalname,
-      artist: artist || "",
-      uploadedBy: username
+      url,
+      ...songData
     });
 
   } catch (err) {
     console.error("Error subiendo canción:", err);
-    res.status(500).json({
-      error: "No se pudo subir la canción a Firebase. Revisa credenciales y bucket.",
-      detalles: err.message
-    });
+    res.status(500).json({ error: "Error subiendo la canción", detalles: err.message });
   }
 });
 
 // =====================
-// Servir frontend React
+// Servir archivos estáticos (uploads y frontend React)
 // =====================
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 const frontendBuildPath = path.join(__dirname, "../frontend/gomusic/build");
 app.use(express.static(frontendBuildPath));
 app.get("*", (req, res) => {
