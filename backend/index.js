@@ -1,12 +1,40 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 
 const app = express();
-app.use(cors());
+
+// ===== CORS =====
+// Si defines ALLOWED_ORIGINS en Render (coma-separados) se usará la lista.
+// Si no está definido se permiten todos los orígenes (útil para desarrollo).
+const allowedOriginsEnv = process.env.ALLOWED_ORIGINS || "";
+const allowedOrigins = allowedOriginsEnv
+  .split(",")
+  .map(s => s.trim())
+  .filter(Boolean);
+
+if (allowedOrigins.length) {
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // permitir peticiones sin origin (curl, server-to-server)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        return callback(new Error("CORS: origen no permitido"));
+      },
+      methods: ["GET", "POST", "OPTIONS"],
+    })
+  );
+  console.log("CORS habilitado para orígenes:", allowedOrigins);
+} else {
+  app.use(cors()); // permite todo
+  console.log("CORS: se permiten todos los orígenes (ALLOWED_ORIGINS no definido)");
+}
+
 app.use(express.json());
 
-// Helper seguro para registrar rutas (evita que una ruta malformada detenga el arranque)
+// Helper seguro para registrar rutas
 function safeGet(routePath, handler) {
   try {
     app.get(routePath, handler);
@@ -35,59 +63,70 @@ const songs = [
 ];
 
 // =====================
-// Servir música (desde backend/music para desarrollo local)
-// En Render/producción puedes mover los MP3 a public/music en la raíz del repo y servirlos con /music/<file>
-app.use("/music", express.static(path.join(__dirname, "music")));
-
+// Servir música (desarrollo: backend/music)
+// En producción con monorepo en Render puedes colocar MP3 en backend/music o en public/ del frontend.
 // =====================
-// Endpoints API (namespaced bajo /api para evitar colisiones)
-// =====================
-safeGet("/search", (req, res) => {
-  const q = (req.query.q || "").toString().trim().toLowerCase();
-  if (!q) return res.json([]);
-  const results = songs.filter(
-    song => song.name.toLowerCase().includes(q) || song.artist.toLowerCase().includes(q)
-  );
-  res.json(results);
-});
-
-safeGet("/health", (req, res) => res.json({ status: "ok" }));
-
-// =====================
-// Servir frontend React (BUILD)
-// Ajusta la ruta si tu build está en otra carpeta
-// =====================
-const frontendBuildPath = path.join(__dirname, "../frontend/gomusic/build");
-try {
-  app.use(express.static(frontendBuildPath));
-  // React Router fallback
-  safeGet("*", (req, res) => {
-    res.sendFile(path.join(frontendBuildPath, "index.html"));
-  });
-} catch (err) {
-  console.warn("⚠ No se encontró build del frontend en:", frontendBuildPath);
-  console.warn("   Si despliegas en Render asegúrate de construir el frontend antes o de servirlo desde la carpeta correcta.");
+const musicDir = path.join(__dirname, "music");
+if (fs.existsSync(musicDir)) {
+  app.use("/music", express.static(musicDir));
+  console.log("Servir música desde:", musicDir);
+} else {
+  console.warn("Carpeta de música no encontrada en:", musicDir);
 }
 
 // =====================
-// Mostrar rutas registradas (útil para depuración en Render)
+// Endpoints API
+// =====================
+// Búsqueda de canciones
+safeGet("/api/search", (req, res) => {
+  try {
+    const q = (req.query.q || "").toString().trim().toLowerCase();
+    if (!q) return res.json([]);
+    const results = songs.filter(
+      song => song.name.toLowerCase().includes(q) || song.artist.toLowerCase().includes(q)
+    );
+    res.json(results);
+  } catch (err) {
+    console.error("Error en /api/search:", err);
+    res.status(500).json({ error: "Error interno" });
+  }
+});
+
+// Ruta de salud
+safeGet("/api/health", (req, res) => res.json({ status: "ok" }));
+
+// =====================
+// Servir frontend React (si existe build)
+// =====================
+const frontendBuildPath = path.join(__dirname, "../frontend/gomusic/build");
+if (fs.existsSync(frontendBuildPath)) {
+  app.use(express.static(frontendBuildPath));
+  // fallback para SPA (React Router)
+  safeGet("*", (req, res) => {
+    const indexFile = path.join(frontendBuildPath, "index.html");
+    if (fs.existsSync(indexFile)) return res.sendFile(indexFile);
+    return res.status(404).send("No se encontró index.html del frontend");
+  });
+  console.log("Frontend servido desde:", frontendBuildPath);
+} else {
+  console.warn("Build del frontend no encontrado en:", frontendBuildPath);
+  console.warn("Si quieres servir el frontend desde este backend, construye el frontend (npm run build) y colócalo en esa ruta.");
+}
+
+// =====================
+// Listar rutas registradas (depuración)
 // =====================
 function listRoutes() {
   try {
     const routes = [];
-    app._router.stack.forEach(layer => {
-      if (layer.route && layer.route.path) {
-        const methods = Object.keys(layer.route.methods).join(",").toUpperCase();
-        routes.push({ path: layer.route.path, methods });
-      } else if (layer.name === "router" && layer.handle && layer.handle.stack) {
-        layer.handle.stack.forEach(l => {
-          if (l.route && l.route.path) {
-            const methods = Object.keys(l.route.methods).join(",").toUpperCase();
-            routes.push({ path: l.route.path, methods });
-          }
-        });
-      }
-    });
+    if (app._router && app._router.stack) {
+      app._router.stack.forEach(layer => {
+        if (layer.route && layer.route.path) {
+          const methods = Object.keys(layer.route.methods).join(",").toUpperCase();
+          routes.push({ path: layer.route.path, methods });
+        }
+      });
+    }
     console.log("Rutas registradas:", routes);
   } catch (err) {
     console.error("No se pudo listar rutas:", err.message);
@@ -96,7 +135,7 @@ function listRoutes() {
 listRoutes();
 
 // =====================
-// Error handler (al final)
+// Handler de errores (al final)
 // =====================
 app.use((err, req, res, next) => {
   console.error("Error capturado por middleware:", err);
@@ -104,7 +143,7 @@ app.use((err, req, res, next) => {
 });
 
 // =====================
-// Iniciar servidor (Render usa app.listen normalmente)
+// Iniciar servidor (Render usa app.listen)
 // =====================
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`✅ Servidor corriendo en puerto ${PORT}`));
