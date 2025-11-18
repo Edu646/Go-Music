@@ -45,10 +45,12 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
     // Guardar archivo en carpeta uploads
     const timestamp = Date.now();
-    const fileName = `${timestamp}_${req.file.originalname}`;
+    // Sanitizar el nombre del archivo para evitar errores de sistema de archivos
+    const safeOriginalName = req.file.originalname.replace(/[^a-z0-9.]/gi, '_'); 
+    const fileName = `${timestamp}_${safeOriginalName}`;
     const uploadDir = path.join(__dirname, "uploads");
 
-    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
     const uploadPath = path.join(uploadDir, fileName);
     fs.writeFileSync(uploadPath, req.file.buffer);
@@ -91,7 +93,11 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // ---------------------
 const frontendBuildPath = path.join(__dirname, "../frontend/gomusic/build");
 app.use(express.static(frontendBuildPath));
-app.get("*", (req, res) => {
+
+// --- CORRECCIÓN APLICADA AQUÍ ---
+// Se cambió app.get("*", ...) por app.get(/.*/, ...)
+// Esto evita el error de "Missing parameter name" en Express 5 / path-to-regexp
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(frontendBuildPath, "index.html"));
 });
 
