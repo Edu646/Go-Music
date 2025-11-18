@@ -8,40 +8,29 @@ const app = express();
 // ===== CORS =====
 // Si defines ALLOWED_ORIGINS en Render (coma-separados) se usará la lista.
 // Si no está definido se permiten todos los orígenes (útil para desarrollo).
-const allowedOriginsEnv = process.env.ALLOWED_ORIGINS || "";
-const allowedOrigins = allowedOriginsEnv
-  .split(",")
-  .map(s => s.trim())
-  .filter(Boolean);
+// ===== CORS =====
+const allowedOriginsEnv = process.env.ALLOWED_ORIGINS || ""; // p. ej. "https://go-music-3mgo.onrender.com,https://tu-backend.onrender.com"
+const allowedOrigins = allowedOriginsEnv.split(",").map(s => s.trim()).filter(Boolean);
 
-if (allowedOrigins.length) {
-  app.use(
-    cors({
-      origin: (origin, callback) => {
-        // permitir peticiones sin origin (curl, server-to-server)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) return callback(null, true);
-        return callback(new Error("CORS: origen no permitido"));
-      },
-      methods: ["GET", "POST", "OPTIONS"],
-    })
-  );
-  console.log("CORS habilitado para orígenes:", allowedOrigins);
-} else {
+// quick dev fallback: si no hay ALLOWED_ORIGINS se permite todo (cambiar en prod)
+if (allowedOrigins.length === 0) {
   app.use(cors()); // permite todo
   console.log("CORS: se permiten todos los orígenes (ALLOWED_ORIGINS no definido)");
+} else {
+  app.use(cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("CORS: origen no permitido"));
+    },
+    methods: ["GET","POST","OPTIONS"],
+    credentials: true
+  }));
+  console.log("CORS habilitado para:", allowedOrigins);
 }
 
-app.use(express.json());
-
-// Helper seguro para registrar rutas
-function safeGet(routePath, handler) {
-  try {
-    app.get(routePath, handler);
-  } catch (err) {
-    console.error(`✖ Ruta inválida registrada: "${routePath}" -> ${err.message}`);
-  }
-}
+// permitir preflight en todas las rutas
+app.options("*", cors());
 
 // =====================
 // Catálogo de canciones
