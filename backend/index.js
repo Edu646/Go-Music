@@ -35,12 +35,12 @@ const songs = [
 ];
 
 // =====================
-// Servir música (desde backend/music para desarrollo local)
-// En Render/producción puedes mover los MP3 a public/music en la raíz del repo y servirlos con /music/<file>
+// Servir música
+// =====================
 app.use("/music", express.static(path.join(__dirname, "music")));
 
 // =====================
-// Endpoints API (namespaced bajo /api para evitar colisiones)
+// Endpoints API
 // =====================
 safeGet("/search", (req, res) => {
   const q = (req.query.q || "").toString().trim().toLowerCase();
@@ -51,26 +51,22 @@ safeGet("/search", (req, res) => {
   res.json(results);
 });
 
-safeGet("/api/health", (req, res) => res.json({ status: "ok" }));
-
 // =====================
 // Servir frontend React (BUILD)
-// Ajusta la ruta si tu build está en otra carpeta
 // =====================
 const frontendBuildPath = path.join(__dirname, "../frontend/gomusic/build");
 try {
   app.use(express.static(frontendBuildPath));
-  // React Router fallback
+
   safeGet("*", (req, res) => {
     res.sendFile(path.join(frontendBuildPath, "index.html"));
   });
 } catch (err) {
   console.warn("⚠ No se encontró build del frontend en:", frontendBuildPath);
-  console.warn("   Si despliegas en Render asegúrate de construir el frontend antes o de servirlo desde la carpeta correcta.");
 }
 
 // =====================
-// Mostrar rutas registradas (útil para depuración en Render)
+// Mostrar rutas
 // =====================
 function listRoutes() {
   try {
@@ -79,14 +75,7 @@ function listRoutes() {
       if (layer.route && layer.route.path) {
         const methods = Object.keys(layer.route.methods).join(",").toUpperCase();
         routes.push({ path: layer.route.path, methods });
-      } else if (layer.name === "router" && layer.handle && layer.handle.stack) {
-        layer.handle.stack.forEach(l => {
-          if (l.route && l.route.path) {
-            const methods = Object.keys(l.route.methods).join(",").toUpperCase();
-            routes.push({ path: l.route.path, methods });
-          }
-        });
-      }
+      } 
     });
     console.log("Rutas registradas:", routes);
   } catch (err) {
@@ -96,7 +85,7 @@ function listRoutes() {
 listRoutes();
 
 // =====================
-// Error handler (al final)
+// Error handler
 // =====================
 app.use((err, req, res, next) => {
   console.error("Error capturado por middleware:", err);
@@ -104,7 +93,7 @@ app.use((err, req, res, next) => {
 });
 
 // =====================
-// Iniciar servidor (Render usa app.listen normalmente)
+// Iniciar servidor
 // =====================
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`✅ Servidor corriendo en puerto ${PORT}`));
