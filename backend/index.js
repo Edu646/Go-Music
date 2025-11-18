@@ -1,8 +1,19 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 
 const app = express();
+
+// Guard: evita que se registren rutas que sean URLs completas (previene path-to-regexp crash)
+const originalUse = app.use.bind(app);
+app.use = function (route, ...handlers) {
+  if (typeof route === "string" && /^https?:\/\//i.test(route)) {
+    console.error("Omitiendo app.use() con URL completa (inválida):", route);
+    return app;
+  }
+  return originalUse(route, ...handlers);
+};
 
 // Asegura CORS para tu frontend en producción (lee ALLOWED_ORIGINS env) o permite todo si no está definido
 const allowedEnv = (process.env.ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
