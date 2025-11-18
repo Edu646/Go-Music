@@ -15,7 +15,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 const DATA_FILE = path.join(__dirname, "songs.json");
 
 // ---------------------
-// Funciones para leer y guardar canciones
+// Funciones auxiliares
 // ---------------------
 function readSongs() {
   if (!fs.existsSync(DATA_FILE)) return [];
@@ -34,8 +34,10 @@ function saveSong(song) {
 }
 
 // ---------------------
-// Endpoint para subir canciones
+// ENDPOINTS API
 // ---------------------
+
+// 1. Subir canciones
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No se ha proporcionado ningún archivo" });
@@ -43,25 +45,23 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     const { name, artist, username } = req.body;
     if (!username) return res.status(400).json({ error: "Se requiere el nombre de usuario" });
 
-    // Guardar archivo en carpeta uploads
     const timestamp = Date.now();
-    // Sanitizar el nombre del archivo para evitar errores de sistema de archivos
-    const safeOriginalName = req.file.originalname.replace(/[^a-z0-9.]/gi, '_'); 
-    const fileName = `${timestamp}_${safeOriginalName}`;
+    // Limpiamos el nombre del archivo para evitar errores
+    const safeName = req.file.originalname.replace(/[^a-z0-9.]/gi, '_');
+    const fileName = `${timestamp}_${safeName}`;
+    
     const uploadDir = path.join(__dirname, "uploads");
-
     if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
     const uploadPath = path.join(uploadDir, fileName);
     fs.writeFileSync(uploadPath, req.file.buffer);
 
-    // URL relativa accesible desde frontend
     const url = `/uploads/${fileName}`;
 
-    // Guardar datos en JSON
     const songData = {
+      id: timestamp, // Añadimos ID único
       name: name || req.file.originalname,
-      artist: artist || "",
+      artist: artist || "Desconocido",
       uploadedBy: username,
       audio: url,
       createdAt: new Date().toISOString()
@@ -71,32 +71,47 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     res.json({ message: "Canción subida correctamente", ...songData });
   } catch (err) {
     console.error("Error subiendo canción:", err);
-    res.status(500).json({ error: "Error subiendo la canción", detalles: err.message });
+    res.status(500).json({ error: "Error interno", detalles: err.message });
   }
 });
 
-// ---------------------
-// Endpoint para listar canciones
-// ---------------------
+// 2. Listar todas las canciones
 app.get("/songs", (req, res) => {
   const songs = readSongs();
   res.json(songs);
 });
 
-// ---------------------
-// Servir archivos subidos
-// ---------------------
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// 3. Buscar canciones (ESTE ES EL QUE FALTABA)
+app.get("/search", (req, res) => {
+  const query = req.query.q ? req.query.q.toLowerCase() : "";
+  const songs = readSongs();
+
+  if (!query) {
+    // Si no hay búsqueda, devolvemos todo o nada (según prefieras)
+    return res.json(songs);
+  }
+
+  const results = songs.filter(song => {
+    const songName = song.name ? song.name.toLowerCase() : "";
+    const songArtist = song.artist ? song.artist.toLowerCase() : "";
+    return songName.includes(query) || songArtist.includes(query);
+  });
+
+  res.json(results);
+});
 
 // ---------------------
-// Servir frontend React
+// Servir archivos estáticos y Frontend
 // ---------------------
+
+// Servir audios subidos
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// Servir el frontend compilado
 const frontendBuildPath = path.join(__dirname, "../frontend/gomusic/build");
 app.use(express.static(frontendBuildPath));
 
-// --- CORRECCIÓN APLICADA AQUÍ ---
-// Se cambió app.get("*", ...) por app.get(/.*/, ...)
-// Esto evita el error de "Missing parameter name" en Express 5 / path-to-regexp
+// Catch-all para React (usando RegExp para evitar el error de Express 5)
 app.get(/.*/, (req, res) => {
   res.sendFile(path.join(frontendBuildPath, "index.html"));
 });
