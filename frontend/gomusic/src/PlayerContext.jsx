@@ -1,5 +1,6 @@
 import React, { createContext, useRef, useState, useContext, useEffect } from "react";
 import './PlayerContext.css';
+
 const PlayerContext = createContext();
 
 export function PlayerProvider({ children }) {
@@ -12,7 +13,7 @@ export function PlayerProvider({ children }) {
   const [showPlayer, setShowPlayer] = useState(false);
   const hideTimerRef = useRef(null);
 
-  // estado para la barra de progreso
+  // Estado para la barra de progreso
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
@@ -31,20 +32,30 @@ export function PlayerProvider({ children }) {
   };
 
   const play = (song) => {
+    // 1. Establecemos la canción en el estado
     setCurrentSong(song);
     setIsPlaying(true);
     setShowPlayer(true);
     clearHideTimer();
 
-    // Actualizar src y cargar metadata antes de reproducir
+    // 2. Forzamos la carga inmediata en el elemento de audio
     setTimeout(() => {
       try {
-        if (audioRef.current) {
-          audioRef.current.src = song ? `http://localhost:3001${song.audio}` : "";
+        if (audioRef.current && song) {
+          // --- CORRECCIÓN AQUÍ ---
+          // Usamos song.audio directamente. 
+          // El componente que llama a play() (SearchPlayer) ya debe encargarse de la URL completa.
+          audioRef.current.src = song.audio; 
+          
           audioRef.current.load();
-          audioRef.current.play().catch(() => {
-            /* autoplay bloqueado por el navegador */
-          });
+          
+          const playPromise = audioRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise.catch((error) => {
+              console.log("Autoplay prevenido por el navegador o error de carga:", error);
+              setIsPlaying(false); // Revertir estado si falla
+            });
+          }
         }
       } catch (e) {
         console.error("Audio play error:", e);
@@ -66,7 +77,7 @@ export function PlayerProvider({ children }) {
     setShowPlayer(true);
   };
 
-  // actualizar tiempo y duración desde el elemento audio
+  // Actualizar tiempo y duración desde el elemento audio
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -84,6 +95,8 @@ export function PlayerProvider({ children }) {
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
     audio.addEventListener("ended", onEnded);
+    // Importante: capturar error de carga
+    audio.addEventListener("error", (e) => console.error("Error cargando audio:", audio.error));
 
     return () => {
       audio.removeEventListener("timeupdate", onTimeUpdate);
@@ -91,6 +104,7 @@ export function PlayerProvider({ children }) {
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("error", () => {});
     };
   }, [currentSong]);
 
@@ -114,16 +128,15 @@ export function PlayerProvider({ children }) {
     const x = clientX - rect.left;
     const ratio = Math.max(0, Math.min(1, x / rect.width));
     const seekTime = ratio * duration;
+    
     if (audioRef.current) {
       audioRef.current.currentTime = seekTime;
       setCurrentTime(seekTime);
     }
   };
 
-  // pointer handlers to support drag
   const handlePointerDown = (e) => {
     seekingRef.current = true;
-    // prevent text selection / page scroll on touch
     if (e.pointerType === "touch") e.preventDefault?.();
     updateSeekFromClientX(e.clientX);
     window.addEventListener("pointermove", handlePointerMove);
@@ -141,14 +154,12 @@ export function PlayerProvider({ children }) {
     seekingRef.current = false;
     window.removeEventListener("pointermove", handlePointerMove);
     window.removeEventListener("pointerup", handlePointerUp);
-    
   };
 
   return (
     <PlayerContext.Provider value={{ currentSong, play, pause, resume, isPlaying }}>
       {children}
 
-      {/* reproductor personalizado */}
       <div className={`audio-player ${showPlayer ? "" : "hidden"}`} role="region" aria-label="Audio player">
         <div className="song-info">
           {currentSong ? (
@@ -192,11 +203,14 @@ export function PlayerProvider({ children }) {
           )}
         </div>
 
-        {/* audio oculto sin controles nativos */}
+        {/* --- CORRECCIÓN AQUÍ --- */}
+        {/* Quitamos localhost y usamos currentSong.audio directamente */}
+        {/* crossOrigin="anonymous" ayuda si tienes problemas de CORS con el audio */}
         <audio
           ref={audioRef}
-          src={currentSong ? `http://localhost:3001${currentSong.audio}` : ""}
-          preload="metadata"
+          src={currentSong ? currentSong.audio : ""}
+          preload="auto"
+          crossOrigin="anonymous" 
           style={{ display: "none" }}
         />
       </div>
