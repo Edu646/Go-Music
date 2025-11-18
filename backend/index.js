@@ -53,7 +53,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     const uploadPath = path.join(uploadDir, fileName);
     fs.writeFileSync(uploadPath, req.file.buffer);
 
-    // URL accesible desde frontend
+    // URL relativa accesible desde frontend
     const url = `/uploads/${fileName}`;
 
     // Guardar datos en JSON
