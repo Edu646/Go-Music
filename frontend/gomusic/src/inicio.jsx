@@ -4,7 +4,7 @@ import API_URL from "./config";
 
 function Inicio() {
   useEffect(() => {
-    fetch(`${API_URL}/api/health`)
+    fetch(`${API_URL}/health`)
       .then((res) => res.json())
       .then((info) => {
         console.log("Backend OK:", info);

@@ -51,7 +51,7 @@ safeGet("/search", (req, res) => {
   res.json(results);
 });
 
-safeGet("/api/health", (req, res) => res.json({ status: "ok" }));
+safeGet("/health", (req, res) => res.json({ status: "ok" }));
 
 // =====================
 // Servir frontend React (BUILD)
