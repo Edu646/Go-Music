@@ -19,7 +19,7 @@ function App() {
           {/* 🌐 Layout general del sitio */}
           <Route element={<Layout />}>
             <Route path="/" element={<Inicio />} />
-            <Route path="/ejemplo" element={<Ejemplo />} />
+            <Route path="/Calculadora" element={<Calculadora />} />
             <Route path="/playlist" element={<div>Playlist Page</div>} />
             <Route path="/about" element={<div>About Page</div>} />
             <Route path="/SESION" element={<Formulario />} />
