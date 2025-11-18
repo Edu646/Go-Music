@@ -3,8 +3,24 @@ const cors = require("cors");
 const path = require("path");
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+
+// Asegura CORS para tu frontend en producción (lee ALLOWED_ORIGINS env) o permite todo si no está definido
+const allowedEnv = (process.env.ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
+if (allowedEnv.length) {
+  app.use(cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      return allowedEnv.includes(origin) ? callback(null, true) : callback(new Error("CORS not allowed"));
+    },
+    methods: ["GET","POST","OPTIONS"],
+    credentials: true
+  }));
+  console.log("CORS enabled for:", allowedEnv);
+} else {
+  app.use(cors()); // permite todos (útil para desarrollo)
+  console.log("CORS: allowing all origins (ALLOWED_ORIGINS not set)");
+}
+app.options("*", cors());
 
 // Helper seguro para registrar rutas (evita que una ruta malformada detenga el arranque)
 function safeGet(routePath, handler) {
