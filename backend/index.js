@@ -3,7 +3,6 @@ const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
 const admin = require("firebase-admin");
-const multer = require("multer");
 
 const app = express();
 app.use(cors());
@@ -19,20 +18,18 @@ function safeGet(routePath, handler) {
 }
 
 // =====================
-// Catálogo local de canciones (fallback desarrollo)
+// Catálogo local de canciones (fallback para desarrollo)
+// =====================
 const songs = [
   { id: 1, name: "Shape of You", artist: "Ed Sheeran", audio: "/music/Shape-Of-You.mp3" },
-  { id: 2, name: "Ed Sheeran - Castle on the Hill", artist: "Ed Sheeran", audio: "/music/Ed-Sheeran-Castle-on-the-Hill.mp3" },
-  { id: 3, name: "Ed Sheeran - Don't", artist: "Ed Sheeran", audio: "/music/Ed Sheeran - Don't.mp3" },
-  { id: 4, name: "Ed Sheeran - Hearts Don't Break Around Here", artist: "Ed Sheeran", audio: "/music/Ed Sheeran - Hearts Don't Break Around Here.mp3" },
-  { id: 5, name: "Ed Sheeran - How Would You Feel (Paean)", artist: "Ed Sheeran", audio: "/music/Ed Sheeran - How Would You Feel (Paean).mp3" },
-  { id: 6, name: "Ed Sheeran - Nancy Mulligan", artist: "Ed Sheeran", audio: "/music/Ed Sheeran - Nancy Mulligan.mp3" },
-  { id: 7, name: "Ed Sheeran - New Man", artist: "Ed Sheeran", audio: "/music/Ed Sheeran - New Man.mp3" },
-  { id: 8, name: "Ed Sheeran - Perfect", artist: "Ed Sheeran", audio: "/music/Ed Sheeran - Perfect.mp3" }
+  { id: 2, name: "Castle on the Hill", artist: "Ed Sheeran", audio: "/music/Ed-Sheeran-Castle-on-the-Hill.mp3" },
+  { id: 3, name: "Perfect", artist: "Ed Sheeran", audio: "/music/Ed Sheeran - Perfect.mp3" }
+  // ... agrega más si quieres
 ];
 
 // =====================
 // Inicializar Firebase Admin
+// =====================
 let db = null;
 let bucket = null;
 
@@ -63,11 +60,15 @@ try {
 }
 
 // =====================
-// Servir música local (solo desarrollo)
+// Servir música local
+// =====================
 app.use("/music", express.static(path.join(__dirname, "music")));
 
 // =====================
 // Endpoints API
+// =====================
+
+// /search
 safeGet("/search", async (req, res) => {
   const q = (req.query.q || "").toString().trim().toLowerCase();
   if (!q) return res.json([]);
@@ -80,9 +81,7 @@ safeGet("/search", async (req, res) => {
         .filter(s => ((s.name || "").toLowerCase().includes(q) || (s.artist || "").toLowerCase().includes(q)));
       return res.json(results);
     } else {
-      const results = songs.filter(
-        song => song.name.toLowerCase().includes(q) || song.artist.toLowerCase().includes(q)
-      );
+      const results = songs.filter(song => song.name.toLowerCase().includes(q) || song.artist.toLowerCase().includes(q));
       return res.json(results);
     }
   } catch (err) {
@@ -91,6 +90,7 @@ safeGet("/search", async (req, res) => {
   }
 });
 
+// /songs GET
 safeGet("/songs", async (req, res) => {
   try {
     if (db) {
@@ -106,6 +106,7 @@ safeGet("/songs", async (req, res) => {
   }
 });
 
+// /songs POST
 app.post("/songs", async (req, res) => {
   try {
     const { name, artist, audio } = req.body;
@@ -130,97 +131,88 @@ app.post("/songs", async (req, res) => {
   }
 });
 
-// =====================
-// Endpoint para subir canciones (multipart/form-data)
-const upload = multer({ storage: multer.memoryStorage() });
+// /upload
+try {
+  const multer = require("multer");
+  const upload = multer({ storage: multer.memoryStorage() });
 
-app.post("/upload", upload.single("file"), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "No file provided" });
-  if (!bucket) return res.status(500).json({ error: "Firebase Storage no está configurado" });
+  app.post("/upload", upload.single("file"), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "No file provided" });
+    if (!bucket) return res.status(500).json({ error: "Firebase Storage no está configurado" });
 
-  try {
-    const filename = `songs/${Date.now()}_${req.file.originalname.replace(/\s+/g, "_")}`;
-    const file = bucket.file(filename);
+    try {
+      const filename = `songs/${Date.now()}_${req.file.originalname}`;
+      const file = bucket.file(filename);
+      const stream = file.createWriteStream({ metadata: { contentType: req.file.mimetype } });
 
-    const stream = file.createWriteStream({
-      metadata: { contentType: req.file.mimetype }
-    });
+      stream.on("error", err => res.status(500).json({ error: err.message }));
 
-    stream.on("error", err => {
-      console.error("Upload error:", err);
-      return res.status(500).json({ error: err.message });
-    });
-
-    stream.on("finish", async () => {
-      try {
-        const [url] = await file.getSignedUrl({
-          action: "read",
-          expires: Date.now() + 1000 * 60 * 60 * 24 * 7 // 7 días
-        });
-
-        if (db) {
-          const docRef = await db.collection("songs").add({
-            name: req.body.name || req.file.originalname,
-            artist: req.body.artist || "Desconocido",
-            audio: url,
-            storagePath: filename,
-            createdBy: req.body.createdBy || "unknown",
-            fileSize: req.file.size,
-            fileType: req.file.mimetype,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
+      stream.on("finish", async () => {
+        try {
+          const [url] = await file.getSignedUrl({
+            action: "read",
+            expires: Date.now() + 1000 * 60 * 60 * 24 * 7
           });
-
-          return res.json({ 
-            id: docRef.id, 
-            url,
-            name: req.body.name || req.file.originalname,
-            artist: req.body.artist || "Desconocido"
-          });
+          return res.json({ url });
+        } catch (err) {
+          return res.status(500).json({ error: err.message });
         }
+      });
 
-        return res.json({ url });
-      } catch (err) {
-        console.error("Error guardando metadata:", err);
-        return res.status(500).json({ error: err.message });
-      }
-    });
-
-    stream.end(req.file.buffer);
-  } catch (err) {
-    console.error("Error en /upload:", err);
-    return res.status(500).json({ error: err.message });
-  }
-});
+      stream.end(req.file.buffer);
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+} catch (err) {
+  console.warn("⚠ Endpoint /upload no fue activado. Instala multer si lo deseas.");
+}
 
 // =====================
 // Servir frontend React
+// =====================
 const frontendBuildPath = path.join(__dirname, "../frontend/gomusic/build");
-app.use(express.static(frontendBuildPath));
-safeGet("*", (req, res) => {
-  res.sendFile(path.join(frontendBuildPath, "index.html"));
-});
+try {
+  app.use(express.static(frontendBuildPath));
+  safeGet("*", (req, res) => res.sendFile(path.join(frontendBuildPath, "index.html")));
+} catch (err) {
+  console.warn("⚠ No se encontró build del frontend en:", frontendBuildPath);
+}
 
 // =====================
-// Listar rutas para debug
+// Listar rutas de forma segura
+// =====================
 function listRoutes() {
-  const routes = [];
-  app._router.stack.forEach(layer => {
-    if (layer.route && layer.route.path) {
-      routes.push(layer.route.path);
+  try {
+    if (!app._router) {
+      console.warn("⚠ app._router no está definido, no se pueden listar rutas.");
+      return;
     }
-  });
-  console.log("Rutas registradas:", routes);
+
+    const routes = [];
+    app._router.stack.forEach(layer => {
+      if (layer.route && layer.route.path) {
+        const methods = Object.keys(layer.route.methods).join(",").toUpperCase();
+        routes.push({ path: layer.route.path, methods });
+      }
+    });
+    console.log("Rutas registradas:", routes);
+  } catch (err) {
+    console.error("No se pudo listar rutas:", err.message);
+  }
 }
 listRoutes();
 
 // =====================
 // Error handler
+// =====================
 app.use((err, req, res, next) => {
-  console.error("Error capturado:", err);
+  console.error("Error capturado por middleware:", err);
   res.status(500).json({ error: err.message || "Internal Server Error" });
 });
 
 // =====================
 // Iniciar servidor
+// =====================
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`✅ Servidor corriendo en puerto ${PORT}`));
