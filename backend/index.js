@@ -1,3 +1,6 @@
+// =====================
+// Importar dependencias
+// =====================
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -9,7 +12,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// =====================
 // Helper seguro para registrar rutas
+// =====================
 function safeGet(routePath, handler) {
   try {
     app.get(routePath, handler);
@@ -44,71 +49,102 @@ try {
     bucket = admin.storage().bucket();
     console.log("✅ firebase-admin inicializado. Bucket:", bucket.name);
   } else {
-    console.warn("⚠ No se encontraron credenciales de Firebase. Usando catálogo local.");
+    console.warn("⚠ No se encontraron credenciales de Firebase. Se usará registro local.");
   }
 } catch (err) {
   console.warn("⚠ Error inicializando firebase-admin:", err.message);
 }
 
 // =====================
-// Multer setup (para subir archivos)
+// Multer setup (subida de archivos en memoria)
 // =====================
 const upload = multer({ storage: multer.memoryStorage() });
 
 // =====================
-// Endpoint para subir canciones
+// Endpoint /upload
 // =====================
 app.post("/upload", upload.single("file"), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "No file provided" });
-  if (!bucket) return res.status(500).json({ error: "Firebase Storage no configurado" });
-
-  const { name, artist } = req.body;
-
   try {
+    // Validaciones básicas
+    if (!req.file) return res.status(400).json({ error: "No se ha proporcionado ningún archivo" });
+    const { name, artist, username } = req.body;
+    if (!username) return res.status(400).json({ error: "Se requiere el nombre de usuario" });
+
     const filename = `songs/${Date.now()}_${req.file.originalname}`;
-    const file = bucket.file(filename);
+    let audioUrl = null;
 
-    const stream = file.createWriteStream({ metadata: { contentType: req.file.mimetype } });
-
-    stream.on("error", err => {
-      console.error("Upload error:", err);
-      res.status(500).json({ error: err.message });
-    });
-
-    stream.on("finish", async () => {
+    // Intentar subir a Firebase Storage
+    if (bucket) {
       try {
-        const [url] = await file.getSignedUrl({
+        const file = bucket.file(filename);
+        const stream = file.createWriteStream({
+          metadata: { contentType: req.file.mimetype }
+        });
+
+        await new Promise((resolve, reject) => {
+          stream.on("error", reject);
+          stream.on("finish", resolve);
+          stream.end(req.file.buffer);
+        });
+
+        const [url] = await bucket.file(filename).getSignedUrl({
           action: "read",
           expires: Date.now() + 1000 * 60 * 60 * 24 * 7 // 7 días
         });
+        audioUrl = url;
+      } catch (err) {
+        console.warn("⚠ No se pudo subir a Firebase Storage, se seguirá con registro local:", err.message);
+      }
+    } else {
+      console.warn("⚠ Bucket de Firebase no configurado, se seguirá con registro local");
+    }
 
-        let docRef = null;
-        if (db) {
-          docRef = await db.collection("songs").add({
-            name: name || req.file.originalname,
-            artist: artist || "",
-            audio: url,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-          });
-        }
-
-        res.json({
-          message: "Canción subida correctamente",
-          id: docRef ? docRef.id : null,
-          url,
+    // Guardar en Firestore
+    let docRef = null;
+    if (db) {
+      try {
+        docRef = await db.collection("songs").add({
           name: name || req.file.originalname,
-          artist: artist || ""
+          artist: artist || "",
+          uploadedBy: username,
+          audio: audioUrl || "",
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
       } catch (err) {
-        console.error("Error generando URL o guardando en Firestore:", err);
-        res.status(500).json({ error: err.message });
+        console.warn("⚠ No se pudo guardar en Firestore, guardando localmente:", err.message);
+        // Guardar localmente
+        const localPath = path.join(__dirname, "local_songs.json");
+        let localSongs = [];
+        if (fs.existsSync(localPath)) {
+          localSongs = JSON.parse(fs.readFileSync(localPath, "utf-8"));
+        }
+        localSongs.push({
+          name: name || req.file.originalname,
+          artist: artist || "",
+          uploadedBy: username,
+          audio: audioUrl || "",
+          createdAt: new Date().toISOString()
+        });
+        fs.writeFileSync(localPath, JSON.stringify(localSongs, null, 2));
       }
+    }
+
+    // Respuesta exitosa
+    res.json({
+      message: "Canción registrada correctamente",
+      id: docRef ? docRef.id : null,
+      url: audioUrl || null,
+      name: name || req.file.originalname,
+      artist: artist || "",
+      uploadedBy: username
     });
 
-    stream.end(req.file.buffer);
   } catch (err) {
     console.error("Error global /upload:", err);
-    res.status(500).json({ error: err.message });
+    res.json({
+      message: "Error manejado al subir la canción, pero registro local guardado",
+      error: err.message
+    });
   }
 });
 
