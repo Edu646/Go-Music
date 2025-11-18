@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
+const admin = require("firebase-admin");
 
 const app = express();
 app.use(cors());
@@ -16,7 +18,7 @@ function safeGet(routePath, handler) {
 }
 
 // =====================
-// Catálogo de canciones
+// Catálogo local de canciones (fallback para desarrollo)
 // =====================
 const songs = [
   { id: 1, name: "Shape of You", artist: "Ed Sheeran", audio: "/music/Shape-Of-You.mp3" },
@@ -35,23 +37,165 @@ const songs = [
 ];
 
 // =====================
-// Servir música (desde backend/music para desarrollo local)
-// En Render/producción puedes mover los MP3 a public/music en la raíz del repo y servirlos con /music/<file>
+// Inicializar Firebase Admin (intenta desde env o archivo local para desarrollo)
+// Variables de entorno recomendadas:
+//   FIREBASE_SERVICE_ACCOUNT  -> JSON stringificado del service account
+//   FIREBASE_STORAGE_BUCKET   -> e.g. "mi-proyecto.appspot.com"
+// =====================
+let db = null;
+let bucket = null;
+
+try {
+  let serviceAccount;
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  } else {
+    // archivo local opcional para desarrollo: backend/serviceAccountKey.json
+    const localPath = path.join(__dirname, "serviceAccountKey.json");
+    if (fs.existsSync(localPath)) {
+      serviceAccount = require(localPath);
+    }
+  }
+
+  if (serviceAccount) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.project_id}.appspot.com`
+    });
+    db = admin.firestore();
+    bucket = admin.storage().bucket();
+    console.log("✅ firebase-admin inicializado.");
+  } else {
+    console.warn("⚠ No se encontraron credenciales de Firebase. Usando catálogo local.");
+  }
+} catch (err) {
+  console.warn("⚠ Error inicializando firebase-admin:", err.message);
+}
+
+// =====================
+// Servir música local (solo para desarrollo si mantienes la carpeta /music)
+// En producción usa URLs de Firebase Storage (HTTPS) para evitar Mixed Content.
+// =====================
 app.use("/music", express.static(path.join(__dirname, "music")));
 
 // =====================
-// Endpoints API (namespaced bajo /api para evitar colisiones)
+// Endpoints API (namespaced bajo /api opcional, aquí quedan en raíz para compatibilidad)
 // =====================
-safeGet("/search", (req, res) => {
+
+// Búsqueda: si Firestore está disponible, busca en la colección "songs", si no, usa el array local
+safeGet("/search", async (req, res) => {
   const q = (req.query.q || "").toString().trim().toLowerCase();
   if (!q) return res.json([]);
-  const results = songs.filter(
-    song => song.name.toLowerCase().includes(q) || song.artist.toLowerCase().includes(q)
-  );
-  res.json(results);
+
+  try {
+    if (db) {
+      const snapshot = await db.collection("songs").get();
+      const results = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(s => ((s.name || "").toLowerCase().includes(q) || (s.artist || "").toLowerCase().includes(q)));
+      return res.json(results);
+    } else {
+      const results = songs.filter(
+        song => song.name.toLowerCase().includes(q) || song.artist.toLowerCase().includes(q)
+      );
+      return res.json(results);
+    }
+  } catch (err) {
+    console.error("Error en /search:", err);
+    return res.status(500).json({ error: err.message });
+  }
 });
 
-safeGet("/health", (req, res) => res.json({ status: "ok" }));
+// Listar todas las canciones (Firestore o local)
+safeGet("/songs", async (req, res) => {
+  try {
+    if (db) {
+      const snapshot = await db.collection("songs").orderBy("createdAt", "desc").get();
+      const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      return res.json(list);
+    } else {
+      return res.json(songs);
+    }
+  } catch (err) {
+    console.error("Error en /songs:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Crear metadata de canción (por ejemplo después de subir a Storage desde frontend)
+app.post("/songs", async (req, res) => {
+  try {
+    const { name, artist, audio } = req.body;
+    if (!name || !audio) return res.status(400).json({ error: "Faltan campos: name y audio son obligatorios" });
+
+    if (db) {
+      const docRef = await db.collection("songs").add({
+        name,
+        artist: artist || "",
+        audio,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      return res.json({ id: docRef.id });
+    } else {
+      // fallback local: insertar en array (no persistente)
+      const newItem = { id: songs.length + 1, name, artist: artist || "", audio };
+      songs.push(newItem);
+      return res.json({ id: newItem.id });
+    }
+  } catch (err) {
+    console.error("Error en POST /songs:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// (Opcional) Endpoint para subir archivos vía backend a Firebase Storage
+// Usa multipart/form-data con campo 'file'.
+// Nota: requiere instalar multer (npm install multer) y solo funciona si bucket está disponible.
+try {
+  const multer = require("multer");
+  const upload = multer({ storage: multer.memoryStorage() });
+
+  app.post("/upload", upload.single("file"), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "No file provided" });
+    if (!bucket) return res.status(500).json({ error: "Firebase Storage no está configurado" });
+
+    try {
+      const filename = `songs/${Date.now()}_${req.file.originalname}`;
+      const file = bucket.file(filename);
+      const stream = file.createWriteStream({
+        metadata: { contentType: req.file.mimetype }
+      });
+
+      stream.on("error", err => {
+        console.error("Upload error:", err);
+        return res.status(500).json({ error: err.message });
+      });
+
+      stream.on("finish", async () => {
+        // Hacer público o generar URL firmada según reglas del bucket
+        // Aquí se genera una URL de descarga pública (si el bucket lo permite) usando getSignedUrl
+        try {
+          const [url] = await file.getSignedUrl({
+            action: "read",
+            expires: Date.now() + 1000 * 60 * 60 * 24 * 7 // 7 días
+          });
+          return res.json({ url });
+        } catch (err) {
+          console.error("Error generando URL:", err);
+          return res.status(500).json({ error: err.message });
+        }
+      });
+
+      stream.end(req.file.buffer);
+    } catch (err) {
+      console.error("Error en /upload:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+} catch (err) {
+  // multer no está instalado o error; omitimos endpoint /upload
+  console.warn("⚠ Endpoint /upload no fue activado. Instala multer si lo deseas. Detalle:", err.message);
+}
 
 // =====================
 // Servir frontend React (BUILD)
@@ -104,7 +248,7 @@ app.use((err, req, res, next) => {
 });
 
 // =====================
-// Iniciar servidor (Render usa app.listen normalmente)
+// Iniciar servidor
 // =====================
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`✅ Servidor corriendo en puerto ${PORT}`));
