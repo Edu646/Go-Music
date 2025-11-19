@@ -1,10 +1,13 @@
-/* Contenedor principal del buscador (ahora section) */
+/* =========================================
+   CONTENEDOR PRINCIPAL
+   ========================================= */
 .search-player-container {
   max-width: auto;
-  margin: 120px 200px 0 auto;
+  /* Ajusta estos márgenes según tu diseño global */
+  margin: 120px 200px 0 auto; 
   padding: 40px 32px 36px 32px;
   border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
   color: #fff;
   backdrop-filter: blur(2px);
   background: rgba(24, 24, 24, 0.97);
@@ -23,7 +26,9 @@
   letter-spacing: 1px;
 }
 
-/* Formulario de búsqueda */
+/* =========================================
+   FORMULARIO DE BÚSQUEDA
+   ========================================= */
 .search-player-container form {
   display: flex;
   gap: 10px;
@@ -40,13 +45,14 @@
   background: #232323;
   color: #fff;
   transition: box-shadow 0.2s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .search-player-container input[type="text"]:focus {
   box-shadow: 0 0 0 2px #1db95455;
 }
 
+/* Botón "Buscar" del formulario */
 .search-player-container button {
   background: #1db954;
   color: #fff;
@@ -57,16 +63,17 @@
   cursor: pointer;
   font-weight: 500;
   transition: background 0.2s, transform 0.1s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.search-player-container button:hover,
-.song-result button:hover {
+.search-player-container button:hover {
   background: #17a74a;
   transform: translateY(-2px) scale(1.04);
 }
 
-/* Resultados de canciones */
+/* =========================================
+   RESULTADOS (LISTA DE CANCIONES)
+   ========================================= */
 .song-result {
   background: #232323;
   border-radius: 10px;
@@ -74,8 +81,8 @@
   margin-bottom: 14px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  justify-content: space-between; /* Separa info (izq) de acciones (der) */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
   transition: background 0.2s;
 }
 
@@ -83,12 +90,28 @@
   background: #282828;
 }
 
-.song-result strong {
+/* Texto de la canción */
+.song-info {
+  flex: 1; /* Ocupa el espacio disponible */
+  margin-right: 15px;
   color: #fff;
+  font-size: 1rem;
 }
 
+.song-info strong {
+  color: #fff;
+  font-weight: bold;
+}
+
+/* Agrupador de botones (Play + Descargar) */
+.song-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Espacio entre botones */
+}
+
+/* --- Botón PLAY --- */
 .song-result button {
-  margin-left: 16px;
   padding: 7px 18px;
   font-size: 1rem;
   border-radius: 8px;
@@ -97,6 +120,8 @@
   border: none;
   cursor: pointer;
   transition: background 0.2s, transform 0.1s;
+  /* Quitamos margin-left porque ahora usamos gap en el padre */
+  margin: 0; 
 }
 
 .song-result button:hover {
@@ -104,14 +129,42 @@
   transform: scale(1.05);
 }
 
-/* Canción actual */
+/* --- Botón DESCARGAR (Estilo enlace) --- */
+.btn-download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  
+  /* Diseño: Borde verde, fondo transparente */
+  background: transparent;
+  border: 2px solid #1db954;
+  color: #1db954;
+}
+
+.btn-download:hover {
+  background: #1db954;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+}
+
+/* =========================================
+   CANCIÓN ACTUAL (Info extra si la usas)
+   ========================================= */
 .current-song {
   margin-top: 28px;
   background: #232323;
   border-radius: 10px;
   padding: 18px 10px 10px 10px;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
 }
 
 .current-song h2 {
@@ -120,11 +173,13 @@
   margin-bottom: 14px;
 }
 
-/* Reproductor global fijo */
+/* =========================================
+   REPRODUCTOR DE AUDIO FIJO
+   ========================================= */
 audio {
   background: #232323;
   border-radius: 14px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   padding: 8px 0;
   outline: none;
   transition: box-shadow 0.2s;
@@ -160,51 +215,33 @@ audio::-webkit-media-controls-volume-slider {
   background: #1db954;
 }
 
-/* Responsive */
+/* =========================================
+   RESPONSIVE
+   ========================================= */
 @media (max-width: 600px) {
   .search-player-container {
     max-width: 98vw;
     padding: 18px 4vw 24px 4vw;
     margin-top: 60px;
+    margin-right: auto; /* Resetear el margen derecho en móvil */
   }
+  
+  /* En móviles, quizás quieras que los botones se apilen si no caben */
+  .song-result {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .song-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
   audio {
     width: 98vw !important;
     max-width: 98vw !important;
     left: 1vw !important;
     transform: none !important;
   }
-}
-
-/* --- Agrega esto al final de tu CSS --- */
-
-/* Contenedor para agrupar los botones a la derecha */
-.song-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px; /* Espacio entre Play y Descargar */
-}
-
-/* Estilo específico para el botón de descarga (enlace) */
-.btn-download {
-  display: inline-block;
-  padding: 7px 18px;
-  font-size: 1rem;
-  border-radius: 8px;
-  text-decoration: none; /* Quitar subrayado del enlace */
-  cursor: pointer;
-  transition: all 0.2s;
-  
-  /* Estilo visual: Fondo transparente con borde verde */
-  background: transparent;
-  border: 2px solid #1db954;
-  color: #1db954;
-  font-weight: 500;
-}
-
-/* Efecto Hover para Descargar */
-.btn-download:hover {
-  background: #1db954;
-  color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
 }
