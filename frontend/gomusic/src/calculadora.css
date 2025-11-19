@@ -175,3 +175,36 @@ audio::-webkit-media-controls-volume-slider {
   }
 }
 
+/* --- Agrega esto al final de tu CSS --- */
+
+/* Contenedor para agrupar los botones a la derecha */
+.song-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Espacio entre Play y Descargar */
+}
+
+/* Estilo específico para el botón de descarga (enlace) */
+.btn-download {
+  display: inline-block;
+  padding: 7px 18px;
+  font-size: 1rem;
+  border-radius: 8px;
+  text-decoration: none; /* Quitar subrayado del enlace */
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  /* Estilo visual: Fondo transparente con borde verde */
+  background: transparent;
+  border: 2px solid #1db954;
+  color: #1db954;
+  font-weight: 500;
+}
+
+/* Efecto Hover para Descargar */
+.btn-download:hover {
+  background: #1db954;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+}
