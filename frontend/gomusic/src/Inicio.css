@@ -1,138 +1,153 @@
+/* ------------------------------
+   ESTILO GLOBAL
+------------------------------ */
 html, body {
   min-height: 100vh;
   margin: 0;
   padding: 0;
   font-family: 'Segoe UI', Arial, sans-serif;
-  background: linear-gradient(135deg, #1db954 , #121212 85%);
-  background-repeat: no-repeat;
-  background-size: cover;
+  background: linear-gradient(135deg, #1db954, #121212 80%);
   background-attachment: fixed;
-  color: #333;
-}
-
-
-
-.container {
-  width: auto;
-  margin: 150px 400px 0 auto;
-  padding: 40px 32px;
-  background: rgba(24, 24, 24, 0.93);
-  border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  background-size: cover;
   color: #fff;
-  backdrop-filter: blur(3px);
-  text-align: center;
-  transition: box-shadow 0.2s;
 }
 
-.container h1 {
-  font-size: 2.3rem;
+
+/* ------------------------------
+   CONTENEDOR PRINCIPAL
+------------------------------ */
+.container {
+  max-width: 700px;
+  margin: 110px auto 0 auto;
+  padding: 40px 32px;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 24px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  text-align: center;
+  transition: 0.3s ease;
+}
+
+.container:hover {
+  box-shadow: 0 14px 48px rgba(0, 0, 0, 0.45);
+}
+
+
+/* ------------------------------
+   TITULOS Y TEXTOS
+------------------------------ */
+.container h1,
+.container h3 {
+  font-size: 2.1rem;
   color: #1db954;
-  margin-bottom: 18px;
+  margin-bottom: 15px;
   letter-spacing: 1px;
 }
 
 .container p {
   font-size: 1.15rem;
+  color: #dcdcdc;
+  line-height: 1.6;
   margin-bottom: 28px;
-  color: #e0e0e0;
 }
 
+
+/* ------------------------------
+   BOTONES
+------------------------------ */
 .container .btn {
   display: inline-block;
   padding: 12px 28px;
   margin: 8px;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #1db954;
   color: #fff;
-  font-size: 1.08rem;
-  font-weight: 500;
+  font-size: 1.1rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  transition: 0.2s;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
   text-decoration: none;
 }
 
 .container .btn:hover {
-  background: #17a74a;
-  transform: scale(1.04);
+  background: #19a44d;
+  transform: scale(1.05);
 }
 
-@media (max-width: 700px) {
+
+/* ------------------------------
+   RESPONSIVE TABLET
+------------------------------ */
+@media (max-width: 900px) {
   .container {
-    max-width: 96vw;
-    padding: 24px 4vw;
-    margin-top: 40px;
+    max-width: 80%;
+    margin-top: 80px;
+    padding: 32px 26px;
   }
-  .container h1 {
-    font-size: 1.5rem;
+
+  .container h1,
+  .container h3 {
+    font-size: 1.8rem;
   }
+
+  .container p {
+    font-size: 1.05rem;
+  }
+}
+
+
+/* ------------------------------
+   RESPONSIVE MÓVIL
+------------------------------ */
+@media (max-width: 600px) {
+  .container {
+    max-width: 92%;
+    margin-top: 50px;
+    padding: 26px 20px;
+    border-radius: 18px;
+  }
+
+  .container h1,
+  .container h3 {
+    font-size: 1.6rem;
+  }
+
   .container p {
     font-size: 1rem;
   }
-}
-
-/* Estilos responsivos separados para móvil (solo overrides) */
-
-/* Punto de quiebre general móvil */
-@media (max-width: 700px) {
-  html, body {
-    background-position: center;
-  }
-
-  .container {
-    padding: 28px 18px !important;
-    border-radius: 16px !important;
-    width: 94% !important;
-    margin: 24px auto !important;
-  }
-
-  .container h1 {
-    font-size: 1.5rem !important;
-  }
-
-  .container p {
-    font-size: 1rem !important;
-  }
 
   .container .btn {
-    padding: 10px 18px !important;
-    font-size: 0.98rem !important;
+    padding: 12px;
+    width: 100%;
+    font-size: 1rem;
+    margin: 10px 0;
   }
 }
 
-/* Móviles pequeños / teléfonos */
+
+/* ------------------------------
+   RESPONSIVE MÓVILES PEQUEÑOS
+------------------------------ */
 @media (max-width: 420px) {
   .container {
-    margin: 20px 12px !important;
-    padding: 20px 14px !important;
-    border-radius: 12px !important;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.28) !important;
+    padding: 22px 16px;
+    border-radius: 14px;
   }
 
-  .container h1 {
-    font-size: 1.25rem !important;
-    margin-bottom: 12px !important;
+  .container h1,
+  .container h3 {
+    font-size: 1.35rem;
   }
 
   .container p {
-    font-size: 0.95rem !important;
-    margin-bottom: 18px !important;
+    font-size: 0.95rem;
+    margin-bottom: 20px;
   }
 
   .container .btn {
-    display: block !important;
-    width: 100% !important;
-    padding: 12px !important;
-    margin: 8px 0 !important;
-    border-radius: 10px !important;
-    font-size: 0.98rem !important;
-  }
-
-  /* Eliminar márgenes grandes heredados */
-  body, .container, .search-player-container {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    border-radius: 10px;
+    font-size: 0.95rem;
   }
 }
