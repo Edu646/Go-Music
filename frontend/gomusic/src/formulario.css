@@ -1,424 +1,186 @@
-/* Variables CSS para fácil personalización */
-:root {
-  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --success-gradient: linear-gradient(90deg, #10b981, #06b6d4);
-  --danger-color: #ef4444;
-  --bg-dark: #0a0e1a;
-  --bg-card: #1a1f35;
-  --bg-input: rgba(255, 255, 255, 0.03);
-  --border-color: rgba(255, 255, 255, 0.1);
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --focus-ring: rgba(102, 126, 234, 0.4);
-  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.3);
-  --nav-height: 80px; /* Ajusta según la altura de tu nav */
-}
+/* formulario.css */
 
-/* Contenedor general con espacio para el nav */
-.auth-container,
-.form-upload-container {
-  max-width: 520px;
-  margin: calc(var(--nav-height) + 40px) auto 40px;
-  padding: 32px;
-  background: var(--bg-card);
-  color: var(--text-primary);
-  border-radius: 16px;
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-lg);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  animation: fadeInUp 0.4s ease-out;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Contenedor general */
+.auth-container {
+  width: 90%;
+  max-width: 600px;
+  margin: 120px auto 50px; /* más abajo para no tapar navbar */
+  padding: 30px 25px;
+  background: rgba(24, 24, 24, 0.95);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  color: #fff;
+  backdrop-filter: blur(5px);
+  text-align: center;
+  font-family: 'Segoe UI', Arial, sans-serif;
 }
 
 /* Títulos */
-.auth-title,
-h2,
-h3 {
-  font-size: 28px;
-  font-weight: 700;
-  margin: 0 0 24px;
-  background: linear-gradient(135deg, #667eea 0%, #a78bfa 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  letter-spacing: -0.5px;
+.auth-container h2,
+.user-info-box h3,
+.formulario h3 {
+  color: #1db954;
+  margin-bottom: 15px;
+  letter-spacing: 1px;
 }
 
-h3 {
-  font-size: 22px;
-  margin-bottom: 16px;
-}
-
-/* Formularios */
-.auth-form,
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-/* Inputs con animación mejorada */
-.auth-input,
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="file"] {
+/* Formulario input */
+.auth-form input,
+.formulario input,
+.song-list input {
   width: 100%;
-  padding: 14px 16px;
-  border-radius: 12px;
-  border: 2px solid var(--border-color);
-  background: var(--bg-input);
-  backdrop-filter: blur(10px);
-  color: var(--text-primary);
-  outline: none;
-  font-size: 15px;
-  font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-sizing: border-box;
-}
-
-.auth-input::placeholder,
-input::placeholder {
-  color: var(--text-muted);
-}
-
-.auth-input:focus,
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="password"]:focus,
-input[type="file"]:focus {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
-  box-shadow: 0 0 0 4px var(--focus-ring);
-  transform: translateY(-1px);
-}
-
-input[type="file"] {
-  padding: 12px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-input[type="file"]::file-selector-button {
-  padding: 8px 16px;
-  background: var(--primary-gradient);
-  color: white;
-  border: none;
+  padding: 10px 12px;
+  margin-bottom: 12px;
   border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  margin-right: 12px;
-  transition: transform 0.15s ease;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  transition: background 0.2s;
 }
 
-input[type="file"]::file-selector-button:hover {
+.auth-form input:focus,
+.formulario input:focus,
+.song-list input:focus {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Botones */
+button {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.2s;
+  background: #1db954;
+  color: #fff;
+}
+
+button:hover {
+  background: #17a74a;
   transform: scale(1.05);
 }
 
-/* Botones con efectos modernos */
-.auth-button,
-button,
+/* Botón de Google */
 .google-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 14px 24px;
-  border-radius: 12px;
-  border: none;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 15px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
-.auth-button::before,
-button[type="submit"]::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
-
-.auth-button:hover::before,
-button[type="submit"]:hover::before {
-  width: 300px;
-  height: 300px;
-}
-
-.auth-button,
-button[type="submit"] {
-  background: var(--primary-gradient);
-  color: white;
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-  position: relative;
-  z-index: 1;
-}
-
-.auth-button:hover,
-button[type="submit"]:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(102, 126, 234, 0.4);
-}
-
-.auth-button:active,
-button[type="submit"]:active {
-  transform: translateY(0);
-}
-
-/* Botón Google mejorado */
-.google-btn {
-  background: white;
-  color: #1f2937;
-  padding: 12px 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  font-weight: 600;
-  border: 2px solid transparent;
-  margin-bottom: 16px;
+  background: #4285F4;
+  margin-top: 12px;
 }
 
 .google-btn:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  border-color: rgba(0, 0, 0, 0.05);
-  transform: translateY(-2px);
+  background: #357ae8;
+  transform: scale(1.05);
 }
 
-.google-icon {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-}
-
-/* Toggle y botones secundarios */
+/* Toggle login/registro */
 .auth-toggle {
   background: transparent;
-  color: #a78bfa;
-  border: 2px dashed rgba(167, 139, 250, 0.3);
-  padding: 10px 16px;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s ease;
+  border: 1px solid #1db954;
+  color: #1db954;
+  margin-top: 12px;
 }
 
 .auth-toggle:hover {
-  border-color: rgba(167, 139, 250, 0.6);
-  background: rgba(167, 139, 250, 0.05);
-  transform: translateY(-1px);
-}
-
-/* Botón de logout */
-button[style*="ef4444"] {
-  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
-  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
-}
-
-button[style*="ef4444"]:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
-}
-
-/* Estado de sesión activa */
-div[style*="10b981"] {
-  margin-bottom: 20px !important;
-  padding: 16px !important;
-  background: rgba(16, 185, 129, 0.1) !important;
-  border-radius: 12px !important;
-  border: 2px solid rgba(16, 185, 129, 0.3) !important;
-  animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  background: #1db954;
+  color: #fff;
 }
 
 /* Mensajes */
-.auth-container p,
-.form-upload-container p,
-.form-upload-container .msg {
+.message {
   margin-top: 12px;
-  color: var(--text-secondary);
-  font-size: 14px;
-  line-height: 1.6;
+  color: #ffcc00;
+  font-weight: 500;
 }
 
-/* Barra de progreso mejorada */
-.progress-bar,
-div[style*="rgba(255,255,255,0.1)"] {
-  height: 8px !important;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.08) !important;
-  border-radius: 999px !important;
-  overflow: hidden;
-  margin-top: 8px !important;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+/* Área de usuario logueado */
+.user-info-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
 }
 
-.progress-bar > span,
-div[style*="linear-gradient(90deg,#10b981,#06b6d4)"] {
-  display: block;
-  height: 100%;
-  background: var(--success-gradient) !important;
-  transition: width 0.3s ease !important;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+.avatar-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #1db954;
 }
 
-/* Estado sin sesión */
-.no-session {
+.logout-btn {
+  background: #ff4c4c;
+}
+
+.logout-btn:hover {
+  background: #e04343;
+}
+
+/* Formulario subida de canciones */
+.formulario {
+  margin-top: 25px;
   padding: 20px;
-  background: rgba(239, 68, 68, 0.05);
-  border-radius: 12px;
-  border: 2px dashed rgba(239, 68, 68, 0.2);
-  color: var(--text-primary);
-  text-align: center;
+  background: rgba(30, 30, 30, 0.9);
+  border-radius: 15px;
 }
 
-.no-session p {
-  margin: 8px 0;
-  color: #fca5a5;
+.song-list {
+  margin-top: 25px;
+  text-align: left;
 }
 
-/* Contenedor de botones múltiples */
-div[style*="display: flex"] {
-  display: flex !important;
-  gap: 12px !important;
-  flex-wrap: wrap;
+.song-list ul {
+  list-style: none;
+  padding: 0;
 }
 
-/* Responsive mejorado */
-@media (max-width: 640px) {
-  :root {
-    --nav-height: 60px;
+.song-list li {
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: 8px;
+  border-radius: 8px;
+}
+
+.song-list a {
+  color: #1db954;
+  text-decoration: none;
+  margin-left: 6px;
+}
+
+.song-list a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+  .auth-container {
+    margin: 150px auto 30px;
+    padding: 20px;
   }
 
-  .auth-container,
-  .form-upload-container {
-    margin: calc(var(--nav-height) + 20px) 16px 20px;
-    padding: 24px 20px;
-    border-radius: 12px;
+  .avatar-img {
+    width: 80px;
+    height: 80px;
+  }
+}
+
+@media (max-width: 420px) {
+  .auth-container {
+    margin: 180px auto 20px;
+    padding: 15px;
   }
 
-  .auth-title,
-  h2 {
-    font-size: 24px;
-    margin-bottom: 20px;
-  }
-
-  h3 {
-    font-size: 20px;
-  }
-
-  .auth-button,
-  .google-btn,
   button {
-    font-size: 14px;
-    padding: 12px 20px;
-  }
-
-  .auth-input,
-  input {
-    padding: 12px 14px;
-    font-size: 14px;
-  }
-
-  div[style*="display: flex"] {
-    flex-direction: column;
-  }
-
-  div[style*="display: flex"] button {
     width: 100%;
   }
-}
 
-@media (max-width: 400px) {
-  .auth-container,
-  .form-upload-container {
-    padding: 20px 16px;
+  .formulario input,
+  .auth-form input,
+  .song-list input {
+    font-size: 0.95rem;
   }
-
-  .google-btn {
-    font-size: 13px;
-    padding: 10px 16px;
-  }
-
-  .google-icon {
-    width: 18px;
-    height: 18px;
-  }
-}
-
-/* Animación de carga */
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-.auth-container p:first-of-type {
-  animation: pulse 2s ease-in-out infinite;
-}
-
-/* Mejoras de accesibilidad */
-button:focus-visible,
-input:focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-  scroll-padding-top: var(--nav-height);
-}
-
-/* Estilos para mensajes de error y éxito */
-div[style*="#fca5a5"] {
-  color: #fca5a5 !important;
-  background: rgba(239, 68, 68, 0.1);
-  padding: 12px;
-  border-radius: 8px;
-  border-left: 4px solid #ef4444;
-  margin-top: 12px !important;
-}
-
-div[style*="#bbf7d0"] {
-  color: #bbf7d0 !important;
-  background: rgba(16, 185, 129, 0.1);
-  padding: 12px;
-  border-radius: 8px;
-  border-left: 4px solid #10b981;
-  margin-top: 12px !important;
 }
