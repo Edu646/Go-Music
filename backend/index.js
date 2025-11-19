@@ -5,7 +5,12 @@ const path = require("path");
 const multer = require("multer");
 const mongoose = require("mongoose");
 const { v2: cloudinary } = require("cloudinary");
-const { CloudinaryStorage } = require("multer-storage-cloudinary"); // <-- 🛠 La sintaxis para el constructor
+
+// 🛠 CORRECCIÓN DEL ERROR: Importación robusta del constructor CloudinaryStorage
+// Importamos el objeto completo del módulo
+const storageModule = require("multer-storage-cloudinary");
+// Accedemos a la propiedad CloudinaryStorage
+const CloudinaryStorage = storageModule.CloudinaryStorage;
 
 const app = express();
 app.use(cors());
@@ -34,7 +39,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// 🛠 Uso de CloudinaryStorage (Esto soluciona el error)
+// Uso del constructor corregido
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
@@ -61,7 +66,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
       public_id: req.file.filename
     });
 
-    res.json(newSong); // Devolvemos el objeto completo, como espera el frontend
+    res.json(newSong);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error al subir" });
