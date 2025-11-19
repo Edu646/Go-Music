@@ -5,7 +5,7 @@ const path = require("path");
 const multer = require("multer");
 const mongoose = require("mongoose");
 const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const streamifier = require("streamifier");
 
 const app = express();
 app.use(cors());
@@ -43,22 +43,31 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Configuración de storage
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: "gomusic_uploads",
-    resource_type: "auto",
-    allowed_formats: ["mp3", "wav", "ogg", "m4a", "flac"]
-  },
-});
-
+// Configuración de Multer para almacenamiento en memoria
+const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
 
-// --- ENDPOINTS API (deben ir ANTES del frontend) ---
+// Función helper para subir a Cloudinary desde buffer
+const uploadToCloudinary = (buffer) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "gomusic_uploads",
+        resource_type: "auto"
+      },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    streamifier.createReadStream(buffer).pipe(uploadStream);
+  });
+};
+
+// --- ENDPOINTS API ---
 
 // 1. Subir Canción
 app.post("/upload", upload.single("file"), async (req, res) => {
@@ -69,19 +78,23 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     
     const { name, artist, username } = req.body;
 
+    // Subir a Cloudinary
+    const result = await uploadToCloudinary(req.file.buffer);
+
+    // Guardar en MongoDB
     const newSong = await Song.create({
       name: name || req.file.originalname,
       artist: artist || "Desconocido",
       uploadedBy: username || "Anónimo",
-      audio: req.file.path,
-      public_id: req.file.filename
+      audio: result.secure_url,
+      public_id: result.public_id
     });
 
     console.log("✅ Canción subida:", newSong.name);
     res.json(newSong);
   } catch (err) {
     console.error("❌ Error al subir:", err);
-    res.status(500).json({ error: "Error al subir la canción" });
+    res.status(500).json({ error: "Error al subir la canción: " + err.message });
   }
 });
 
@@ -139,11 +152,11 @@ app.delete("/songs/:id", async (req, res) => {
   }
 });
 
-// --- FRONTEND (debe ir DESPUÉS de todas las rutas API) ---
+// --- FRONTEND ---
 const frontendBuildPath = path.join(__dirname, "../frontend/gomusic/build");
 app.use(express.static(frontendBuildPath));
 
-// Catch-all route - CORREGIDO (sin el asterisco problemático)
+// Catch-all route para SPA
 app.get("/*", (req, res) => {
   res.sendFile(path.join(frontendBuildPath, "index.html"));
 });
