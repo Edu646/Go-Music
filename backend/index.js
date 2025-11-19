@@ -5,7 +5,18 @@ const path = require("path");
 const multer = require("multer");
 const mongoose = require("mongoose");
 const { v2: cloudinary } = require("cloudinary");
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
+
+// Importación robusta que funciona con diferentes versiones
+let CloudinaryStorage;
+try {
+  CloudinaryStorage = require("multer-storage-cloudinary").CloudinaryStorage;
+  if (!CloudinaryStorage) {
+    CloudinaryStorage = require("multer-storage-cloudinary");
+  }
+} catch (err) {
+  console.error("❌ Error cargando multer-storage-cloudinary:", err);
+  process.exit(1);
+}
 
 const app = express();
 app.use(cors());
@@ -30,8 +41,8 @@ const SongSchema = new mongoose.Schema({
   name: String,
   artist: String,
   uploadedBy: String,
-  audio: String,      // URL de Cloudinary
-  public_id: String,  // ID para borrarla si hiciera falta
+  audio: String,
+  public_id: String,
   createdAt: { type: Date, default: Date.now }
 });
 const Song = mongoose.model("Song", SongSchema);
@@ -43,7 +54,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Configuración de storage con Cloudinary
+// Configuración de storage
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
@@ -55,7 +66,7 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB máximo
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 
 // --- ENDPOINTS ---
@@ -69,12 +80,6 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     
     const { name, artist, username } = req.body;
 
-    // Validar que al menos tenga un nombre
-    if (!name && !req.file.originalname) {
-      return res.status(400).json({ error: "La canción debe tener un nombre" });
-    }
-
-    // Guardar datos en MongoDB
     const newSong = await Song.create({
       name: name || req.file.originalname,
       artist: artist || "Desconocido",
@@ -110,7 +115,6 @@ app.get("/search", async (req, res) => {
       const all = await Song.find().sort({ createdAt: -1 });
       return res.json(all);
     }
-    // Búsqueda flexible (insensible a mayúsculas)
     const results = await Song.find({
       $or: [
         { name: { $regex: query, $options: "i" } },
@@ -132,12 +136,10 @@ app.delete("/songs/:id", async (req, res) => {
       return res.status(404).json({ error: "Canción no encontrada" });
     }
 
-    // Eliminar de Cloudinary
     if (song.public_id) {
       await cloudinary.uploader.destroy(song.public_id, { resource_type: "video" });
     }
 
-    // Eliminar de MongoDB
     await Song.findByIdAndDelete(req.params.id);
     
     console.log("✅ Canción eliminada:", song.name);
@@ -149,11 +151,9 @@ app.delete("/songs/:id", async (req, res) => {
 });
 
 // --- FRONTEND ---
-// Servir la carpeta de compilación (build) de React
 const frontendBuildPath = path.join(__dirname, "../frontend/gomusic/build");
 app.use(express.static(frontendBuildPath));
 
-// Catch-all para SPA (debe ir al final)
 app.get("*", (req, res) => {
   res.sendFile(path.join(frontendBuildPath, "index.html"));
 });
