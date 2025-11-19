@@ -4,19 +4,8 @@ const cors = require("cors");
 const path = require("path");
 const multer = require("multer");
 const mongoose = require("mongoose");
-const { v2: cloudinary } = require("cloudinary");
-
-// Importación robusta que funciona con diferentes versiones
-let CloudinaryStorage;
-try {
-  CloudinaryStorage = require("multer-storage-cloudinary").CloudinaryStorage;
-  if (!CloudinaryStorage) {
-    CloudinaryStorage = require("multer-storage-cloudinary");
-  }
-} catch (err) {
-  console.error("❌ Error cargando multer-storage-cloudinary:", err);
-  process.exit(1);
-}
+const cloudinary = require("cloudinary").v2;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
 const app = express();
 app.use(cors());
@@ -69,7 +58,7 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// --- ENDPOINTS ---
+// --- ENDPOINTS API (deben ir ANTES del frontend) ---
 
 // 1. Subir Canción
 app.post("/upload", upload.single("file"), async (req, res) => {
@@ -150,11 +139,12 @@ app.delete("/songs/:id", async (req, res) => {
   }
 });
 
-// --- FRONTEND ---
+// --- FRONTEND (debe ir DESPUÉS de todas las rutas API) ---
 const frontendBuildPath = path.join(__dirname, "../frontend/gomusic/build");
 app.use(express.static(frontendBuildPath));
 
-app.get("*", (req, res) => {
+// Catch-all route - CORREGIDO (sin el asterisco problemático)
+app.get("/*", (req, res) => {
   res.sendFile(path.join(frontendBuildPath, "index.html"));
 });
 
