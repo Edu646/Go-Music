@@ -67,7 +67,7 @@ const uploadToCloudinary = (buffer) => {
   });
 };
 
-// --- ENDPOINTS API ---
+// --- ENDPOINTS API (ANTES del frontend) ---
 
 // 1. Subir Canción
 app.post("/upload", upload.single("file"), async (req, res) => {
@@ -152,12 +152,14 @@ app.delete("/songs/:id", async (req, res) => {
   }
 });
 
-// --- FRONTEND ---
+// --- FRONTEND (DESPUÉS de todas las rutas API) ---
 const frontendBuildPath = path.join(__dirname, "../frontend/gomusic/build");
+
+// Servir archivos estáticos
 app.use(express.static(frontendBuildPath));
 
-// Catch-all route para SPA
-app.get("/*", (req, res) => {
+// Catch-all usando middleware en lugar de route
+app.use((req, res) => {
   res.sendFile(path.join(frontendBuildPath, "index.html"));
 });
 
