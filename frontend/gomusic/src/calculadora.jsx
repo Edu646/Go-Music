@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import "./calculadora.css";
 import { usePlayer } from "./PlayerContext";
 
-const API_URL = process.env.REACT_APP_API_URL || ""; // Usa la variable de entorno o ruta relativa
+const API_URL = process.env.REACT_APP_API_URL || "";
 
 function SearchPlayer() {
   const [query, setQuery] = useState("");
@@ -17,9 +17,9 @@ function SearchPlayer() {
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
 
-      // Ajustar URLs de audio para producción
       const adjustedData = data.map((song) => ({
         ...song,
+        // Aseguramos que la URL sea completa para que la descarga funcione bien
         audio: song.audio.startsWith("http") ? song.audio : `${API_URL}${song.audio}`,
       }));
 
@@ -41,10 +41,18 @@ function SearchPlayer() {
     }
   };
 
+  // Función opcional para forzar la descarga si el atributo 'download' falla por CORS
+  const handleDownload = async (e, song) => {
+    // Si el backend está en el mismo dominio, el <a> funciona solo.
+    // Si quieres hacerlo visualmente o traquearlo, puedes usar esta función.
+    // Por ahora, confiaremos en el atributo download del HTML abajo.
+  };
+
   return (
-    <section className="search-player-container">
-      <h1>Buscar Canciones</h1>
+    <div className="search-container">
+      <h2>Buscar Canciones</h2>
       <form
+        className="search-box"
         onSubmit={(e) => {
           e.preventDefault();
           handleSearch();
@@ -52,7 +60,7 @@ function SearchPlayer() {
       >
         <input
           type="text"
-          placeholder="Escribe nombre o artista"
+          placeholder="Buscar..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleEnter}
@@ -60,17 +68,35 @@ function SearchPlayer() {
         <button type="submit">Buscar</button>
       </form>
 
-      <div style={{ marginTop: "20px" }}>
+      <div className="results-list">
         {results.map((song) => (
-          <div key={song.id} className="song-result">
-            <span>
-              <strong>{song.name}</strong> - {song.artist}
-            </span>
-            <button onClick={() => handlePlay(song)}>Play</button>
+          <div className="song-item" key={song.id || song.name}>
+            <div className="song-info">
+              {song.name} - {song.artist}
+            </div>
+            
+            <div className="song-actions">
+              {/* Botón de Reproducir */}
+              <button onClick={() => handlePlay(song)} style={{ marginRight: "10px" }}>
+                Play
+              </button>
+
+              {/* Botón de Descargar */}
+              <a 
+                href={song.audio} 
+                download={`${song.name}.mp3`} // Sugiere el nombre del archivo
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="btn-download" // Clase para darle estilo si quieres
+                style={{ textDecoration: 'none', border: '1px solid #ccc', padding: '2px 5px', color: 'black', background: '#f0f0f0' }}
+              >
+                Descargar
+              </a>
+            </div>
           </div>
         ))}
       </div>
-    </section>
+    </div>
   );
 }
 
