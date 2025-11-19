@@ -5,21 +5,25 @@ const path = require("path");
 const multer = require("multer");
 const mongoose = require("mongoose");
 const { v2: cloudinary } = require("cloudinary");
-
-// 🛠 CORRECCIÓN DEL ERROR: Importación robusta del constructor CloudinaryStorage
-// Importamos el objeto completo del módulo
-const storageModule = require("multer-storage-cloudinary");
-// Accedemos a la propiedad CloudinaryStorage
-const CloudinaryStorage = storageModule.CloudinaryStorage;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Validación de variables de entorno
+if (!process.env.MONGO_URI || !process.env.CLOUDINARY_CLOUD_NAME) {
+  console.error("❌ Faltan variables de entorno críticas");
+  process.exit(1);
+}
+
 // --- CONEXIÓN A MONGODB ---
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Conectado a MongoDB Atlas"))
-  .catch(err => console.error("❌ Error conectando a MongoDB:", err));
+  .catch(err => {
+    console.error("❌ Error conectando a MongoDB:", err);
+    process.exit(1);
+  });
 
 // Definir cómo se ve una canción en la base de datos
 const SongSchema = new mongoose.Schema({
@@ -39,37 +43,51 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Uso del constructor corregido
+// Configuración de storage con Cloudinary
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: "gomusic_uploads",
     resource_type: "auto",
+    allowed_formats: ["mp3", "wav", "ogg", "m4a", "flac"]
   },
 });
-const upload = multer({ storage: storage });
+
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB máximo
+});
 
 // --- ENDPOINTS ---
 
 // 1. Subir Canción
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "Falta el archivo" });
+    if (!req.file) {
+      return res.status(400).json({ error: "Falta el archivo de audio" });
+    }
+    
     const { name, artist, username } = req.body;
+
+    // Validar que al menos tenga un nombre
+    if (!name && !req.file.originalname) {
+      return res.status(400).json({ error: "La canción debe tener un nombre" });
+    }
 
     // Guardar datos en MongoDB
     const newSong = await Song.create({
       name: name || req.file.originalname,
       artist: artist || "Desconocido",
       uploadedBy: username || "Anónimo",
-      audio: req.file.path, // Cloudinary nos da esta URL automáticamente
+      audio: req.file.path,
       public_id: req.file.filename
     });
 
+    console.log("✅ Canción subida:", newSong.name);
     res.json(newSong);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error al subir" });
+    console.error("❌ Error al subir:", err);
+    res.status(500).json({ error: "Error al subir la canción" });
   }
 });
 
@@ -79,6 +97,7 @@ app.get("/songs", async (req, res) => {
     const songs = await Song.find().sort({ createdAt: -1 });
     res.json(songs);
   } catch (err) {
+    console.error("❌ Error obteniendo canciones:", err);
     res.status(500).json({ error: "Error obteniendo canciones" });
   }
 });
@@ -88,7 +107,7 @@ app.get("/search", async (req, res) => {
   try {
     const query = req.query.q;
     if (!query) {
-      const all = await Song.find();
+      const all = await Song.find().sort({ createdAt: -1 });
       return res.json(all);
     }
     // Búsqueda flexible (insensible a mayúsculas)
@@ -97,10 +116,35 @@ app.get("/search", async (req, res) => {
         { name: { $regex: query, $options: "i" } },
         { artist: { $regex: query, $options: "i" } }
       ]
-    });
+    }).sort({ createdAt: -1 });
     res.json(results);
   } catch (err) {
-    res.status(500).json({ error: "Error buscando" });
+    console.error("❌ Error buscando:", err);
+    res.status(500).json({ error: "Error buscando canciones" });
+  }
+});
+
+// 4. Eliminar Canción
+app.delete("/songs/:id", async (req, res) => {
+  try {
+    const song = await Song.findById(req.params.id);
+    if (!song) {
+      return res.status(404).json({ error: "Canción no encontrada" });
+    }
+
+    // Eliminar de Cloudinary
+    if (song.public_id) {
+      await cloudinary.uploader.destroy(song.public_id, { resource_type: "video" });
+    }
+
+    // Eliminar de MongoDB
+    await Song.findByIdAndDelete(req.params.id);
+    
+    console.log("✅ Canción eliminada:", song.name);
+    res.json({ message: "Canción eliminada correctamente" });
+  } catch (err) {
+    console.error("❌ Error al eliminar:", err);
+    res.status(500).json({ error: "Error al eliminar la canción" });
   }
 });
 
@@ -109,10 +153,14 @@ app.get("/search", async (req, res) => {
 const frontendBuildPath = path.join(__dirname, "../frontend/gomusic/build");
 app.use(express.static(frontendBuildPath));
 
-app.get(/.*/, (req, res) => {
+// Catch-all para SPA (debe ir al final)
+app.get("*", (req, res) => {
   res.sendFile(path.join(frontendBuildPath, "index.html"));
 });
 
 // --- INICIO ---
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`✅ Servidor listo en puerto ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`✅ Servidor listo en puerto ${PORT}`);
+  console.log(`📁 Sirviendo frontend desde: ${frontendBuildPath}`);
+});
