@@ -6,18 +6,25 @@ const multer = require("multer");
 const mongoose = require("mongoose");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
+const http = require("http");            // NECESARIO PARA SOCKET.IO
+const { Server } = require("socket.io"); // SOCKET.IO
 
 const app = express();
+const server = http.createServer(app);   // Servidor combinado para Express + Socket.io
+const io = new Server(server, {
+  cors: { origin: "*" }
+});
+
 app.use(cors());
 app.use(express.json());
 
-// Validación de variables de entorno
+// --- VALIDACIÓN VARIABLES ENTORNO ---
 if (!process.env.MONGO_URI || !process.env.CLOUDINARY_CLOUD_NAME) {
   console.error("❌ Faltan variables de entorno críticas");
   process.exit(1);
 }
 
-// --- CONEXIÓN A MONGODB ---
+// --- CONEXIÓN MONGODB ---
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Conectado a MongoDB Atlas"))
   .catch(err => {
@@ -25,7 +32,7 @@ mongoose.connect(process.env.MONGO_URI)
     process.exit(1);
   });
 
-// Definir cómo se ve una canción en la base de datos
+// --- MODELO CANCIONES ---
 const SongSchema = new mongoose.Schema({
   name: String,
   artist: String,
@@ -36,21 +43,26 @@ const SongSchema = new mongoose.Schema({
 });
 const Song = mongoose.model("Song", SongSchema);
 
-// --- CONFIGURACIÓN CLOUDINARY ---
+// --- MODELO MENSAJES DE CHAT ---
+const MessageSchema = new mongoose.Schema({
+  sender: String,
+  text: String,
+  createdAt: { type: Date, default: Date.now }
+});
+const Message = mongoose.model("Message", MessageSchema);
+
+// --- CONFIG CLOUDINARY ---
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Configuración de Multer para almacenamiento en memoria
+// --- MULTER ---
 const storage = multer.memoryStorage();
-const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
-});
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-// Función helper para subir a Cloudinary desde buffer
+// --- SUBIR AUDIO A CLOUDINARY ---
 const uploadToCloudinary = (buffer) => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -67,21 +79,18 @@ const uploadToCloudinary = (buffer) => {
   });
 };
 
-// --- ENDPOINTS API (ANTES del frontend) ---
+// -------------------------------------------------------
+//  RUTAS API DE AUDIOS
+// -------------------------------------------------------
 
-// 1. Subir Canción
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: "Falta el archivo de audio" });
-    }
-    
+    if (!req.file) return res.status(400).json({ error: "Falta archivo" });
+
     const { name, artist, username } = req.body;
 
-    // Subir a Cloudinary
     const result = await uploadToCloudinary(req.file.buffer);
 
-    // Guardar en MongoDB
     const newSong = await Song.create({
       name: name || req.file.originalname,
       artist: artist || "Desconocido",
@@ -90,82 +99,84 @@ app.post("/upload", upload.single("file"), async (req, res) => {
       public_id: result.public_id
     });
 
-    console.log("✅ Canción subida:", newSong.name);
     res.json(newSong);
   } catch (err) {
-    console.error("❌ Error al subir:", err);
-    res.status(500).json({ error: "Error al subir la canción: " + err.message });
+    res.status(500).json({ error: "Error subiendo canción: " + err.message });
   }
 });
 
-// 2. Listar Canciones
 app.get("/songs", async (req, res) => {
   try {
     const songs = await Song.find().sort({ createdAt: -1 });
     res.json(songs);
-  } catch (err) {
-    console.error("❌ Error obteniendo canciones:", err);
+  } catch {
     res.status(500).json({ error: "Error obteniendo canciones" });
   }
 });
 
-// 3. Buscar Canciones
-app.get("/search", async (req, res) => {
-  try {
-    const query = req.query.q;
-    if (!query) {
-      const all = await Song.find().sort({ createdAt: -1 });
-      return res.json(all);
-    }
-    const results = await Song.find({
-      $or: [
-        { name: { $regex: query, $options: "i" } },
-        { artist: { $regex: query, $options: "i" } }
-      ]
-    }).sort({ createdAt: -1 });
-    res.json(results);
-  } catch (err) {
-    console.error("❌ Error buscando:", err);
-    res.status(500).json({ error: "Error buscando canciones" });
-  }
-});
-
-// 4. Eliminar Canción
 app.delete("/songs/:id", async (req, res) => {
   try {
     const song = await Song.findById(req.params.id);
-    if (!song) {
-      return res.status(404).json({ error: "Canción no encontrada" });
-    }
+    if (!song) return res.status(404).json({ error: "No encontrada" });
 
     if (song.public_id) {
       await cloudinary.uploader.destroy(song.public_id, { resource_type: "video" });
     }
 
     await Song.findByIdAndDelete(req.params.id);
-    
-    console.log("✅ Canción eliminada:", song.name);
-    res.json({ message: "Canción eliminada correctamente" });
-  } catch (err) {
-    console.error("❌ Error al eliminar:", err);
-    res.status(500).json({ error: "Error al eliminar la canción" });
+    res.json({ message: "Canción eliminada" });
+  } catch {
+    res.status(500).json({ error: "Error eliminando canción" });
   }
 });
 
-// --- FRONTEND (DESPUÉS de todas las rutas API) ---
-const frontendBuildPath = path.join(__dirname, "../frontend/gomusic/build");
+// -------------------------------------------------------
+//  CHAT GLOBAL REAL-TIME
+// -------------------------------------------------------
 
-// Servir archivos estáticos
-app.use(express.static(frontendBuildPath));
-
-// Catch-all usando middleware en lugar de route
-app.use((req, res) => {
-  res.sendFile(path.join(frontendBuildPath, "index.html"));
+// Obtener mensajes guardados
+app.get("/messages", async (req, res) => {
+  const msgs = await Message.find().sort({ createdAt: 1 });
+  res.json(msgs);
 });
 
-// --- INICIO ---
+// Eventos de chat en tiempo real
+io.on("connection", (socket) => {
+  console.log("🟢 Usuario conectado:", socket.id);
+
+  // Recibir mensaje y enviarlo a todos
+  socket.on("sendMessage", async (data) => {
+    const message = await Message.create({
+      sender: data.sender,
+      text: data.text
+    });
+
+    io.emit("newMessage", message); // Notifica a TODOS
+  });
+
+  socket.on("disconnect", () => {
+    console.log("🔴 Usuario desconectado:", socket.id);
+  });
+});
+
+// -------------------------------------------------------
+//  FRONTEND REACT
+// -------------------------------------------------------
+
+const frontendPath = path.join(__dirname, "../frontend/gomusic/build");
+app.use(express.static(frontendPath));
+
+app.use((req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
+});
+
+// -------------------------------------------------------
+//  INICIO DEL SERVIDOR
+// -------------------------------------------------------
+
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`✅ Servidor listo en puerto ${PORT}`);
-  console.log(`📁 Sirviendo frontend desde: ${frontendBuildPath}`);
+
+server.listen(PORT, () => {
+  console.log(`✅ Servidor con chat listo en puerto ${PORT}`);
+  console.log(`📁 Frontend servido desde: ${frontendPath}`);
 });
