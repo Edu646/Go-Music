@@ -13,7 +13,7 @@ export default function Chat() {
 
   useEffect(() => {
     if (!username) {
-      navigate("/SESION");
+      navigate("/login");
       return;
     }
 
