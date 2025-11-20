@@ -11,34 +11,31 @@ export default function Chat() {
   const [newCount, setNewCount] = useState(0);
   const username = getCurrentUser();
 
+  // Protección de acceso: solo redirige si no hay usuario
   useEffect(() => {
     if (!username) {
-      navigate("/SESION");
+      navigate("/SESION"); // o "/login" según tu ruta de login
       return;
-    }else {
-       navigate("/CHAT");
     }
 
-    
-
+    // Traer mensajes iniciales
     fetch("/messages")
       .then(res => res.json())
       .then(data => setMessages(data));
 
+    // Escuchar mensajes nuevos
     socket.on("newMessage", msg => {
       setMessages(prev => [...prev, msg]);
 
       // Contador de mensajes nuevos si la pestaña no tiene foco
-      if (document.hidden) {
-        setNewCount(prev => prev + 1);
-      }
+      if (document.hidden) setNewCount(prev => prev + 1);
     });
 
     return () => socket.off("newMessage");
   }, [username, navigate]);
 
+  // Reset contador cuando la pestaña vuelve visible
   useEffect(() => {
-    // Cuando la pestaña vuelve a estar visible, reinicia el contador
     const handleVisibility = () => {
       if (!document.hidden) setNewCount(0);
     };
@@ -51,6 +48,9 @@ export default function Chat() {
     socket.emit("sendMessage", { sender: username, text });
     setText("");
   };
+
+  // Mientras redirige al login si no hay usuario
+  if (!username) return null;
 
   return (
     <div className="chat-container">
