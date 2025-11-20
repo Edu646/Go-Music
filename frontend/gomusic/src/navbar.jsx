@@ -18,7 +18,7 @@ function Navbar() {
           <NavLink to="/playlist" className={({ isActive }) => isActive ? "active" : ""}>Playlist</NavLink>
         </li>
         <li>
-          <Link to="/about">Chat </Link>
+          <Link to="/Chat">Chat </Link>
         </li>
 
         <li>
