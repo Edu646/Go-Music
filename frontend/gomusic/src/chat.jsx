@@ -13,9 +13,13 @@ export default function Chat() {
 
   useEffect(() => {
     if (!username) {
-      navigate("/login");
+      navigate("/SESION");
       return;
+    }else {
+       navigate("/CHAT");
     }
+
+    
 
     fetch("/messages")
       .then(res => res.json())
