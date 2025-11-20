@@ -3,9 +3,9 @@ import "./Inicio.css";
 
 function Inicio() {
   const images = [
-    "/img/carrusel1.jpg",
-    "/img/carrusel2.jpg",
-    "/img/carrusel3.jpg"
+    "/imagenes/Gemini_Generated_Image_grymgwgrymgwgrym (1).png",
+    "/imagenes/Gemini_Generated_Image_grymgwgrymgwgrym (2).png",
+    "/imagenes/Gemini_Generated_Image_grymgwgrymgwgrym (3).png"
   ];
 
   const [index, setIndex] = useState(0);
