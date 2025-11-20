@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import "./calculadora.css";
 import { usePlayer } from "./PlayerContext";
-
+import "./calculadora.css";
 const API_URL = process.env.REACT_APP_API_URL || "";
 
 function SearchPlayer() {

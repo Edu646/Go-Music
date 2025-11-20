@@ -1,6 +1,10 @@
 // ...existing code...
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { 
+  initializeAuth, 
+  browserSessionPersistence, 
+  GoogleAuthProvider 
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
@@ -21,7 +25,12 @@ if (!getApps().length) {
   app = getApp();
 }
 
-export const auth = getAuth(app);
+// ⛔ Antes tenías: export const auth = getAuth(app);
+// ✅ Ahora lo cambiamos a initializeAuth con persistence por pestaña
+export const auth = initializeAuth(app, {
+  persistence: browserSessionPersistence
+});
+
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
 export const storage = getStorage(app);
