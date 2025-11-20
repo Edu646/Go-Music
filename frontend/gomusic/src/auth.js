@@ -1,12 +1,13 @@
 // src/auth.js
 export const getCurrentUser = () => {
-  return localStorage.getItem("username") || null;
+  const u = localStorage.getItem("gomusic_user");
+  return u ? JSON.parse(u).username : null; // devuelve solo el username
 };
 
-export const setCurrentUser = (username) => {
-  localStorage.setItem("username", username);
+export const setCurrentUser = (userObj) => {
+  localStorage.setItem("gomusic_user", JSON.stringify(userObj));
 };
 
 export const logoutUser = () => {
-  localStorage.removeItem("username");
+  localStorage.removeItem("gomusic_user");
 };
