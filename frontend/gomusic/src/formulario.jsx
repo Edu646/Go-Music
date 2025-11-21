@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-// 🛠️ FIX 1: Importamos el socket para la desconexión
 import socket from "./socket"; 
 import { auth, googleProvider, storage } from "./firebaseconfig";
 import {
@@ -13,13 +12,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import "./formulario.css";
 
-// -------------------------------------------------------
-// 🛠️ FIX 2: Definiciones de Componentes Auxiliares
-// Las movemos o mantenemos al final, asegurándonos de que sean 
-// funciones regulares que Formulario pueda usar en su JSX.
-// -------------------------------------------------------
-
-// Componente Subida
+// Componente Subida (Mantenido sin cambios funcionales)
 function FormularioSubida({ user, refreshSongs }) {
   const [file, setFile] = useState(null);
   const [name, setName] = useState("");
@@ -67,7 +60,7 @@ function FormularioSubida({ user, refreshSongs }) {
   );
 }
 
-// Componente Lista de Canciones
+// Componente Lista de Canciones (Mantenido sin cambios funcionales)
 function SongList({ songs, search, setSearch, refreshSongs }) {
   const handleSearchChange = (e) => setSearch(e.target.value);
 
@@ -78,7 +71,7 @@ function SongList({ songs, search, setSearch, refreshSongs }) {
     try {
       const res = await fetch(`/songs/${id}`, { method: "DELETE" });
       if (res.ok) {
-        refreshSongs(); // Recarga la lista
+        refreshSongs(); 
       } else {
         alert("Error eliminando la canción.");
       }
@@ -115,6 +108,16 @@ function SongList({ songs, search, setSearch, refreshSongs }) {
 // COMPONENTE PRINCIPAL
 // -------------------------------------------------------
 
+// Función auxiliar para emitir conexión y estado online
+const connectAndEmitOnline = (username) => {
+    if (socket && !socket.connected) {
+      socket.connect();
+    }
+    if (socket) {
+      socket.emit("userOnline", username);
+    }
+};
+
 export default function Formulario() {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ username: "", email: "", password: "" });
@@ -125,10 +128,8 @@ export default function Formulario() {
   const [songs, setSongs] = useState([]);
   const [search, setSearch] = useState("");
 
-  // 🛠️ FIX 3: Ajuste de la ruta de búsqueda
   const fetchSongs = useCallback(async () => {
     try {
-      // Usamos /songs y pasamos 'q' como query param, la mejor práctica RESTful
       const query = search ? `/songs?q=${encodeURIComponent(search)}` : '/songs';
       const res = await fetch(query);
       const data = await res.json();
@@ -146,35 +147,40 @@ export default function Formulario() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
+        // 🚨 FIX: Intenta obtener el username de localStorage primero si existe 
+        // para evitar que el displayName (que a veces tarda en actualizarse)
+        // ponga un valor genérico temporalmente.
+        const storedUser = JSON.parse(localStorage.getItem("gomusic_user"));
+        
         const u = {
-          username: firebaseUser.displayName || firebaseUser.email.split("@")[0],
+          // Usamos el username guardado o el displayName si existe. 
+          // Si no, usamos la parte del email.
+          username: storedUser?.username || firebaseUser.displayName || firebaseUser.email.split("@")[0],
           email: firebaseUser.email,
           avatar: firebaseUser.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png"
         };
+        
         setUser(u);
         localStorage.setItem("gomusic_user", JSON.stringify(u)); 
         
-        // 🚨 IMPORTANTE: Conectar el socket al iniciar sesión
-        if (socket && !socket.connected && u.username) {
-             socket.connect();
-             socket.emit("userOnline", u.username);
+        // Conectar el socket al iniciar sesión
+        if (u.username) {
+          connectAndEmitOnline(u.username);
         }
         
       } else {
         setUser(null);
         localStorage.removeItem("gomusic_user");
         
-        // 🚨 IMPORTANTE: Desconectar el socket si la sesión se pierde
+        // Desconectar el socket si la sesión se pierde
         if (socket && socket.connected) {
-             socket.disconnect();
+          socket.disconnect();
         }
       }
     });
     return () => unsubscribe();
   }, []);
 
-  // 🛠️ FIX 4: Definición de las funciones (que son las mismas que tenías)
-  // Las definiciones deben estar aquí para evitar el error 'no-undef'
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
   const handlePhotoChange = (e) => setPhotoFile(e.target.files[0]);
 
@@ -203,8 +209,7 @@ export default function Formulario() {
         setMessage("Sesión iniciada correctamente");
         
         // Emitir estado online al iniciar sesión
-        if (socket && !socket.connected) socket.connect();
-        socket.emit("userOnline", u.username);
+        connectAndEmitOnline(u.username);
         
       } else {
         const cred = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
@@ -220,8 +225,7 @@ export default function Formulario() {
         setMessage("Cuenta creada correctamente");
 
         // Emitir estado online al registrarse
-        if (socket && !socket.connected) socket.connect();
-        socket.emit("userOnline", u.username);
+        connectAndEmitOnline(u.username);
       }
       setFormData({ username: "", email: "", password: "" });
       setPhotoFile(null);
@@ -244,8 +248,7 @@ export default function Formulario() {
       setMessage("Sesión iniciada con Google");
       
       // Emitir estado online
-      if (socket && !socket.connected) socket.connect();
-      socket.emit("userOnline", u.username);
+      connectAndEmitOnline(u.username);
       
     } catch (err) {
       console.log(err);
@@ -253,17 +256,14 @@ export default function Formulario() {
     }
   };
 
-  // 🚨 SOLUCIÓN BUG: Desconexión explícita del Socket.io
+  // Desconexión explícita del Socket.io y cierre de sesión
   const handleLogout = async () => {
-    // 1. Desconexión de Socket.io
     if (socket && socket.connected) {
       socket.disconnect(); 
     }
     
-    // 2. Cierre de sesión en Firebase
     await signOut(auth);
     
-    // 3. Limpieza de estado local
     setUser(null);
     localStorage.removeItem("gomusic_user"); 
     setMessage("Sesión cerrada");
@@ -279,7 +279,6 @@ export default function Formulario() {
       {!user ? (
         <>
           <h2>{isLogin ? "Iniciar sesión" : "Crear cuenta"}</h2>
-          {/* FIX: Las funciones ahora están definidas en el scope */}
           <form onSubmit={handleAuth} className="auth-form"> 
             {!isLogin && (
               <>
@@ -292,7 +291,6 @@ export default function Formulario() {
             <button type="submit">{isLogin ? "Iniciar sesión" : "Crear cuenta"}</button>
           </form>
 
-          {/* FIX: handleGoogle ahora está definida */}
           <button onClick={handleGoogle} className="google-btn">Iniciar sesión con Google</button>
           <button onClick={toggleForm} className="auth-toggle">{isLogin ? "¿No tienes cuenta? Crear cuenta" : "¿Ya tienes cuenta? Iniciar sesión"}</button>
           {message && <p className="message">{message}</p>}
@@ -306,7 +304,6 @@ export default function Formulario() {
             <button onClick={handleLogout} className="logout-btn">Cerrar sesión</button>
           </div>
 
-          {/* FIX: Los componentes auxiliares FormularioSubida y SongList están definidos */}
           <FormularioSubida user={user} refreshSongs={fetchSongs} />
 
           <SongList songs={songs} search={search} setSearch={setSearch} refreshSongs={fetchSongs} />
