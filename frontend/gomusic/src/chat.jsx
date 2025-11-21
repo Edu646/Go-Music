@@ -1,287 +1,331 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import socket from "./socket";
-import { getCurrentUser } from "./auth";
-import "./chat.css"; 
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import socket from './socket'; // Asegúrate de que la ruta sea correcta
+import './chat.css'; // Asumo que usas el CSS profesional que te di antes
+
+// Obtener el usuario del almacenamiento local (asumiendo que Formulario.jsx lo guarda)
+const getUsername = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem("gomusic_user"));
+    return user?.username || "Anónimo";
+  } catch {
+    return "Anónimo";
+  }
+};
 
 export default function Chat() {
-  const navigate = useNavigate();
-  const [messages, setMessages] = useState([]);
+  const username = getUsername();
+  
+  // Estado principal de la vista y mensajes
+  const [view, setView] = useState("global"); // 'global' o 'private'
   const [text, setText] = useState("");
-  const [newCount, setNewCount] = useState(0);
+  const [globalMessages, setGlobalMessages] = useState([]);
+  const [privateChats, setPrivateChats] = useState({}); // { 'userB': [{msg}, {msg}, ...], 'userC': [...] }
   
-  // Estados para usuarios
+  // Estado de usuarios y selección
   const [onlineUsers, setOnlineUsers] = useState([]);
-  const [allUsers, setAllUsers] = useState([]); // Lista completa de la BD
-  const [searchTerm, setSearchTerm] = useState(""); // Texto del buscador
-
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [privateChats, setPrivateChats] = useState({});
-  const [unreadPrivate, setUnreadPrivate] = useState({});
-  const [view, setView] = useState("global"); 
+  const [allPotentialUsers, setAllPotentialUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null); // Usuario seleccionado para chat privado
+  const [search, setSearch] = useState("");
   
-  const username = getCurrentUser();
+  // Referencia para el scroll automático
+  const messagesEndRef = useRef(null);
 
-  // --- EFECTOS ---
+  // ----------------------------------------------------
+  // 1. LÓGICA DE CONEXIÓN Y CARGA INICIAL
+  // ----------------------------------------------------
+
+  const fetchInitialData = useCallback(async () => {
+    // A. Cargar mensajes globales (REST API)
+    try {
+      const globalRes = await fetch("/messages");
+      const globalData = await globalRes.json();
+      setGlobalMessages(globalData);
+    } catch (err) {
+      console.error("Error cargando mensajes globales:", err);
+    }
+
+    // B. Cargar todos los mensajes privados del usuario (REST API)
+    try {
+      const privateRes = await fetch(`/private-messages?username=${username}`);
+      const privateData = await privateRes.json();
+      
+      // Reorganizar mensajes privados en el formato de estado { [otherUser]: [msgs] }
+      const organizedChats = {};
+      privateData.forEach(msg => {
+        const otherUser = msg.sender === username ? msg.recipient : msg.sender;
+        if (!organizedChats[otherUser]) {
+          organizedChats[otherUser] = [];
+        }
+        organizedChats[otherUser].push(msg);
+      });
+      setPrivateChats(organizedChats);
+    } catch (err) {
+      console.error("Error cargando mensajes privados:", err);
+    }
+    
+    // C. Cargar todos los usuarios potenciales (para el buscador)
+    try {
+        const userRes = await fetch("/users"); // El nuevo endpoint
+        const userData = await userRes.json();
+        setAllPotentialUsers(userData);
+    } catch (err) {
+        console.error("Error cargando usuarios potenciales:", err);
+    }
+
+  }, [username]);
 
   useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
+    if (username === "Anónimo") return;
+
+    fetchInitialData();
+
+    // 1. Conectar y notificar que estás online
+    if (!socket.connected) {
+      socket.connect();
     }
-  }, []);
-
-  useEffect(() => {
-    if (!username) {
-      navigate("/SESION");
-      return;
-    }
-
-    // 1. Cargar TODOS los usuarios registrados (para poder buscarlos)
-    fetch("/users")
-      .then(res => res.json())
-      .then(data => {
-        // Aseguramos que sea un array de strings (nombres)
-        const userList = data.map(u => (typeof u === 'object' ? u.username : u));
-        setAllUsers(userList.filter(u => u !== username));
-      })
-      .catch(() => console.log("No se pudo cargar la lista global de usuarios"));
-
-    // 2. Cargar mensajes globales
-    fetch("/messages")
-      .then(res => res.json())
-      .then(data => setMessages(data))
-      .catch(err => console.error(err));
-
-    // 3. Cargar historial de chats privados
-    fetch(`/private-messages?username=${username}`)
-      .then(res => res.json())
-      .then(data => {
-        const chats = {};
-        const unread = {};
-        data.forEach(msg => {
-          const otherUser = msg.sender === username ? msg.recipient : msg.sender;
-          if (!chats[otherUser]) chats[otherUser] = [];
-          chats[otherUser].push(msg);
-          if (msg.recipient === username && !msg.read) {
-            unread[msg.sender] = (unread[msg.sender] || 0) + 1;
-          }
-        });
-        setPrivateChats(chats);
-        setUnreadPrivate(unread);
-      })
-      .catch(err => console.error(err));
-
-    // Socket
     socket.emit("userOnline", username);
-
-    socket.on("onlineUsers", users => {
-      setOnlineUsers(users.filter(u => u !== username));
+    
+    // 2. Listener para recibir la lista de usuarios en línea
+    socket.on("onlineUsers", (users) => {
+      setOnlineUsers(users);
     });
 
-    socket.on("newMessage", msg => {
-      setMessages(prev => [...prev, msg]);
-      if (document.hidden || view !== "global") {
-        setNewCount(prev => prev + 1);
-        showNotification("Chat Global", `${msg.sender}: ${msg.text}`);
-      }
+    // 3. Listener para mensajes GLOBAL
+    socket.on("newMessage", (msg) => {
+      setGlobalMessages(prev => [...prev, msg]);
     });
 
-    socket.on("privateMessage", msg => {
+    // 4. Listener para mensajes PRIVADOS
+    socket.on("privateMessage", (msg) => {
+      // Determina el chat correcto: si soy el sender, el otro es el recipient, y viceversa.
       const otherUser = msg.sender === username ? msg.recipient : msg.sender;
+      
       setPrivateChats(prev => ({
         ...prev,
         [otherUser]: [...(prev[otherUser] || []), msg]
       }));
       
-      // Si me habla alguien nuevo, asegurarnos de tenerlo en la lista
-      setAllUsers(prev => {
-        if (!prev.includes(otherUser)) return [...prev, otherUser];
-        return prev;
-      });
-
-      if (msg.recipient === username && (selectedUser !== msg.sender || view !== "private" || document.hidden)) {
-        setUnreadPrivate(prev => ({
-          ...prev,
-          [msg.sender]: (prev[msg.sender] || 0) + 1
-        }));
-        showNotification(`Mensaje de ${msg.sender}`, msg.text);
+      // Lógica de "Marcar como leído" si el chat está abierto
+      if (view === 'private' && selectedUser === otherUser && msg.recipient === username) {
+        markMessagesAsRead(msg.sender);
       }
     });
 
+    // Cleanup: Desconectar los listeners al desmontar
     return () => {
+      socket.off("onlineUsers");
       socket.off("newMessage");
       socket.off("privateMessage");
-      socket.off("onlineUsers");
+      // Opcional: socket.disconnect(); si es la última pestaña
     };
-  }, [username, navigate, selectedUser, view]);
+  }, [username, fetchInitialData]);
 
-  // ... Helpers (showNotification, markAsRead, send, openPrivateChat) ...
-  // (Los pongo resumidos para ahorrar espacio, son iguales que antes)
-  const showNotification = (title, body) => { /* igual que antes */ };
+  // Scroll al final al recibir nuevos mensajes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [globalMessages, privateChats, selectedUser]);
   
-  const markAsRead = (sender) => {
-    setUnreadPrivate(prev => ({ ...prev, [sender]: 0 }));
-    fetch("/private-messages/mark-read", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, sender })
-    }).catch(err => console.error(err));
-  };
+  // Función para marcar mensajes como leídos
+  const markMessagesAsRead = useCallback(async (sender) => {
+    try {
+      await fetch("/private-messages/mark-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, sender }),
+      });
+      // Actualizar el estado local para reflejar que fueron leídos
+      setPrivateChats(prev => {
+        const updatedMsgs = (prev[sender] || []).map(msg => 
+          msg.recipient === username ? { ...msg, read: true } : msg
+        );
+        return { ...prev, [sender]: updatedMsgs };
+      });
+      
+    } catch (err) {
+      console.error("Error marcando mensajes como leídos:", err);
+    }
+  }, [username]);
+
+  // ----------------------------------------------------
+  // 2. LÓGICA DE ENVÍO DE MENSAJES (FIX DOBLE ENVÍO)
+  // ----------------------------------------------------
 
   const send = () => {
-    if (!text.trim()) return;
+    if (!text.trim() || username === "Anónimo") return;
+    
     if (view === "global") {
+      // Solo emitimos. El socket.on("newMessage") lo añade.
       socket.emit("sendMessage", { sender: username, text });
+      
     } else if (view === "private" && selectedUser) {
-      const newMsg = { sender: username, recipient: selectedUser, text, createdAt: new Date() };
-      setPrivateChats(prev => ({ ...prev, [selectedUser]: [...(prev[selectedUser] || []), newMsg] }));
+      
+      // 🚨 FIX DOBLE ENVÍO: SOLO EMITIMOS. 
+      // La actualización de 'setPrivateChats' se hace ÚNICAMENTE 
+      // en el listener socket.on("privateMessage") (la confirmación del server).
       socket.emit("sendPrivateMessage", { sender: username, recipient: selectedUser, text });
     }
+    
     setText("");
   };
 
-  const openPrivateChat = (user) => {
-    setSelectedUser(user);
-    setView("private");
-    markAsRead(user);
-    // Nota: No borramos el searchTerm para que el usuario siga viendo la lista filtrada si quiere
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      send();
+    }
   };
 
-  // --- LÓGICA DE FILTRADO (LA CLAVE) ---
-  let usersToDisplay = [];
+  // ----------------------------------------------------
+  // 3. LÓGICA DE BARRA LATERAL (FIX ENVIAR A SÍ MISMO)
+  // ----------------------------------------------------
+  
+  const handleUserSelect = (user) => {
+    setSelectedUser(user);
+    setView("private");
+    
+    // Si selecciono un usuario que me envió mensajes, los marco como leídos
+    if (privateChats[user]?.some(msg => msg.recipient === username && !msg.read)) {
+        markMessagesAsRead(user);
+    }
+  };
 
-  if (searchTerm.trim() === "") {
-    // 1. MODO "MIS CHATS": Si no busca nada, mostramos historial + conectados
-    const historyUsers = Object.keys(privateChats);
-    usersToDisplay = Array.from(new Set([...onlineUsers, ...historyUsers]));
-  } else {
-    // 2. MODO "BÚSQUEDA": Si escribe, buscamos en TODOS los usuarios (allUsers)
-    usersToDisplay = allUsers.filter(u => 
-      u.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }
+  const combinedUsers = Array.from(new Set([
+    ...onlineUsers,
+    ...allPotentialUsers,
+    ...Object.keys(privateChats) // Incluir usuarios con los que ya chateé
+  ]));
+  
+  // 🚨 FIX ENVIAR A SÍ MISMO: Filtramos el usuario actual de la lista.
+  const filteredUsers = combinedUsers.filter(u => u !== username);
+  
+  // Aplicar el filtro de búsqueda
+  const chatPartners = filteredUsers.filter(u => 
+    u.toLowerCase().includes(search.toLowerCase())
+  );
+  
+  // Función auxiliar para obtener el estado y el último mensaje
+  const getUserChatDetails = (user) => {
+    const isOnline = onlineUsers.includes(user);
+    const msgs = privateChats[user] || [];
+    const lastMsg = msgs[msgs.length - 1];
+    const unreadCount = msgs.filter(msg => msg.recipient === username && !msg.read).length;
+    
+    return {
+      isOnline,
+      lastMsgText: lastMsg ? (lastMsg.sender === username ? 'Tú: ' : '') + lastMsg.text : 'Iniciar chat...',
+      unreadCount
+    };
+  };
 
-  // Ordenar: Conectados arriba, luego alfabético
-  usersToDisplay.sort((a, b) => {
-    const aOnline = onlineUsers.includes(a);
-    const bOnline = onlineUsers.includes(b);
-    if (aOnline && !bOnline) return -1;
-    if (!aOnline && bOnline) return 1;
-    return a.localeCompare(b);
-  });
+  // ----------------------------------------------------
+  // 4. RENDERING
+  // ----------------------------------------------------
 
-  const currentMessages = view === "global" ? messages : (privateChats[selectedUser] || []);
-
-  if (!username) return null;
+  const currentMessages = view === "global" 
+    ? globalMessages 
+    : privateChats[selectedUser] || [];
 
   return (
     <div className="chat-container">
       {/* Sidebar */}
       <div className="sidebar">
         <div className="sidebar-header">
-          <h3>💬 Chats</h3>
+          <h3>Chats ({username})</h3>
           <button 
-            className={`global-chat-btn ${view === "global" ? "active" : ""}`}
-            onClick={() => setView("global")}
+            className={`global-chat-btn ${view === 'global' ? 'active' : ''}`}
+            onClick={() => { setView('global'); setSelectedUser(null); }}
           >
-            <span>🌐 Sala Global</span>
-            {newCount > 0 && <span className="badge">{newCount}</span>}
+            Chat Global {onlineUsers.length > 0 && `(${onlineUsers.length} en línea)`}
           </button>
-
+          
           <input 
-            type="text"
-            placeholder="🔍 Buscar persona..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            type="text" 
+            placeholder="Buscar usuario..." 
             className="search-user-input"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-
+        
         <div className="users-list">
-          <div className="list-title">
-             {searchTerm ? "Resultados de búsqueda" : "Mis conversaciones"}
-          </div>
-
-          {usersToDisplay.length === 0 && (
-             <div className="no-users">
-                {searchTerm ? "No se encontró nadie con ese nombre" : "No tienes chats activos"}
-             </div>
-          )}
-          
-          {usersToDisplay.map(user => {
-             const isOnline = onlineUsers.includes(user);
-             const isSelected = selectedUser === user && view === "private";
-             return (
-              <div
-                key={user}
-                className={`user-item ${isSelected ? "selected" : ""}`}
-                onClick={() => openPrivateChat(user)}
-              >
-                <div className="user-info">
-                  <div className={`avatar-placeholder ${isOnline ? "online" : ""}`}>
-                    {user.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="user-details">
-                    <span className="username">{user}</span>
-                    <span className="status-text">{isOnline ? "En línea" : "Offline"}</span>
-                  </div>
-                </div>
+            <h4 className="list-title">Contactos:</h4>
+            {chatPartners.length > 0 ? chatPartners.map(user => {
+                const details = getUserChatDetails(user);
                 
-                {unreadPrivate[user] > 0 && (
-                  <span className="badge private-badge">{unreadPrivate[user]}</span>
-                )}
-              </div>
-            );
-          })}
+                return (
+                    <div 
+                      key={user} 
+                      className={`user-item ${selectedUser === user ? 'selected' : ''}`}
+                      onClick={() => handleUserSelect(user)}
+                    >
+                        <div className={`avatar-placeholder ${details.isOnline ? 'online' : ''}`}>
+                            {user[0].toUpperCase()}
+                        </div>
+                        <div className="user-details">
+                            <span className="username">{user}</span>
+                            <span className="status-text">{details.lastMsgText}</span>
+                        </div>
+                        {details.unreadCount > 0 && (
+                            <div className="unread-count">{details.unreadCount}</div>
+                        )}
+                    </div>
+                );
+            }) : <p style={{ padding: '10px', fontSize: '14px', color: '#667781' }}>No hay usuarios para mostrar.</p>}
         </div>
       </div>
-
-      {/* Chat Area */}
+      
+      {/* Área de Mensajes */}
       <div className="chat-area">
         <div className="chat-header">
-          <div className="header-info">
-            <h2>{view === "global" ? "🌐 Chat Global" : selectedUser}</h2>
-            {view === "private" && (
-               <span className={`status-indicator ${onlineUsers.includes(selectedUser) ? "on" : "off"}`}>
-                 {onlineUsers.includes(selectedUser) ? "• En línea" : "• Desconectado"}
-               </span>
-            )}
-          </div>
-        </div>
-
-        <div className="messages-container">
-          {currentMessages.length === 0 && (
-            <div className="empty-state">
-              <div className="empty-icon">👋</div>
-              <p>{view === "global" ? "¡Saluda a todos!" : `Escribe tu primer mensaje a ${selectedUser}`}</p>
+            <div className="header-info">
+                {view === 'global' ? (
+                    <h2>Chat Global</h2>
+                ) : (
+                    <>
+                        <h2>{selectedUser}</h2>
+                        <span className={`status-indicator ${getUserChatDetails(selectedUser).isOnline ? 'on' : ''}`}>
+                            {getUserChatDetails(selectedUser).isOnline ? 'En línea' : 'Desconectado'}
+                        </span>
+                    </>
+                )}
             </div>
-          )}
-          
-          {currentMessages.map((m, i) => {
-            const isMe = m.sender === username;
-            return (
-              <div key={i} className={`message-wrapper ${isMe ? "sent" : "received"}`}>
-                <div className="message-bubble">
-                  {!isMe && view === "global" && <div className="message-sender">{m.sender}</div>}
-                  <div className="message-text">{m.text}</div>
-                  <div className="message-time">
-                    {m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ""}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+            {/* Opcional: Botones de opciones */}
         </div>
-
+        
+        <div className="messages-container">
+          {currentMessages.length > 0 ? currentMessages.map((msg, index) => (
+            <div key={index} className={`message-wrapper ${msg.sender === username ? 'sent' : 'received'}`}>
+              <div className="message-bubble">
+                {view === 'global' && msg.sender !== username && (
+                    <div className="message-sender">{msg.sender}</div>
+                )}
+                {msg.text}
+                <span className="message-time">
+                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            </div>
+          )) : (
+            <p style={{ textAlign: 'center', color: '#667781', margin: 'auto' }}>
+                {view === 'global' ? 'Sé el primero en saludar!' : `Es el inicio de tu chat con ${selectedUser}.`}
+            </p>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+        
+        {/* Área de Input */}
         <div className="input-area">
-          <input
+          <input 
+            type="text"
+            placeholder={view === 'global' ? "Escribe un mensaje global..." : `Escribe un mensaje a ${selectedUser}...`}
             className="chat-input"
             value={text}
-            onChange={e => setText(e.target.value)}
-            onKeyPress={e => e.key === "Enter" && send()}
-            placeholder="Escribe un mensaje..."
+            onChange={(e) => setText(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={view === 'private' && !selectedUser}
           />
-          <button className="send-btn" onClick={send} disabled={!text.trim()}>
-            ➢
+          <button onClick={send} className="send-btn" disabled={view === 'private' && !selectedUser}>
+            {/* Usar un icono de "enviar" */}
+            ➡️
           </button>
         </div>
       </div>
