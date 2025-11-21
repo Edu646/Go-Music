@@ -6,11 +6,11 @@ const multer = require("multer");
 const mongoose = require("mongoose");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
-const http = require("http");            // NECESARIO PARA SOCKET.IO
-const { Server } = require("socket.io"); // SOCKET.IO
+const http = require("http");
+const { Server } = require("socket.io");
 
 const app = express();
-const server = http.createServer(app);   // Servidor combinado para Express + Socket.io
+const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" }
 });
@@ -43,13 +43,23 @@ const SongSchema = new mongoose.Schema({
 });
 const Song = mongoose.model("Song", SongSchema);
 
-// --- MODELO MENSAJES DE CHAT ---
+// --- MODELO MENSAJES DE CHAT GLOBAL ---
 const MessageSchema = new mongoose.Schema({
   sender: String,
   text: String,
   createdAt: { type: Date, default: Date.now }
 });
 const Message = mongoose.model("Message", MessageSchema);
+
+// --- MODELO MENSAJES PRIVADOS ---
+const PrivateMessageSchema = new mongoose.Schema({
+  sender: String,
+  recipient: String,
+  text: String,
+  read: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+});
+const PrivateMessage = mongoose.model("PrivateMessage", PrivateMessageSchema);
 
 // --- CONFIG CLOUDINARY ---
 cloudinary.config({
@@ -80,7 +90,7 @@ const uploadToCloudinary = (buffer) => {
 };
 
 // -------------------------------------------------------
-//  RUTAS API DE AUDIOS
+//  RUTAS API DE AUDIOS
 // -------------------------------------------------------
 
 app.post("/upload", upload.single("file"), async (req, res) => {
@@ -120,7 +130,8 @@ app.delete("/songs/:id", async (req, res) => {
     if (!song) return res.status(404).json({ error: "No encontrada" });
 
     if (song.public_id) {
-      await cloudinary.uploader.destroy(song.public_id, { resource_type: "video" });
+      // Usamos 'video' como resource_type ya que cloudinary puede detectar audios como videos
+      await cloudinary.uploader.destroy(song.public_id, { resource_type: "video" }); 
     }
 
     await Song.findByIdAndDelete(req.params.id);
@@ -131,36 +142,148 @@ app.delete("/songs/:id", async (req, res) => {
 });
 
 // -------------------------------------------------------
-//  CHAT GLOBAL REAL-TIME
+//  RUTAS DE CHAT
 // -------------------------------------------------------
 
-// Obtener mensajes guardados
+// Obtener mensajes globales
 app.get("/messages", async (req, res) => {
-  const msgs = await Message.find().sort({ createdAt: 1 });
-  res.json(msgs);
+  try {
+    const msgs = await Message.find().sort({ createdAt: 1 });
+    res.json(msgs);
+  } catch (err) {
+    res.status(500).json({ error: "Error obteniendo mensajes" });
+  }
 });
 
-// Eventos de chat en tiempo real
+// Obtener mensajes privados del usuario
+app.get("/private-messages", async (req, res) => {
+  try {
+    const { username } = req.query;
+    if (!username) {
+      return res.status(400).json({ error: "Falta parámetro username" });
+    }
+
+    const msgs = await PrivateMessage.find({
+      $or: [
+        { sender: username },
+        { recipient: username }
+      ]
+    }).sort({ createdAt: 1 });
+
+    res.json(msgs);
+  } catch (err) {
+    res.status(500).json({ error: "Error obteniendo mensajes privados" });
+  }
+});
+
+// Marcar mensajes como leídos
+app.post("/private-messages/mark-read", async (req, res) => {
+  try {
+    const { username, sender } = req.body;
+    await PrivateMessage.updateMany(
+      { sender: sender, recipient: username, read: false },
+      { read: true }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Error marcando mensajes como leídos" });
+  }
+});
+
+// -------------------------------------------------------
+// RUTA NUEVA: Obtener la lista de todos los usuarios (para el buscador del frontend)
+// -------------------------------------------------------
+
+app.get("/users", async (req, res) => {
+  try {
+    // 1. Obtener nombres únicos de PrivateMessage
+    const privateSenders = await PrivateMessage.distinct('sender');
+    const privateRecipients = await PrivateMessage.distinct('recipient');
+
+    // 2. Obtener nombres únicos de Message
+    const globalSenders = await Message.distinct('sender');
+    
+    // 3. Obtener nombres únicos de Song uploaders
+    const songUploaders = await Song.distinct('uploadedBy');
+
+    // Combinar, eliminar duplicados y limpiar nombres genéricos
+    let allUsers = [...privateSenders, ...privateRecipients, ...globalSenders, ...songUploaders];
+    
+    allUsers = Array.from(new Set(allUsers)).filter(u => 
+        u && 
+        u !== "Anónimo" && 
+        u !== "Desconocido" && 
+        u.trim() !== ""
+    );
+
+    res.json(allUsers);
+  } catch (err) {
+    console.error("Error obteniendo lista de usuarios:", err);
+    res.status(500).json({ error: "Error obteniendo lista de usuarios" });
+  }
+});
+
+// -------------------------------------------------------
+//  CHAT EN TIEMPO REAL CON SOCKET.IO
+// -------------------------------------------------------
+
+// ... (El código Socket.io es el mismo y no necesita cambios)
+
+let onlineUsers = {}; 
+
 io.on("connection", (socket) => {
   console.log("🟢 Usuario conectado:", socket.id);
 
-  // Recibir mensaje y enviarlo a todos
-  socket.on("sendMessage", async (data) => {
-    const message = await Message.create({
-      sender: data.sender,
-      text: data.text
-    });
+  socket.on("userOnline", (username) => {
+    onlineUsers[username] = socket.id;
+    socket.username = username;
+    console.log(`👤 ${username} está en línea`);
+    
+    io.emit("onlineUsers", Object.keys(onlineUsers));
+  });
 
-    io.emit("newMessage", message); // Notifica a TODOS
+  socket.on("sendMessage", async (data) => {
+    try {
+      const message = await Message.create({
+        sender: data.sender,
+        text: data.text
+      });
+      io.emit("newMessage", message);
+    } catch (err) {
+      console.error("Error guardando mensaje global:", err);
+    }
+  });
+
+  socket.on("sendPrivateMessage", async (data) => {
+    try {
+      const message = await PrivateMessage.create({
+        sender: data.sender,
+        recipient: data.recipient,
+        text: data.text
+      });
+
+      socket.emit("privateMessage", message);
+
+      const recipientSocketId = onlineUsers[data.recipient];
+      if (recipientSocketId) {
+        io.to(recipientSocketId).emit("privateMessage", message);
+      }
+    } catch (err) {
+      console.error("Error guardando mensaje privado:", err);
+    }
   });
 
   socket.on("disconnect", () => {
-    console.log("🔴 Usuario desconectado:", socket.id);
+    if (socket.username) {
+      delete onlineUsers[socket.username];
+      console.log(`🔴 ${socket.username} se desconectó`);
+      io.emit("onlineUsers", Object.keys(onlineUsers));
+    }
   });
 });
 
 // -------------------------------------------------------
-//  FRONTEND REACT
+//  FRONTEND REACT
 // -------------------------------------------------------
 
 const frontendPath = path.join(__dirname, "../frontend/gomusic/build");
@@ -171,12 +294,12 @@ app.use((req, res) => {
 });
 
 // -------------------------------------------------------
-//  INICIO DEL SERVIDOR
+//  INICIO DEL SERVIDOR
 // -------------------------------------------------------
 
 const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, () => {
-  console.log(`✅ Servidor con chat listo en puerto ${PORT}`);
+  console.log(`✅ Servidor con chat privado listo en puerto ${PORT}`);
   console.log(`📁 Frontend servido desde: ${frontendPath}`);
 });

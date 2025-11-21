@@ -1,247 +1,117 @@
-/* =========================================
-   CONTENEDOR PRINCIPAL
-   ========================================= */
-.search-player-container {
-  max-width: auto;
-  /* Ajusta estos márgenes según tu diseño global */
-  margin: 120px 200px 0 auto; 
-  padding: 40px 32px 36px 32px;
-  border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+/* Contenedor general */
+.search-container {
+  max-width: 600px;
+  margin: 80px auto; /* Baja el componente para que no lo tape el nav */
+  padding: 20px;
+  background: #121212;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
   color: #fff;
-  backdrop-filter: blur(2px);
-  background: rgba(24, 24, 24, 0.97);
-  transition: box-shadow 0.2s;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  font-family: "Arial", sans-serif;
 }
 
 /* Título */
-.search-player-container h1 {
-  font-size: 2.2rem;
-  margin-bottom: 28px;
-  color: #1db954;
+.search-container h2 {
   text-align: center;
-  letter-spacing: 1px;
+  font-size: 1.6rem;
+  margin-bottom: 20px;
+  color: #1db954; /* Verde Spotify */
 }
 
-/* =========================================
-   FORMULARIO DE BÚSQUEDA
-   ========================================= */
-.search-player-container form {
+/* Caja de búsqueda */
+.search-box {
   display: flex;
   gap: 10px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
-.search-player-container input[type="text"] {
+.search-box input {
   flex: 1;
-  padding: 12px 16px;
+  padding: 10px 14px;
+  font-size: 1rem;
+  border-radius: 10px;
   border: none;
-  border-radius: 8px;
-  font-size: 1.08rem;
   outline: none;
-  background: #232323;
+  background: #1e1e1e;
   color: #fff;
-  transition: box-shadow 0.2s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.search-player-container input[type="text"]:focus {
-  box-shadow: 0 0 0 2px #1db95455;
-}
-
-/* Botón "Buscar" del formulario */
-.search-player-container button {
+.search-box button {
   background: #1db954;
   color: #fff;
   border: none;
-  border-radius: 8px;
-  padding: 12px 24px;
-  font-size: 1.08rem;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background 0.2s, transform 0.1s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.search-player-container button:hover {
-  background: #17a74a;
-  transform: translateY(-2px) scale(1.04);
-}
-
-/* =========================================
-   RESULTADOS (LISTA DE CANCIONES)
-   ========================================= */
-.song-result {
-  background: #232323;
-  border-radius: 10px;
-  padding: 14px 18px;
-  margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* Separa info (izq) de acciones (der) */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
-  transition: background 0.2s;
-}
-
-.song-result:hover {
-  background: #282828;
-}
-
-/* Texto de la canción */
-.song-info {
-  flex: 1; /* Ocupa el espacio disponible */
-  margin-right: 15px;
-  color: #fff;
+  padding: 10px 18px;
   font-size: 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.2s ease;
 }
 
-.song-info strong {
-  color: #fff;
-  font-weight: bold;
+.search-box button:hover {
+  background: #1ed760;
 }
 
-/* Agrupador de botones (Play + Descargar) */
+/* LISTA DE RESULTADOS */
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Item de canción */
+.song-item {
+  background: #1e1e1e;
+  padding: 14px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: 0.2s ease;
+}
+
+.song-item:hover {
+  background: #242424;
+}
+
+/* Nombre y artista */
+.song-info {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* Acciones */
 .song-actions {
   display: flex;
   align-items: center;
-  gap: 10px; /* Espacio entre botones */
+  gap: 10px;
 }
 
-/* --- Botón PLAY --- */
-.song-result button {
-  padding: 7px 18px;
-  font-size: 1rem;
-  border-radius: 8px;
+.song-actions button {
   background: #1db954;
-  color: #fff;
   border: none;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-  /* Quitamos margin-left porque ahora usamos gap en el padre */
-  margin: 0; 
-}
-
-.song-result button:hover {
-  background: #17a74a;
-  transform: scale(1.05);
-}
-
-/* --- Botón DESCARGAR (Estilo enlace) --- */
-.btn-download {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 16px;
-  font-size: 0.95rem;
+  padding: 6px 12px;
   border-radius: 8px;
-  text-decoration: none;
+  color: #fff;
   cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  
-  /* Diseño: Borde verde, fondo transparente */
-  background: transparent;
-  border: 2px solid #1db954;
-  color: #1db954;
+  transition: 0.2s ease;
+}
+
+.song-actions button:hover {
+  background: #1ed760;
+}
+
+/* Botón de descarga */
+.btn-download {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  color: #fff !important;
+  text-decoration: none !important;
+  transition: 0.2s ease;
 }
 
 .btn-download:hover {
-  background: #1db954;
-  color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
-}
-
-/* =========================================
-   CANCIÓN ACTUAL (Info extra si la usas)
-   ========================================= */
-.current-song {
-  margin-top: 28px;
-  background: #232323;
-  border-radius: 10px;
-  padding: 18px 10px 10px 10px;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
-}
-
-.current-song h2 {
-  font-size: 1.15rem;
-  color: #1db954;
-  margin-bottom: 14px;
-}
-
-/* =========================================
-   REPRODUCTOR DE AUDIO FIJO
-   ========================================= */
-audio {
-  background: #232323;
-  border-radius: 14px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-  padding: 8px 0;
-  outline: none;
-  transition: box-shadow 0.2s;
-  width: 90vw !important;
-  max-width: 420px !important;
-  position: fixed;
-  left: 50%;
-  bottom: 18px;
-  transform: translateX(-50%);
-  z-index: 1000;
-}
-
-audio::-webkit-media-controls-panel {
-  background: #232323;
-  border-radius: 14px;
-}
-
-audio::-webkit-media-controls-play-button,
-audio::-webkit-media-controls-pause-button {
-  filter: invert(60%) sepia(80%) saturate(300%) hue-rotate(80deg);
-}
-
-audio::-webkit-media-controls-current-time-display,
-audio::-webkit-media-controls-time-remaining-display {
-  color: #1db954;
-}
-
-audio::-webkit-media-controls-timeline {
-  background: #444;
-}
-
-audio::-webkit-media-controls-volume-slider {
-  background: #1db954;
-}
-
-/* =========================================
-   RESPONSIVE
-   ========================================= */
-@media (max-width: 600px) {
-  .search-player-container {
-    max-width: 98vw;
-    padding: 18px 4vw 24px 4vw;
-    margin-top: 60px;
-    margin-right: auto; /* Resetear el margen derecho en móvil */
-  }
-  
-  /* En móviles, quizás quieras que los botones se apilen si no caben */
-  .song-result {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  
-  .song-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  audio {
-    width: 98vw !important;
-    max-width: 98vw !important;
-    left: 1vw !important;
-    transform: none !important;
-  }
+  background: #3a3a3a;
+  border-color: #666;
 }
