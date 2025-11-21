@@ -15,7 +15,7 @@ export default function Chat() {
   const username = getUsername();
   
   // ----------------------------------------------------
-  // 1. DEFINICIÓN DE TODOS LOS HOOKS (DEBEN IR PRIMERO)
+  // 1. DEFINICIÓN DE TODOS LOS HOOKS 
   // ----------------------------------------------------
   const [view, setView] = useState("global"); 
   const [text, setText] = useState("");
@@ -37,8 +37,6 @@ export default function Chat() {
   const loadChatData = useCallback(async () => {
     if (isChatDataLoaded) return; 
 
-    console.log("Cargando datos de chat...");
-    
     // A. Cargar mensajes globales (REST API)
     try {
       const globalRes = await fetch("/messages");
@@ -71,17 +69,17 @@ export default function Chat() {
         const userRes = await fetch("/users");
         const userData = await userRes.json();
         
-        // 🚨 FIX 1: Limpiamos los datos al mapear para evitar undefined
+        // 🚨 FIX ROBUSTO: Aseguramos que solo haya strings válidos en la lista
         const safeUsernames = userData
-          .map(u => u.username) // Mapear a usernames (algunos podrían ser undefined)
-          .filter(u => u);     // Filtrar cualquier undefined/null resultante
+          .map(u => u.username)
+          .filter(u => u && typeof u === 'string'); 
           
         setAllPotentialUsers(safeUsernames);
     } catch (err) {
         console.error("Error cargando usuarios potenciales:", err);
     }
 
-    setIsChatDataLoaded(true); // Marcamos la carga como finalizada
+    setIsChatDataLoaded(true); 
   }, [username, isChatDataLoaded]);
 
 
@@ -105,7 +103,7 @@ export default function Chat() {
   }, [username]);
   
   // ----------------------------------------------------
-  // 3. EFECTOS DE CONEXIÓN Y LISTENERS
+  // 3. EFECTOS Y LISTENERS
   // ----------------------------------------------------
   
   useEffect(() => {
@@ -208,10 +206,8 @@ export default function Chat() {
     ...Object.keys(privateChats) 
   ]));
   
-  // 🚨 FIX 2: Mantener el filtro de seguridad aquí también
   const filteredUsers = combinedUsers.filter(u => u && u !== username); 
   
-  // Esta línea ahora está doblemente protegida
   const chatPartners = filteredUsers.filter(u => 
     u.toLowerCase().includes(search.toLowerCase())
   );
@@ -257,6 +253,11 @@ export default function Chat() {
         </div>
     ) : (
       <div className="chat-container">
+        {/* Aquí mostramos con quién está chateando la aplicación (username) */}
+        <p style={{textAlign: 'center', backgroundColor: '#555', color: 'yellow', padding: '5px'}}>
+          App User: **{username}** (Si esto es incorrecto, el problema es de la función getUsername o Formulario.jsx)
+        </p>
+
         {/* Sidebar */}
         <div className="sidebar">
           <div className="sidebar-header">
@@ -326,9 +327,12 @@ export default function Chat() {
               <div key={index} className={`message-wrapper ${msg.sender === username ? 'sent' : 'received'}`}>
                 <div className="message-bubble">
                   
-                  {/* Muestra el nombre del remitente si NO eres TÚ */}
+                  {/* El nombre del remitente se muestra si NO es el usuario actual */}
                   {msg.sender !== username && (
-                      <div className="message-sender">{msg.sender}</div>
+                      <div className="message-sender">
+                        {/* 🚨 Debugging: Muestra el remitente real del mensaje */}
+                        {msg.sender}
+                      </div>
                   )}
                   
                   {msg.text}
