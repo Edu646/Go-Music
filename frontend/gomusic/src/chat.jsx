@@ -22,7 +22,7 @@ export default function Chat() {
   const [globalMessages, setGlobalMessages] = useState([]);
   const [privateChats, setPrivateChats] = useState({}); 
   
-  const [isChatDataLoaded, setIsChatDataLoaded] = useState(false); // 🚩 CONTROL DE CARGA
+  const [isChatDataLoaded, setIsChatDataLoaded] = useState(false); 
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [allPotentialUsers, setAllPotentialUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null); 
@@ -34,7 +34,6 @@ export default function Chat() {
   // 2. FUNCIONES CON useCallback
   // ----------------------------------------------------
 
-  // Función para cargar todos los datos del chat (mensajes e historial)
   const loadChatData = useCallback(async () => {
     if (isChatDataLoaded) return; 
 
@@ -71,7 +70,13 @@ export default function Chat() {
     try {
         const userRes = await fetch("/users");
         const userData = await userRes.json();
-        setAllPotentialUsers(userData.map(u => u.username));
+        
+        // 🚨 FIX 1: Limpiamos los datos al mapear para evitar undefined
+        const safeUsernames = userData
+          .map(u => u.username) // Mapear a usernames (algunos podrían ser undefined)
+          .filter(u => u);     // Filtrar cualquier undefined/null resultante
+          
+        setAllPotentialUsers(safeUsernames);
     } catch (err) {
         console.error("Error cargando usuarios potenciales:", err);
     }
@@ -80,7 +85,6 @@ export default function Chat() {
   }, [username, isChatDataLoaded]);
 
 
-  // Función para marcar mensajes como leídos
   const markMessagesAsRead = useCallback(async (sender) => {
     try {
       await fetch("/private-messages/mark-read", {
@@ -104,9 +108,7 @@ export default function Chat() {
   // 3. EFECTOS DE CONEXIÓN Y LISTENERS
   // ----------------------------------------------------
   
-  // EFECTO PRINCIPAL DE SOCKETS
   useEffect(() => {
-    // El cuerpo del useEffect es condicional, pero la llamada al Hook no lo es.
     if (isChatDataLoaded) {
       if (!socket.connected) {
         socket.connect();
@@ -140,9 +142,8 @@ export default function Chat() {
         socket.off("privateMessage");
       };
     }
-  }, [username, isChatDataLoaded, selectedUser, view, markMessagesAsRead]); // Dependencias correctas
+  }, [username, isChatDataLoaded, selectedUser, view, markMessagesAsRead]);
 
-  // EFECTO DE SCROLL
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [globalMessages, privateChats, selectedUser]);
@@ -182,7 +183,7 @@ export default function Chat() {
   // 5. CHEQUEO DE ESTADO Y RENDERIZADO
   // ----------------------------------------------------
 
-  // 🚨 FIX 4: Bloqueo de Sesión. Esta es la primera comprobación en el JSX.
+  // Bloqueo de Sesión
   if (username === "Anónimo") {
      return (
         <div className="chat-container-unlocked" style={{ 
@@ -207,8 +208,10 @@ export default function Chat() {
     ...Object.keys(privateChats) 
   ]));
   
-  const filteredUsers = combinedUsers.filter(u => u !== username);
+  // 🚨 FIX 2: Mantener el filtro de seguridad aquí también
+  const filteredUsers = combinedUsers.filter(u => u && u !== username); 
   
+  // Esta línea ahora está doblemente protegida
   const chatPartners = filteredUsers.filter(u => 
     u.toLowerCase().includes(search.toLowerCase())
   );
@@ -231,7 +234,7 @@ export default function Chat() {
     : privateChats[selectedUser] || [];
 
   return (
-    // 🚨 FIX 5: Bloqueo por Carga Diferida (isChatDataLoaded)
+    // Renderizado condicional basado en isChatDataLoaded
     !isChatDataLoaded ? (
         <div className="chat-blocker" style={{ textAlign: 'center', padding: '50px', margin: '50px auto', maxWidth: '400px', backgroundColor: '#333', borderRadius: '8px', color: 'white' }}>
             <h2>Cargar Mensajes</h2>
@@ -323,7 +326,7 @@ export default function Chat() {
               <div key={index} className={`message-wrapper ${msg.sender === username ? 'sent' : 'received'}`}>
                 <div className="message-bubble">
                   
-                  {/* FIX 6: Muestra el nombre del remitente si NO eres TÚ */}
+                  {/* Muestra el nombre del remitente si NO eres TÚ */}
                   {msg.sender !== username && (
                       <div className="message-sender">{msg.sender}</div>
                   )}
