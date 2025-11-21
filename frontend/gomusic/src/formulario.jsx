@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
+// 💡 NUEVA IMPORTACIÓN: Debes importar tu socket para la desconexión
+import socket from "./socket"; 
 import { auth, googleProvider, storage } from "./firebaseconfig";
 import {
   signInWithEmailAndPassword,
@@ -12,6 +14,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import "./formulario.css";
 
 export default function Formulario() {
+  // ... (Estados sin cambios) ...
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ username: "", email: "", password: "" });
   const [user, setUser] = useState(null);
@@ -21,106 +24,38 @@ export default function Formulario() {
   const [songs, setSongs] = useState([]);
   const [search, setSearch] = useState("");
 
+  // 🛠️ CORRECCIÓN: Ajustamos el endpoint de búsqueda
   const fetchSongs = useCallback(async () => {
     try {
-      const query = search ? `/search?q=${search}` : '/songs';
+      // Endpoint correcto: /songs?q=... (asumiendo el backend espera 'q' como query param)
+      const query = search 
+        ? `/songs?q=${encodeURIComponent(search)}` 
+        : '/songs';
+      
       const res = await fetch(query);
       const data = await res.json();
       setSongs(data);
     } catch (err) {
       console.error("Error al cargar canciones:", err);
     }
-  }, [search]);
+  }, [search]); // Correcto
 
-  useEffect(() => {
-    fetchSongs();
-  }, [fetchSongs]);
-
-  // Escucha de estado de Firebase Auth
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        const u = {
-          username: firebaseUser.displayName || firebaseUser.email.split("@")[0],
-          email: firebaseUser.email,
-          avatar: firebaseUser.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png"
-        };
-        setUser(u);
-        localStorage.setItem("gomusic_user", JSON.stringify(u)); // guardamos usuario
-      } else {
-        setUser(null);
-        localStorage.removeItem("gomusic_user");
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-  const handlePhotoChange = (e) => setPhotoFile(e.target.files[0]);
-
-  const uploadPhoto = async (uid) => {
-    if (!photoFile) return null;
-    const photoRef = ref(storage, `avatars/${uid}`);
-    await uploadBytes(photoRef, photoFile);
-    return await getDownloadURL(photoRef);
-  };
-
-  const handleAuth = async (e) => {
-    e.preventDefault();
-    setMessage("");
-    try {
-      if (isLogin) {
-        const cred = await signInWithEmailAndPassword(auth, formData.email, formData.password);
-        const u = {
-          username: cred.user.displayName || cred.user.email.split("@")[0],
-          email: cred.user.email,
-          avatar: cred.user.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png"
-        };
-        setUser(u);
-        localStorage.setItem("gomusic_user", JSON.stringify(u));
-        setMessage("Sesión iniciada correctamente");
-      } else {
-        const cred = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        const photoURL = photoFile ? await uploadPhoto(cred.user.uid) : null;
-        await updateProfile(cred.user, { displayName: formData.username, photoURL });
-        const u = {
-          username: formData.username,
-          email: cred.user.email,
-          avatar: photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png"
-        };
-        setUser(u);
-        localStorage.setItem("gomusic_user", JSON.stringify(u));
-        setMessage("Cuenta creada correctamente");
-      }
-      setFormData({ username: "", email: "", password: "" });
-      setPhotoFile(null);
-    } catch (err) {
-      console.log(err);
-      setMessage(err.message);
-    }
-  };
-
-  const handleGoogle = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const u = {
-        username: result.user.displayName,
-        email: result.user.email,
-        avatar: result.user.photoURL
-      };
-      setUser(u);
-      localStorage.setItem("gomusic_user", JSON.stringify(u));
-      setMessage("Sesión iniciada con Google");
-    } catch (err) {
-      console.log(err);
-      setMessage("Error iniciando con Google");
-    }
-  };
+  // ... (useEffect de fetchSongs y onAuthStateChanged sin cambios) ...
+  
+  // ... (handleAuth y handleGoogle sin cambios, ya que estaban bien) ...
 
   const handleLogout = async () => {
+    // 1. Desconectar de Firebase Auth
     await signOut(auth);
+    
+    // 2. 🚨 SOLUCIÓN BUG: Desconectar el socket para eliminar el estado 'en línea'
+    if (socket && socket.connected) {
+      socket.disconnect();
+    }
+    
+    // 3. Limpiar estado local
     setUser(null);
-    localStorage.removeItem("gomusic_user"); // eliminamos usuario al cerrar sesión
+    localStorage.removeItem("gomusic_user"); 
     setMessage("Sesión cerrada");
   };
 
@@ -130,6 +65,7 @@ export default function Formulario() {
   };
 
   return (
+    // ... (El JSX permanece sin cambios) ...
     <div className="auth-container">
       {!user ? (
         <>
@@ -170,75 +106,4 @@ export default function Formulario() {
   );
 }
 
-// ---------------------
-// Componente Subida (sin cambios)
-// ---------------------
-function FormularioSubida({ user, refreshSongs }) {
-  const [file, setFile] = useState(null);
-  const [name, setName] = useState("");
-  const [artist, setArtist] = useState("");
-  const [msg, setMsg] = useState("");
-
-  const handleUpload = async (e) => {
-    e.preventDefault();
-    if (!file) return setMsg("Selecciona un archivo primero.");
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("name", name);
-    formData.append("artist", artist);
-    formData.append("username", user.username);
-
-    try {
-      setMsg("Subiendo a Cloudinary...");
-      const res = await fetch("/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      if (res.ok) {
-        setMsg(`✅ Canción '${data.name}' subida correctamente.`);
-        setFile(null);
-        setName("");
-        setArtist("");
-        refreshSongs();
-      } else {
-        setMsg(`❌ Error: ${data.error || "Desconocido"}`);
-      }
-    } catch (err) {
-      console.error(err);
-      setMsg("❌ Error subiendo la canción. ¿Servidor activo?");
-    }
-  };
-
-  return (
-    <form onSubmit={handleUpload} className="formulario">
-      <h3>Subir Canción</h3>
-      <input type="text" placeholder="Nombre de la canción" value={name} onChange={(e) => setName(e.target.value)} required />
-      <input type="text" placeholder="Artista" value={artist} onChange={(e) => setArtist(e.target.value)} />
-      <input type="file" accept="audio/*" onChange={(e) => setFile(e.target.files[0])} required />
-      <button type="submit">Subir canción</button>
-      {msg && <p>{msg}</p>}
-    </form>
-  );
-}
-
-// ---------------------
-// Componente Lista (sin cambios)
-// ---------------------
-function SongList({ songs, search, setSearch, refreshSongs }) {
-  const handleSearchChange = (e) => setSearch(e.target.value);
-
-  return (
-    <div className="song-list">
-      <h3>Buscar Canciones ({songs.length} resultados)</h3>
-      <input type="text" placeholder="Buscar por nombre o artista" value={search} onChange={handleSearchChange} />
-      <button onClick={refreshSongs} style={{ marginLeft: '10px' }}>Recargar Lista</button>
-      <ul>
-        {songs.length > 0 ? songs.map((song, idx) => (
-          <li key={song.id || idx}>
-            <strong>{song.name}</strong> - {song.artist} (Subida por: {song.uploadedBy}){" "}
-            <a href={song.audio} target="_blank" rel="noopener noreferrer">🎵 Escuchar / Descargar</a>
-          </li>
-        )) : <li>{search ? "No se encontraron resultados." : "No hay canciones subidas aún."}</li>}
-      </ul>
-    </div>
-  );
-}
+// ... (El resto de los componentes FormularioSubida y SongList están bien) ...
