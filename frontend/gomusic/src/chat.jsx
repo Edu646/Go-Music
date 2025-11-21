@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import socket from './socket'; // Asegúrate de que la ruta sea correcta
+import socket from './socket'; 
 import './chat.css'; 
 
-// Función para obtener el usuario del almacenamiento local
 const getUsername = () => {
   try {
     const user = JSON.parse(localStorage.getItem("gomusic_user"));
@@ -15,13 +14,14 @@ const getUsername = () => {
 export default function Chat() {
   const username = getUsername();
   
-  // Estado principal
+  // ----------------------------------------------------
+  // 1. DEFINICIÓN DE TODOS LOS HOOKS (DEBEN IR PRIMERO)
+  // ----------------------------------------------------
   const [view, setView] = useState("global"); 
   const [text, setText] = useState("");
   const [globalMessages, setGlobalMessages] = useState([]);
   const [privateChats, setPrivateChats] = useState({}); 
   
-  // Estados de carga y usuarios
   const [isChatDataLoaded, setIsChatDataLoaded] = useState(false); // 🚩 CONTROL DE CARGA
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [allPotentialUsers, setAllPotentialUsers] = useState([]);
@@ -29,31 +29,12 @@ export default function Chat() {
   const [search, setSearch] = useState("");
   
   const messagesEndRef = useRef(null);
-
+  
   // ----------------------------------------------------
-  // 🚨 FIX 4: Bloquear Renderizado si no hay usuario (Seguridad)
-  // ----------------------------------------------------
-  if (username === "Anónimo") {
-    return (
-      <div className="chat-container-unlocked" style={{ 
-          textAlign: 'center', 
-          padding: '50px', 
-          backgroundColor: '#282c34', 
-          color: 'white', 
-          borderRadius: '8px',
-          maxWidth: '500px',
-          margin: '50px auto'
-        }}>
-        <h2>🔒 Chat Bloqueado</h2>
-        <p>Debes **iniciar sesión** para acceder al chat.</p>
-      </div>
-    );
-  }
-
-  // ----------------------------------------------------
-  // 1. LÓGICA DE CARGA DE DATOS (FIX 5: Carga Diferida)
+  // 2. FUNCIONES CON useCallback
   // ----------------------------------------------------
 
+  // Función para cargar todos los datos del chat (mensajes e historial)
   const loadChatData = useCallback(async () => {
     if (isChatDataLoaded) return; 
 
@@ -90,64 +71,15 @@ export default function Chat() {
     try {
         const userRes = await fetch("/users");
         const userData = await userRes.json();
-        setAllPotentialUsers(userData.map(u => u.username)); // Asumiendo que /users devuelve objetos con propiedad username
+        setAllPotentialUsers(userData.map(u => u.username));
     } catch (err) {
         console.error("Error cargando usuarios potenciales:", err);
     }
 
-    setIsChatDataLoaded(true); // 👈 Marcamos la carga como finalizada
+    setIsChatDataLoaded(true); // Marcamos la carga como finalizada
   }, [username, isChatDataLoaded]);
 
-  // ----------------------------------------------------
-  // 2. LISTENERS DE SOCKET (Se activan SÓLO después de cargar datos)
-  // ----------------------------------------------------
-  useEffect(() => {
-    if (isChatDataLoaded) {
-      // Conectar y notificar que estás online
-      if (!socket.connected) {
-        socket.connect();
-      }
-      socket.emit("userOnline", username);
-      
-      // Listener para recibir la lista de usuarios en línea
-      socket.on("onlineUsers", (users) => {
-        setOnlineUsers(users);
-      });
 
-      // Listener para mensajes GLOBAL
-      socket.on("newMessage", (msg) => {
-        setGlobalMessages(prev => [...prev, msg]);
-      });
-
-      // Listener para mensajes PRIVADOS
-      socket.on("privateMessage", (msg) => {
-        const otherUser = msg.sender === username ? msg.recipient : msg.sender;
-        
-        setPrivateChats(prev => ({
-          ...prev,
-          [otherUser]: [...(prev[otherUser] || []), msg]
-        }));
-        
-        // Marcar como leído
-        if (view === 'private' && selectedUser === otherUser && msg.recipient === username) {
-          markMessagesAsRead(msg.sender);
-        }
-      });
-
-      // Cleanup: Desconectar los listeners al desmontar
-      return () => {
-        socket.off("onlineUsers");
-        socket.off("newMessage");
-        socket.off("privateMessage");
-      };
-    }
-  }, [username, isChatDataLoaded, selectedUser, view]);
-
-  // Scroll al final
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [globalMessages, privateChats, selectedUser]);
-  
   // Función para marcar mensajes como leídos
   const markMessagesAsRead = useCallback(async (sender) => {
     try {
@@ -167,19 +99,64 @@ export default function Chat() {
       console.error("Error marcando mensajes como leídos:", err);
     }
   }, [username]);
-
+  
   // ----------------------------------------------------
-  // 3. LÓGICA DE ENVÍO DE MENSAJES (FIX 1: No Duplicación)
+  // 3. EFECTOS DE CONEXIÓN Y LISTENERS
   // ----------------------------------------------------
+  
+  // EFECTO PRINCIPAL DE SOCKETS
+  useEffect(() => {
+    // El cuerpo del useEffect es condicional, pero la llamada al Hook no lo es.
+    if (isChatDataLoaded) {
+      if (!socket.connected) {
+        socket.connect();
+      }
+      socket.emit("userOnline", username);
+      
+      socket.on("onlineUsers", (users) => {
+        setOnlineUsers(users);
+      });
 
+      socket.on("newMessage", (msg) => {
+        setGlobalMessages(prev => [...prev, msg]);
+      });
+
+      socket.on("privateMessage", (msg) => {
+        const otherUser = msg.sender === username ? msg.recipient : msg.sender;
+        
+        setPrivateChats(prev => ({
+          ...prev,
+          [otherUser]: [...(prev[otherUser] || []), msg]
+        }));
+        
+        if (view === 'private' && selectedUser === otherUser && msg.recipient === username) {
+          markMessagesAsRead(msg.sender);
+        }
+      });
+
+      return () => {
+        socket.off("onlineUsers");
+        socket.off("newMessage");
+        socket.off("privateMessage");
+      };
+    }
+  }, [username, isChatDataLoaded, selectedUser, view, markMessagesAsRead]); // Dependencias correctas
+
+  // EFECTO DE SCROLL
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [globalMessages, privateChats, selectedUser]);
+  
+  // ----------------------------------------------------
+  // 4. LÓGICA DE ENVÍO Y MANEJO DE ESTADO
+  // ----------------------------------------------------
+  
   const send = () => {
     if (!text.trim()) return;
     
     if (view === "global") {
       socket.emit("sendMessage", { sender: username, text });
-      
     } else if (view === "private" && selectedUser) {
-      // 🚨 FIX 1: Solo emitimos. Dependemos de socket.on('privateMessage') para la actualización.
       socket.emit("sendPrivateMessage", { sender: username, recipient: selectedUser, text });
     }
     
@@ -191,10 +168,6 @@ export default function Chat() {
       send();
     }
   };
-
-  // ----------------------------------------------------
-  // 4. LÓGICA DE BARRA LATERAL (FIX 3: No enviar a sí mismo)
-  // ----------------------------------------------------
   
   const handleUserSelect = (user) => {
     setSelectedUser(user);
@@ -205,13 +178,35 @@ export default function Chat() {
     }
   };
 
+  // ----------------------------------------------------
+  // 5. CHEQUEO DE ESTADO Y RENDERIZADO
+  // ----------------------------------------------------
+
+  // 🚨 FIX 4: Bloqueo de Sesión. Esta es la primera comprobación en el JSX.
+  if (username === "Anónimo") {
+     return (
+        <div className="chat-container-unlocked" style={{ 
+            textAlign: 'center', 
+            padding: '50px', 
+            backgroundColor: '#282c34', 
+            color: 'white', 
+            borderRadius: '8px',
+            maxWidth: '500px',
+            margin: '50px auto'
+          }}>
+          <h2>🔒 Chat Bloqueado</h2>
+          <p>Debes **iniciar sesión** para acceder al chat.</p>
+        </div>
+      );
+  }
+
+  // Lógica de filtrado de usuarios
   const combinedUsers = Array.from(new Set([
     ...onlineUsers,
     ...allPotentialUsers,
     ...Object.keys(privateChats) 
   ]));
   
-  // 🚨 FIX 3: Filtramos al usuario actual de la lista de contactos
   const filteredUsers = combinedUsers.filter(u => u !== username);
   
   const chatPartners = filteredUsers.filter(u => 
@@ -230,17 +225,13 @@ export default function Chat() {
       unreadCount
     };
   };
-
-  // ----------------------------------------------------
-  // 5. RENDERING FINAL (Mostrar bloqueo/chat)
-  // ----------------------------------------------------
-
+  
   const currentMessages = view === "global" 
     ? globalMessages 
     : privateChats[selectedUser] || [];
 
   return (
-    // 🚨 Renderizado condicional basado en isChatDataLoaded
+    // 🚨 FIX 5: Bloqueo por Carga Diferida (isChatDataLoaded)
     !isChatDataLoaded ? (
         <div className="chat-blocker" style={{ textAlign: 'center', padding: '50px', margin: '50px auto', maxWidth: '400px', backgroundColor: '#333', borderRadius: '8px', color: 'white' }}>
             <h2>Cargar Mensajes</h2>
@@ -332,7 +323,7 @@ export default function Chat() {
               <div key={index} className={`message-wrapper ${msg.sender === username ? 'sent' : 'received'}`}>
                 <div className="message-bubble">
                   
-                  {/* 🚨 FIX 6: Muestra el nombre del remitente si NO eres TÚ (el caso 'papa' a 'evaleromolina') */}
+                  {/* FIX 6: Muestra el nombre del remitente si NO eres TÚ */}
                   {msg.sender !== username && (
                       <div className="message-sender">{msg.sender}</div>
                   )}
