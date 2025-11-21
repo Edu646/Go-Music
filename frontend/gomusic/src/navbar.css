@@ -1,8 +1,13 @@
+/* ----------------------------------- */
+/* --- ESTILOS BASE Y ESCRITORIO --- */
+/* ----------------------------------- */
+
 html, body {
   min-height: 100vh;
   margin: 0;
   padding: 0;
   font-family: 'Segoe UI', Arial, sans-serif;
+  /* Fondo con gradiente */
   background: linear-gradient(135deg, #d1994f 0%, #202020 100%);
   background-repeat: no-repeat;
   background-size: cover;
@@ -12,7 +17,8 @@ html, body {
 
 /* Espacio para la navbar fija */
 body {
-  padding-top: 80px;
+  /* ¡CRUCIAL! Debe coincidir con la altura de la navbar (100px) */
+  padding-top: 100px; 
 }
 
 /* Navbar coherente con el fondo */
@@ -29,10 +35,10 @@ body {
   color: #fff;
   font-weight: bold;
   border-bottom: 4px solid #000; /* Solo borde abajo */
-  border-radius: 0  0  80px 80px;              /* Sin bordes redondeados */
+  border-radius: 0 0 80px 80px;
   z-index: 1000;
-  height: 100px;
-  box-sizing: border-box;        /* Incluye el borde en el ancho */
+  height: 100px; /* Altura de escritorio */
+  box-sizing: border-box;
   box-shadow: 0 4px 24px rgba(0,0,0,0.18);
   backdrop-filter: blur(2px);
 }
@@ -81,7 +87,12 @@ body {
   box-shadow: 0 2px 8px rgba(29,185,84,0.10);
 }
 
-/* Contenedor principal del inicio */
+/* Ocultar el botón de menú hamburguesa por defecto en escritorio */
+.nav-toggle {
+    display: none;
+}
+
+/* Contenedor principal del inicio (usado en la ruta '/') */
 .container {
   max-width: 600px;
   margin: 100px auto 0 auto;
@@ -129,41 +140,31 @@ body {
   transform: scale(1.04);
 }
 
-/* Responsive */
-@media (max-width: 700px) {
-  .navbar {
-    width: 99vw;
-    padding: 10px 8vw;
-    height: 56px;
-    font-size: 1rem;
-  }
-  .container {
-    max-width: 96vw;
-    padding: 24px 4vw;
-    margin-top: 40px;
-  }
-  .container h1 {
-    font-size: 1.5rem;
-  }
-  .container p {
-    font-size: 1rem;
-  }
-}
+/* ----------------------------------- */
+/* 📱 VISTA MÓVIL (MEDIA QUERY) 📱 */
+/* ----------------------------------- */
 
-/* Overrides y menú móvil para .navbar */
 @media (max-width: 700px) {
+  /* BODY: Ajuste para evitar que el contenido quede bajo la navbar fija */
+  body {
+    /* La navbar móvil es de 56px de altura, usamos 64px para compensar */
+    padding-top: 64px; 
+  }
+
+  /* NAVBAR: Ajustes de altura, padding y bordes */
   .navbar {
     padding: 12px 16px;
-    height: 56px;
+    height: 56px; /* Altura móvil */
     border-radius: 0;
     gap: 8px;
+    width: 100vw;
   }
 
   .logo img {
     max-height: 40px;
   }
 
-  /* Oculta los enlaces por defecto en móvil */
+  /* ENLACES DE ESCRITORIO: Ocultar los enlaces por defecto en móvil */
   .nav-links {
     display: none;
     gap: 12px;
@@ -184,14 +185,17 @@ body {
     font-size: 1.2rem;
     transition: background .18s ease, transform .12s ease;
   }
-  .nav-toggle:hover { background: rgba(255,255,255,0.03); transform: translateY(-2px); }
+  .nav-toggle:hover {
+    background: rgba(255,255,255,0.03);
+    transform: translateY(-2px);
+  }
 
-  /* Cuando la navbar recibe la clase .open mostramos el menú desplegable */
+  /* MENÚ DESPLEGABLE: Cuando la navbar recibe la clase .open mostramos el menú */
   .navbar.open .nav-links {
     display: flex;
     flex-direction: column;
     position: fixed;
-    top: 64px;
+    top: 68px; /* Separación de la navbar móvil (56px) */
     right: 12px;
     width: min(86vw, 320px);
     background: rgba(12,12,12,0.98);
@@ -201,11 +205,12 @@ body {
     z-index: 1500;
   }
 
+  /* MEJORA: Aumentar el área táctil de los enlaces en el menú desplegable */
   .navbar.open .nav-links a {
-    padding: 10px 12px;
+    padding: 12px; /* Más padding para un mejor toque (tap target) */
     border-radius: 8px;
-    display: block;
-    font-size: 0.98rem;
+    display: block; /* Ocupa todo el ancho del desplegable */
+    font-size: 1rem;
   }
 
   /* Ajustes: links destacados ocupan ancho completo */
@@ -216,6 +221,29 @@ body {
     color: var(--accent, #1db954);
   }
 
-  /* Evitar que el contenido quede bajo la navbar fija */
-  body { padding-top: 64px; }
+  /* CONTAINER PRINCIPAL: Más compacto en móvil */
+  .container {
+    max-width: 96vw;
+    padding: 24px 4vw;
+    margin-top: 40px; /* Menos margen superior */
+    border-radius: 16px; 
+    text-align: center;
+  }
+
+  .container h1 {
+    font-size: 1.8rem; /* Título más pequeño */
+  }
+
+  .container p {
+    font-size: 1rem; /* Párrafo más pequeño */
+  }
+  
+  /* MEJORA: Botones apilados y ocupando ancho completo para facilitar la pulsación */
+  .container .btn {
+    display: block; /* Ocupa todo el ancho */
+    width: 100%;
+    margin: 8px 0; /* Espacio vertical entre botones */
+    padding: 14px 0; /* Más cómodo para el dedo */
+    font-size: 1rem;
+  }
 }

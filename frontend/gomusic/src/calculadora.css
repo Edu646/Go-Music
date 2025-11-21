@@ -115,3 +115,56 @@
   background: #3a3a3a;
   border-color: #666;
 }
+
+/* ----------------------------------- */
+/* 📱 VISTA MÓVIL (MEDIA QUERY) 📱 */
+/* ----------------------------------- */
+
+@media (max-width: 500px) {
+  /* Reducción general de padding y margen en el contenedor */
+  .search-container {
+    margin: 40px 10px; /* Menos margen vertical y horizontal */
+    padding: 15px;
+    border-radius: 10px; /* Borde un poco más pequeño */
+  }
+
+  /* Título: Aún más compacto */
+  .search-container h2 {
+    font-size: 1.4rem;
+    margin-bottom: 15px;
+  }
+
+  /* Caja de búsqueda: Padding más compacto y fuente más pequeña */
+  .search-box input,
+  .search-box button {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    border-radius: 8px;
+  }
+
+  /* Item de canción: Cambiamos a una disposición apilada para más espacio */
+  .song-item {
+    flex-direction: column; /* Apila la info y las acciones */
+    align-items: flex-start; /* Alinea los elementos a la izquierda */
+    padding: 10px;
+    gap: 8px; /* Espacio entre info y acciones */
+  }
+
+  /* Nombre y artista: Fuente más pequeña para ahorrar espacio */
+  .song-info {
+    font-size: 0.95rem;
+  }
+
+  /* Acciones: Asegura que los botones sean cómodos de presionar */
+  .song-actions {
+    width: 100%; /* Ocupa todo el ancho disponible */
+    justify-content: flex-end; /* Mueve los botones a la derecha si es necesario */
+    gap: 8px;
+  }
+
+  .song-actions button,
+  .btn-download {
+    padding: 8px 10px; /* Botones más grandes para el dedo */
+    font-size: 0.9rem;
+  }
+}

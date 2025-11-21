@@ -252,11 +252,7 @@ export default function Chat() {
             </button>
         </div>
     ) : (
-      <div className="chat-container">
-        {/* Aquí mostramos con quién está chateando la aplicación (username) */}
-        <p style={{textAlign: 'center', backgroundColor: '#555', color: 'yellow', padding: '5px'}}>
-          App User: **{username}** (Si esto es incorrecto, el problema es de la función getUsername o Formulario.jsx)
-        </p>
+      <div className="chat-container"> 
 
         {/* Sidebar */}
         <div className="sidebar">
