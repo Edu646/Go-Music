@@ -43,6 +43,30 @@ const SongSchema = new mongoose.Schema({
 });
 const Song = mongoose.model("Song", SongSchema);
 
+// -------------------------------------------------------
+// RUTA SEARCH
+// -------------------------------------------------------
+app.get("/search", async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || !q.trim()) return res.json([]);
+
+    // Busca por nombre de canción o artista (case-insensitive)
+    const regex = new RegExp(q.trim(), "i");
+    const songs = await Song.find({
+      $or: [
+        { name: { $regex: regex } },
+        { artist: { $regex: regex } }
+      ]
+    }).sort({ createdAt: -1 });
+
+    res.json(songs);
+  } catch (err) {
+    console.error("Error en /search:", err);
+    res.status(500).json({ error: "Error buscando canciones" });
+  }
+});
+
 // --- MODELO MENSAJES DE CHAT GLOBAL ---
 const MessageSchema = new mongoose.Schema({
   sender: String,
