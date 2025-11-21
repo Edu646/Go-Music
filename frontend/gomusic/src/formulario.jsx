@@ -12,7 +12,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import "./formulario.css";
 
-// Componente Subida (Mantenido sin cambios funcionales)
+// Componente Subida (sin cambios)
 function FormularioSubida({ user, refreshSongs }) {
   const [file, setFile] = useState(null);
   const [name, setName] = useState("");
@@ -60,7 +60,7 @@ function FormularioSubida({ user, refreshSongs }) {
   );
 }
 
-// Componente Lista de Canciones (Mantenido sin cambios funcionales)
+// Componente Lista de Canciones (sin cambios)
 function SongList({ songs, search, setSearch, refreshSongs }) {
   const handleSearchChange = (e) => setSearch(e.target.value);
 
@@ -118,6 +118,25 @@ const connectAndEmitOnline = (username) => {
     }
 };
 
+// 🚨 Nueva Función Auxiliar para obtener el username de forma robusta
+const getUsernameFromStorageOrFirebase = (firebaseUser) => {
+    const storedUser = JSON.parse(localStorage.getItem("gomusic_user"));
+
+    // Prioridad 1: Usar el username que ya tenemos en localStorage si existe
+    if (storedUser?.username) {
+        return storedUser.username;
+    }
+    
+    // Prioridad 2: Usar el DisplayName de Firebase
+    if (firebaseUser.displayName) {
+        return firebaseUser.displayName;
+    }
+    
+    // Prioridad 3: Usar la parte del email antes del @
+    return firebaseUser.email.split("@")[0];
+}
+
+
 export default function Formulario() {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ username: "", email: "", password: "" });
@@ -147,15 +166,11 @@ export default function Formulario() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        // 🚨 FIX: Intenta obtener el username de localStorage primero si existe 
-        // para evitar que el displayName (que a veces tarda en actualizarse)
-        // ponga un valor genérico temporalmente.
-        const storedUser = JSON.parse(localStorage.getItem("gomusic_user"));
+        // 🚨 CAMBIO CLAVE: Usamos la función robusta
+        const finalUsername = getUsernameFromStorageOrFirebase(firebaseUser);
         
         const u = {
-          // Usamos el username guardado o el displayName si existe. 
-          // Si no, usamos la parte del email.
-          username: storedUser?.username || firebaseUser.displayName || firebaseUser.email.split("@")[0],
+          username: finalUsername,
           email: firebaseUser.email,
           avatar: firebaseUser.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png"
         };
@@ -198,9 +213,12 @@ export default function Formulario() {
       if (isLogin) {
         const cred = await signInWithEmailAndPassword(auth, formData.email, formData.password);
         const firebaseUser = cred.user;
-
+        
+        // 🚨 CAMBIO CLAVE: Usamos la función robusta
+        const finalUsername = getUsernameFromStorageOrFirebase(firebaseUser);
+        
         const u = {
-          username: firebaseUser.displayName || firebaseUser.email.split("@")[0],
+          username: finalUsername,
           email: firebaseUser.email,
           avatar: firebaseUser.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png"
         };
@@ -212,11 +230,12 @@ export default function Formulario() {
         connectAndEmitOnline(u.username);
         
       } else {
+        // Lógica de Registro (aquí sí usamos el nombre del formulario)
         const cred = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
         const photoURL = photoFile ? await uploadPhoto(cred.user.uid) : null;
         await updateProfile(cred.user, { displayName: formData.username, photoURL });
         const u = {
-          username: formData.username,
+          username: formData.username, // Usamos el nombre que el usuario tecleó
           email: cred.user.email,
           avatar: photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png"
         };
@@ -238,10 +257,16 @@ export default function Formulario() {
   const handleGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
+      const firebaseUser = result.user;
+
+      // 🚨 CAMBIO CLAVE: Usamos la función robusta
+      const finalUsername = getUsernameFromStorageOrFirebase(firebaseUser);
+      
       const u = {
-        username: result.user.displayName,
-        email: result.user.email,
-        avatar: result.user.photoURL
+        // En Google, su nombre de visualización es más fiable, pero preferimos localStorage
+        username: finalUsername, 
+        email: firebaseUser.email,
+        avatar: firebaseUser.photoURL
       };
       setUser(u);
       localStorage.setItem("gomusic_user", JSON.stringify(u));
