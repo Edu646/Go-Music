@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from "react";
 import "./playlist_usuario.css";
 
-export default function UserPlaylists({ user }) {
+export default function UserPlaylists() {
+  const [user, setUser] = useState(null);
   const [playlists, setPlaylists] = useState([]);
   const [selected, setSelected] = useState(null); // playlist seleccionada para editar
   const [allSongs, setAllSongs] = useState([]);
   const [search, setSearch] = useState("");
+
+  // Obtener usuario de localStorage al montar
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("gomusic_user"));
+    if (storedUser) setUser(storedUser);
+  }, []);
 
   // Cargar playlists del usuario
   const fetchPlaylists = async () => {
@@ -14,6 +21,11 @@ export default function UserPlaylists({ user }) {
       const res = await fetch(`/playlists/${user.username}`);
       const data = await res.json();
       setPlaylists(data);
+      // Si hay una playlist seleccionada, actualizarla
+      if (selected) {
+        const updated = data.find(p => p._id === selected._id);
+        setSelected(updated || null);
+      }
     } catch (err) {
       console.error("Error cargando playlists:", err);
     }
@@ -55,7 +67,9 @@ export default function UserPlaylists({ user }) {
     try {
       const playlist = playlists.find(p => p._id === playlistId);
       if (!playlist) return;
-      const updatedSongs = playlist.songs.filter(s => s._id !== songId);
+      const updatedSongs = playlist.songs.filter(
+        s => s._id.toString() !== songId.toString()
+      );
       const res = await fetch(`/playlists/${playlistId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -92,7 +106,6 @@ export default function UserPlaylists({ user }) {
           <h3>Editando: {selected.name}</h3>
           <button onClick={() => setSelected(null)}>Cerrar Editor</button>
 
-          {/* Buscar canciones para agregar */}
           <input
             type="text"
             placeholder="Buscar canciones..."
@@ -106,7 +119,7 @@ export default function UserPlaylists({ user }) {
               <li key={s._id}>
                 {s.name} - {s.artist}
                 <audio src={s.audio} controls style={{ marginLeft: "10px" }} />
-                {!selected.songs.find(song => song._id === s._id) && (
+                {!selected.songs.some(song => song._id.toString() === s._id.toString()) && (
                   <button onClick={() => addSong(selected._id, s)}>Agregar</button>
                 )}
               </li>

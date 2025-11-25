@@ -48,7 +48,6 @@ function Navbar() {
         <li>
           <NavLink
             to="/playlist"
-            className={({ isActive }) => (isActive ? "active" : "")}
             onClick={closeMenu}
           >
             Playlist
