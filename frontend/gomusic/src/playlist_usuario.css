@@ -41,6 +41,7 @@
   border-radius: 10px;
   object-fit: cover;
   margin-bottom: 10px;
+  cursor: pointer;
 }
 
 .playlist-card h4 {
@@ -162,23 +163,8 @@
 }
 
 /* ------------------- */
-/* RESPONSIVE          */
+/* PLAYLIST POPUP      */
 /* ------------------- */
-@media (max-width: 700px) {
-  .playlist-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  }
-
-  .playlist-editor {
-    padding: 20px;
-  }
-
-  .playlist-editor li audio {
-    max-width: 120px;
-  }
-
-
-/* playlist_usuario.css */
 
 .playlist-popup {
   position: fixed;
@@ -264,6 +250,22 @@
   height: 30px;
   cursor: pointer;
 }
+
+/* ------------------- */
+/* RESPONSIVE          */
+/* ------------------- */
+@media (max-width: 700px) {
+  .playlist-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+
+  .playlist-editor {
+    padding: 20px;
+  }
+
+  .playlist-editor li audio {
+    max-width: 120px;
+  }
 }
 
 @media (max-width: 420px) {
