@@ -238,7 +238,7 @@ function SongList({ songs, search, setSearch, refreshSongs }) {
             <a href={song.audio} target="_blank" rel="noopener noreferrer">🎵 Escuchar / Descargar</a>
           </li>
         )) : <li>{search ? "No se encontraron resultados." : "No hay canciones subidas aún."}</li>}
-        <PlaylistCreator user={user} refreshPlaylists={() => {}} />
+        <playlist_crear user={user} refreshPlaylists={() => {}} />
       </ul>
     </div>
   );
