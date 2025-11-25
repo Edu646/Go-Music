@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import "./playlist_usuario.css";
 
 export default function UserPlaylists({ user }) {
   const [playlists, setPlaylists] = useState([]);
