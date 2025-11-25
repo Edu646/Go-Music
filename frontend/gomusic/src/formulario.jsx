@@ -11,6 +11,62 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import "./formulario.css";
 
+// ---------------------
+// Componente PlaylistCreator
+// ---------------------
+function PlaylistCreator({ user, refreshPlaylists }) {
+  const [name, setName] = useState("");
+  const [image, setImage] = useState(null);
+  const [msg, setMsg] = useState("");
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return setMsg("Pon un nombre a la playlist");
+
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("owner", user.username);
+    if (image) formData.append("image", image);
+
+    try {
+      const res = await fetch("/playlists", { method: "POST", body: formData });
+      const data = await res.json();
+      if (res.ok) {
+        setMsg("Playlist creada ✔️");
+        setName("");
+        setImage(null);
+        refreshPlaylists && refreshPlaylists();
+      } else {
+        setMsg(data.error || "Error creando playlist");
+      }
+    } catch (err) {
+      setMsg("Error creando playlist");
+    }
+  };
+
+  return (
+    <form className="playlist-creator" onSubmit={handleCreate}>
+      <h3>Crear nueva Playlist</h3>
+      <input
+        type="text"
+        placeholder="Nombre de la playlist"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setImage(e.target.files[0])}
+      />
+      <button type="submit">Crear Playlist</button>
+      {msg && <p>{msg}</p>}
+    </form>
+  );
+}
+
+// ---------------------
+// Componente principal
+// ---------------------
 export default function Formulario() {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ username: "", email: "", password: "" });
@@ -20,6 +76,9 @@ export default function Formulario() {
 
   const [songs, setSongs] = useState([]);
   const [search, setSearch] = useState("");
+
+  // Nuevo estado para mostrar formulario de playlist
+  const [showPlaylistCreator, setShowPlaylistCreator] = useState(false);
 
   const fetchSongs = useCallback(async () => {
     try {
@@ -46,7 +105,7 @@ export default function Formulario() {
           avatar: firebaseUser.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png"
         };
         setUser(u);
-        localStorage.setItem("gomusic_user", JSON.stringify(u)); 
+        localStorage.setItem("gomusic_user", JSON.stringify(u));
       } else {
         setUser(null);
         localStorage.removeItem("gomusic_user");
@@ -122,6 +181,7 @@ export default function Formulario() {
     setUser(null);
     localStorage.removeItem("gomusic_user");
     setMessage("Sesión cerrada");
+    setShowPlaylistCreator(false); // Oculta formulario playlist al cerrar sesión
   };
 
   const toggleForm = () => {
@@ -159,17 +219,24 @@ export default function Formulario() {
             <button onClick={handleLogout} className="logout-btn">Cerrar sesión</button>
           </div>
 
-          {/* Formulario de subida */}
+          {/* Formulario de subida de canciones */}
           <FormularioSubida user={user} refreshSongs={fetchSongs} />
 
+          {/* Botón para mostrar el formulario PlaylistCreator */}
+          <button
+            className="btn-playlist-toggle"
+            onClick={() => setShowPlaylistCreator(!showPlaylistCreator)}
+          >
+            {showPlaylistCreator ? "Ocultar Crear Playlist" : "Crear Playlist"}
+          </button>
+
+          {/* Mostrar PlaylistCreator solo si el usuario ha iniciado sesión y clic en botón */}
+          {showPlaylistCreator && (
+            <PlaylistCreator user={user} refreshPlaylists={fetchSongs} />
+          )}
+
           {/* Lista de canciones */}
-          <SongList
-            songs={songs}
-            search={search}
-            setSearch={setSearch}
-            refreshSongs={fetchSongs}
-            user={user}     // ← AÑADIDO PARA CORREGIR EL ESLINT
-          />
+          <SongList songs={songs} search={search} setSearch={setSearch} refreshSongs={fetchSongs} />
         </>
       )}
     </div>
@@ -229,8 +296,7 @@ function FormularioSubida({ user, refreshSongs }) {
 // ---------------------
 // Componente Lista
 // ---------------------
-function SongList({ songs, search, setSearch, refreshSongs, user }) {
-
+function SongList({ songs, search, setSearch, refreshSongs }) {
   const handleSearchChange = (e) => setSearch(e.target.value);
 
   return (
