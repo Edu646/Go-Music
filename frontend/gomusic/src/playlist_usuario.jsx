@@ -5,27 +5,28 @@ import "./playlist_usuario.css";
 export default function UserPlaylists() {
   const [user, setUser] = useState(null);
   const [playlists, setPlaylists] = useState([]);
-  const [selected, setSelected] = useState(null); // Playlist seleccionada para editar
+  const [selected, setSelected] = useState(null);
   const [allSongs, setAllSongs] = useState([]);
   const [search, setSearch] = useState("");
-  const [popupPlaylist, setPopupPlaylist] = useState(null); // Popup de reproducción
+  const [popupPlaylist, setPopupPlaylist] = useState(null);
 
   const { play } = usePlayer();
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Obtener usuario de localStorage
+  // Obtener usuario
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("gomusic_user"));
     if (storedUser) setUser(storedUser);
   }, []);
 
-  // Fetch playlists
+  // Fetch playlists del usuario
   const fetchPlaylists = async () => {
     if (!user) return;
     try {
       const res = await fetch(`/playlists/${user.username}`);
       const data = await res.json();
       setPlaylists(data);
+
       if (selected) {
         const updated = data.find(p => p._id === selected._id);
         setSelected(updated || null);
@@ -35,7 +36,7 @@ export default function UserPlaylists() {
     }
   };
 
-  // Fetch songs
+  // Fetch de canciones
   const fetchSongs = async () => {
     try {
       const query = search ? `/search?q=${search}` : "/songs";
@@ -59,6 +60,7 @@ export default function UserPlaylists() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ song }),
       });
+
       if (res.ok) fetchPlaylists();
     } catch (err) {
       console.error("Error agregando canción:", err);
@@ -69,47 +71,37 @@ export default function UserPlaylists() {
     try {
       const playlist = playlists.find(p => p._id === playlistId);
       if (!playlist) return;
+
       const updatedSongs = playlist.songs.filter(
         s => s._id.toString() !== songId.toString()
       );
+
       const res = await fetch(`/playlists/${playlistId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ songs: updatedSongs.map(s => s._id) }),
       });
+
       if (res.ok) fetchPlaylists();
     } catch (err) {
       console.error("Error quitando canción:", err);
     }
   };
 
+  // Abrir popup sin reproducir automáticamente
   const openPopup = (playlist) => {
     setPopupPlaylist(playlist);
     setCurrentIndex(0);
-    if (playlist.songs[0]) play(playlist.songs[0]);
   };
 
   const closePopup = () => setPopupPlaylist(null);
-
-  const nextSong = () => {
-    if (!popupPlaylist) return;
-    const nextIndex = (currentIndex + 1) % popupPlaylist.songs.length;
-    setCurrentIndex(nextIndex);
-    play(popupPlaylist.songs[nextIndex]);
-  };
-
-  const prevSong = () => {
-    if (!popupPlaylist) return;
-    const prevIndex = (currentIndex - 1 + popupPlaylist.songs.length) % popupPlaylist.songs.length;
-    setCurrentIndex(prevIndex);
-    play(popupPlaylist.songs[prevIndex]);
-  };
 
   if (!user) return <p>Debes iniciar sesión para ver tus playlists.</p>;
 
   return (
     <div className="user-playlists">
       <h2>Mis Playlists</h2>
+
       <div className="playlist-grid">
         {playlists.map((p) => (
           <div key={p._id} className="playlist-card">
@@ -117,7 +109,6 @@ export default function UserPlaylists() {
               src={p.image || "https://i.ibb.co/4pDNDk1/avatar-default.png"}
               alt={p.name}
               onClick={() => openPopup(p)}
-              style={{ cursor: "pointer" }}
             />
             <h4>{p.name}</h4>
             <p>{p.songs.length} canciones</p>
@@ -126,7 +117,7 @@ export default function UserPlaylists() {
         ))}
       </div>
 
-      {/* Editor de playlist */}
+      {/* Editor */}
       {selected && (
         <div className="playlist-editor">
           <h3>Editando: {selected.name}</h3>
@@ -163,12 +154,18 @@ export default function UserPlaylists() {
         </div>
       )}
 
-      {/* Popup de reproducción */}
+      {/* Popup sin flechas */}
       {popupPlaylist && (
         <div className="playlist-popup">
           <div className="popup-content">
+
             <button className="close-popup" onClick={closePopup}>X</button>
-            <img src={popupPlaylist.image || "https://i.ibb.co/4pDNDk1/avatar-default.png"} alt={popupPlaylist.name} />
+
+            <img
+              src={popupPlaylist.image || "https://i.ibb.co/4pDNDk1/avatar-default.png"}
+              alt={popupPlaylist.name}
+            />
+
             <h3>{popupPlaylist.name}</h3>
 
             <ul className="popup-song-list">
@@ -180,10 +177,6 @@ export default function UserPlaylists() {
               ))}
             </ul>
 
-            <div className="popup-controls">
-              <button onClick={prevSong}>⏮️</button>
-              <button onClick={nextSong}>⏭️</button>
-            </div>
           </div>
         </div>
       )}
