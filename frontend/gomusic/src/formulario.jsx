@@ -40,6 +40,7 @@ function PlaylistCreator({ user, refreshPlaylists }) {
         setMsg(data.error || "Error creando playlist");
       }
     } catch (err) {
+      console.error("Error creando playlist:", err);
       setMsg("Error creando playlist");
     }
   };
@@ -77,11 +78,10 @@ export default function Formulario() {
   const [songs, setSongs] = useState([]);
   const [search, setSearch] = useState("");
 
-  // Estado para playlists
-  const [playlists, setPlaylists] = useState([]);
+  // Estado para mostrar formulario de playlist
   const [showPlaylistCreator, setShowPlaylistCreator] = useState(false);
+  const [playlists, setPlaylists] = useState([]);
 
-  // ------------------ Funciones Fetch ------------------
   const fetchSongs = useCallback(async () => {
     try {
       const query = search ? `/search?q=${search}` : '/songs';
@@ -93,7 +93,7 @@ export default function Formulario() {
     }
   }, [search]);
 
-  const fetchPlaylists = async () => {
+  const fetchPlaylists = useCallback(async () => {
     if (!user) return;
     try {
       const res = await fetch(`/playlists/${user.username}`);
@@ -102,17 +102,14 @@ export default function Formulario() {
     } catch (err) {
       console.error("Error cargando playlists:", err);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchSongs();
-  }, [fetchSongs]);
+    fetchPlaylists();
+  }, [fetchSongs, fetchPlaylists]);
 
-  useEffect(() => {
-    if (user) fetchPlaylists();
-  }, [user]);
-
-  // ------------------ Firebase Auth ------------------
+  // Escucha de estado de Firebase Auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
@@ -198,8 +195,7 @@ export default function Formulario() {
     setUser(null);
     localStorage.removeItem("gomusic_user");
     setMessage("Sesión cerrada");
-    setShowPlaylistCreator(false);
-    setPlaylists([]);
+    setShowPlaylistCreator(false); // Oculta formulario playlist al cerrar sesión
   };
 
   const toggleForm = () => {
@@ -253,20 +249,24 @@ export default function Formulario() {
             <PlaylistCreator user={user} refreshPlaylists={fetchPlaylists} />
           )}
 
-          {/* Lista de canciones */}
-          <SongList songs={songs} search={search} setSearch={setSearch} refreshSongs={fetchSongs} />
-
-          {/* Lista de playlists del usuario */}
+          {/* Lista de playlists */}
           {playlists.length > 0 && (
             <div className="user-playlists">
-              <h3>Mis Playlists ({playlists.length})</h3>
-              <ul>
+              <h3>Mis Playlists</h3>
+              <div className="playlist-grid">
                 {playlists.map(p => (
-                  <li key={p._id}>{p.name}</li>
+                  <div key={p._id} className="playlist-card">
+                    <img src={p.image || "https://i.ibb.co/4pDNDk1/avatar-default.png"} alt={p.name} />
+                    <h4>{p.name}</h4>
+                    <p>{p.songs.length} canciones</p>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
+
+          {/* Lista de canciones */}
+          <SongList songs={songs} search={search} setSearch={setSearch} refreshSongs={fetchSongs} />
         </>
       )}
     </div>
@@ -336,7 +336,7 @@ function SongList({ songs, search, setSearch, refreshSongs }) {
       <button onClick={refreshSongs} style={{ marginLeft: '10px' }}>Recargar Lista</button>
       <ul>
         {songs.length > 0 ? songs.map((song, idx) => (
-          <li key={song.id || idx}>
+          <li key={song._id || idx}>
             <strong>{song.name}</strong> - {song.artist} (Subida por: {song.uploadedBy}){" "}
             <a href={song.audio} target="_blank" rel="noopener noreferrer">🎵 Escuchar / Descargar</a>
           </li>
