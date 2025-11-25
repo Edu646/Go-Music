@@ -46,7 +46,7 @@ export default function Formulario() {
           avatar: firebaseUser.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png"
         };
         setUser(u);
-        localStorage.setItem("gomusic_user", JSON.stringify(u)); // guardamos usuario
+        localStorage.setItem("gomusic_user", JSON.stringify(u)); 
       } else {
         setUser(null);
         localStorage.removeItem("gomusic_user");
@@ -120,7 +120,7 @@ export default function Formulario() {
   const handleLogout = async () => {
     await signOut(auth);
     setUser(null);
-    localStorage.removeItem("gomusic_user"); // eliminamos usuario al cerrar sesión
+    localStorage.removeItem("gomusic_user");
     setMessage("Sesión cerrada");
   };
 
@@ -159,11 +159,17 @@ export default function Formulario() {
             <button onClick={handleLogout} className="logout-btn">Cerrar sesión</button>
           </div>
 
-          {/* Formulario de subida de canciones */}
+          {/* Formulario de subida */}
           <FormularioSubida user={user} refreshSongs={fetchSongs} />
 
           {/* Lista de canciones */}
-          <SongList songs={songs} search={search} setSearch={setSearch} refreshSongs={fetchSongs} />
+          <SongList
+            songs={songs}
+            search={search}
+            setSearch={setSearch}
+            refreshSongs={fetchSongs}
+            user={user}     // ← AÑADIDO PARA CORREGIR EL ESLINT
+          />
         </>
       )}
     </div>
@@ -171,7 +177,7 @@ export default function Formulario() {
 }
 
 // ---------------------
-// Componente Subida (sin cambios)
+// Componente Subida
 // ---------------------
 function FormularioSubida({ user, refreshSongs }) {
   const [file, setFile] = useState(null);
@@ -221,9 +227,10 @@ function FormularioSubida({ user, refreshSongs }) {
 }
 
 // ---------------------
-// Componente Lista (sin cambios)
+// Componente Lista
 // ---------------------
-function SongList({ songs, search, setSearch, refreshSongs }) {
+function SongList({ songs, search, setSearch, refreshSongs, user }) {
+
   const handleSearchChange = (e) => setSearch(e.target.value);
 
   return (
@@ -238,7 +245,6 @@ function SongList({ songs, search, setSearch, refreshSongs }) {
             <a href={song.audio} target="_blank" rel="noopener noreferrer">🎵 Escuchar / Descargar</a>
           </li>
         )) : <li>{search ? "No se encontraron resultados." : "No hay canciones subidas aún."}</li>}
-        <playlist_crear user={user} refreshPlaylists={() => {}} />
       </ul>
     </div>
   );
