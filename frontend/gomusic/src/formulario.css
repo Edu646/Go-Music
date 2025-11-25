@@ -18,7 +18,8 @@
 /* Títulos */
 .auth-container h2,
 .user-info-box h3,
-.formulario h3 {
+.formulario h3,
+.playlist-creator h3 {
   color: #1db954;
   margin-bottom: 15px;
   letter-spacing: 1px;
@@ -27,7 +28,8 @@
 /* Formulario input */
 .auth-form input,
 .formulario input,
-.song-list input {
+.song-list input,
+.playlist-creator input {
   width: 100%;
   padding: 10px 12px;
   margin-bottom: 12px;
@@ -42,7 +44,8 @@
 
 .auth-form input:focus,
 .formulario input:focus,
-.song-list input:focus {
+.song-list input:focus,
+.playlist-creator input:focus {
   background: rgba(255, 255, 255, 0.2);
 }
 
@@ -100,16 +103,16 @@ button:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 20px;
 }
 
 .avatar-img {
-  width: 100px;
-  height: 100px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid #1db954;
+  border: 2px solid #1db954;
 }
 
 .logout-btn {
@@ -122,12 +125,21 @@ button:hover {
 
 /* Formulario subida de canciones */
 .formulario {
-  margin-top: 25px;
+  margin-top: 20px;
   padding: 20px;
   background: rgba(30, 30, 30, 0.9);
   border-radius: 15px;
 }
 
+/* Formulario playlist */
+.playlist-creator {
+  margin-top: 20px;
+  padding: 20px;
+  background: rgba(30, 30, 30, 0.9);
+  border-radius: 15px;
+}
+
+/* Lista de canciones */
 .song-list {
   margin-top: 25px;
   text-align: left;
@@ -155,6 +167,46 @@ button:hover {
   text-decoration: underline;
 }
 
+/* Lista de playlists */
+.user-playlists {
+  margin-top: 25px;
+  text-align: left;
+}
+
+.playlist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.playlist-card {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.playlist-card:hover {
+  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.playlist-card img {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  object-fit: cover;
+  margin-bottom: 5px;
+}
+
+/* Botón toggle Playlist */
+.btn-playlist-toggle {
+  margin-top: 15px;
+  width: 100%;
+}
+
 /* Responsive */
 @media (max-width: 700px) {
   .auth-container {
@@ -163,8 +215,13 @@ button:hover {
   }
 
   .avatar-img {
-    width: 80px;
-    height: 80px;
+    width: 60px;
+    height: 60px;
+  }
+
+  .playlist-card img {
+    width: 60px;
+    height: 60px;
   }
 }
 
@@ -180,7 +237,8 @@ button:hover {
 
   .formulario input,
   .auth-form input,
-  .song-list input {
+  .song-list input,
+  .playlist-creator input {
     font-size: 0.95rem;
   }
 }
