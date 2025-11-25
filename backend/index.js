@@ -51,8 +51,8 @@ app.get("/search", async (req, res) => {
     const { q } = req.query;
     if (!q || !q.trim()) return res.json([]);
 
-    // Busca por nombre de canción o artista (case-insensitive)
     const regex = new RegExp(q.trim(), "i");
+
     const songs = await Song.find({
       $or: [
         { name: { $regex: regex } },
@@ -114,9 +114,8 @@ const uploadToCloudinary = (buffer) => {
 };
 
 // -------------------------------------------------------
-//  RUTAS API DE AUDIOS
+//  RUTAS API DE AUDIOS
 // -------------------------------------------------------
-
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "Falta archivo" });
@@ -154,22 +153,20 @@ app.delete("/songs/:id", async (req, res) => {
     if (!song) return res.status(404).json({ error: "No encontrada" });
 
     if (song.public_id) {
-      // Usamos 'video' como resource_type ya que cloudinary puede detectar audios como videos
-      await cloudinary.uploader.destroy(song.public_id, { resource_type: "video" }); 
+      // Cloudinary detecta audios como video, pero el tipo correcto es "auto"
+      await cloudinary.uploader.destroy(song.public_id, { resource_type: "auto" });
     }
 
     await Song.findByIdAndDelete(req.params.id);
     res.json({ message: "Canción eliminada" });
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: "Error eliminando canción" });
   }
 });
 
 // -------------------------------------------------------
-//  RUTAS DE CHAT
+//  RUTAS DE CHAT
 // -------------------------------------------------------
-
-// Obtener mensajes globales
 app.get("/messages", async (req, res) => {
   try {
     const msgs = await Message.find().sort({ createdAt: 1 });
@@ -179,7 +176,6 @@ app.get("/messages", async (req, res) => {
   }
 });
 
-// Obtener mensajes privados del usuario
 app.get("/private-messages", async (req, res) => {
   try {
     const { username } = req.query;
@@ -200,14 +196,15 @@ app.get("/private-messages", async (req, res) => {
   }
 });
 
-// Marcar mensajes como leídos
 app.post("/private-messages/mark-read", async (req, res) => {
   try {
     const { username, sender } = req.body;
+
     await PrivateMessage.updateMany(
-      { sender: sender, recipient: username, read: false },
+      { sender, recipient: username, read: false },
       { read: true }
     );
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Error marcando mensajes como leídos" });
@@ -215,29 +212,24 @@ app.post("/private-messages/mark-read", async (req, res) => {
 });
 
 // -------------------------------------------------------
-// RUTA NUEVA: Obtener la lista de todos los usuarios (para el buscador del frontend)
+//  NUEVA RUTA: LISTA DE USUARIOS
 // -------------------------------------------------------
-
 app.get("/users", async (req, res) => {
   try {
-    // 1. Obtener nombres únicos de PrivateMessage
-    const privateSenders = await PrivateMessage.distinct('sender');
-    const privateRecipients = await PrivateMessage.distinct('recipient');
+    const privateSenders = await PrivateMessage.distinct("sender");
+    const privateRecipients = await PrivateMessage.distinct("recipient");
+    const globalSenders = await Message.distinct("sender");
+    const songUploaders = await Song.distinct("uploadedBy");
 
-    // 2. Obtener nombres únicos de Message
-    const globalSenders = await Message.distinct('sender');
-    
-    // 3. Obtener nombres únicos de Song uploaders
-    const songUploaders = await Song.distinct('uploadedBy');
+    let allUsers = [
+      ...privateSenders,
+      ...privateRecipients,
+      ...globalSenders,
+      ...songUploaders
+    ];
 
-    // Combinar, eliminar duplicados y limpiar nombres genéricos
-    let allUsers = [...privateSenders, ...privateRecipients, ...globalSenders, ...songUploaders];
-    
-    allUsers = Array.from(new Set(allUsers)).filter(u => 
-        u && 
-        u !== "Anónimo" && 
-        u !== "Desconocido" && 
-        u.trim() !== ""
+    allUsers = Array.from(new Set(allUsers)).filter(
+      (u) => u && u.trim() !== "" && u !== "Anónimo" && u !== "Desconocido"
     );
 
     res.json(allUsers);
@@ -248,12 +240,9 @@ app.get("/users", async (req, res) => {
 });
 
 // -------------------------------------------------------
-//  CHAT EN TIEMPO REAL CON SOCKET.IO
+//  CHAT EN TIEMPO REAL
 // -------------------------------------------------------
-
-// ... (El código Socket.io es el mismo y no necesita cambios)
-
-let onlineUsers = {}; 
+let onlineUsers = {};
 
 io.on("connection", (socket) => {
   console.log("🟢 Usuario conectado:", socket.id);
@@ -261,8 +250,7 @@ io.on("connection", (socket) => {
   socket.on("userOnline", (username) => {
     onlineUsers[username] = socket.id;
     socket.username = username;
-    console.log(`👤 ${username} está en línea`);
-    
+
     io.emit("onlineUsers", Object.keys(onlineUsers));
   });
 
@@ -300,16 +288,14 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     if (socket.username) {
       delete onlineUsers[socket.username];
-      console.log(`🔴 ${socket.username} se desconectó`);
       io.emit("onlineUsers", Object.keys(onlineUsers));
     }
   });
 });
 
 // -------------------------------------------------------
-//  FRONTEND REACT
+//  FRONTEND REACT
 // -------------------------------------------------------
-
 const frontendPath = path.join(__dirname, "../frontend/gomusic/build");
 app.use(express.static(frontendPath));
 
@@ -318,9 +304,8 @@ app.use((req, res) => {
 });
 
 // -------------------------------------------------------
-//  INICIO DEL SERVIDOR
+//  INICIO DEL SERVIDOR
 // -------------------------------------------------------
-
 const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, () => {
