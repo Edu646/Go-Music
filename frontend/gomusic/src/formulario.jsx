@@ -77,9 +77,11 @@ export default function Formulario() {
   const [songs, setSongs] = useState([]);
   const [search, setSearch] = useState("");
 
-  // Nuevo estado para mostrar formulario de playlist
+  // Estado para playlists
+  const [playlists, setPlaylists] = useState([]);
   const [showPlaylistCreator, setShowPlaylistCreator] = useState(false);
 
+  // ------------------ Funciones Fetch ------------------
   const fetchSongs = useCallback(async () => {
     try {
       const query = search ? `/search?q=${search}` : '/songs';
@@ -91,11 +93,26 @@ export default function Formulario() {
     }
   }, [search]);
 
+  const fetchPlaylists = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`/playlists/${user.username}`);
+      const data = await res.json();
+      setPlaylists(data);
+    } catch (err) {
+      console.error("Error cargando playlists:", err);
+    }
+  };
+
   useEffect(() => {
     fetchSongs();
   }, [fetchSongs]);
 
-  // Escucha de estado de Firebase Auth
+  useEffect(() => {
+    if (user) fetchPlaylists();
+  }, [user]);
+
+  // ------------------ Firebase Auth ------------------
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
@@ -181,7 +198,8 @@ export default function Formulario() {
     setUser(null);
     localStorage.removeItem("gomusic_user");
     setMessage("Sesión cerrada");
-    setShowPlaylistCreator(false); // Oculta formulario playlist al cerrar sesión
+    setShowPlaylistCreator(false);
+    setPlaylists([]);
   };
 
   const toggleForm = () => {
@@ -232,11 +250,23 @@ export default function Formulario() {
 
           {/* Mostrar PlaylistCreator solo si el usuario ha iniciado sesión y clic en botón */}
           {showPlaylistCreator && (
-            <PlaylistCreator user={user} refreshPlaylists={fetchSongs} />
+            <PlaylistCreator user={user} refreshPlaylists={fetchPlaylists} />
           )}
 
           {/* Lista de canciones */}
           <SongList songs={songs} search={search} setSearch={setSearch} refreshSongs={fetchSongs} />
+
+          {/* Lista de playlists del usuario */}
+          {playlists.length > 0 && (
+            <div className="user-playlists">
+              <h3>Mis Playlists ({playlists.length})</h3>
+              <ul>
+                {playlists.map(p => (
+                  <li key={p._id}>{p.name}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </>
       )}
     </div>
