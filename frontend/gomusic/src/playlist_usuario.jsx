@@ -7,12 +7,14 @@ export default function UserPlaylists({ user }) {
   const [songs, setSongs] = useState([]);
 
   const loadPlaylists = async () => {
+    if (!user) return; // <-- Evitar error si user es undefined
     const res = await fetch(`/playlists/${user.username}`);
     const data = await res.json();
     setPlaylists(data);
   };
 
   const searchSongs = async () => {
+    if (!search.trim()) return;
     const res = await fetch(`/search?q=${search}`);
     const data = await res.json();
     setSongs(data);
@@ -28,9 +30,12 @@ export default function UserPlaylists({ user }) {
     if (res.ok) loadPlaylists();
   };
 
+  // Carga playlists solo cuando user existe
   useEffect(() => {
-    loadPlaylists();
-  }, []);
+    if (user) loadPlaylists();
+  }, [user]);
+
+  if (!user) return <p>Debes iniciar sesión para ver tus playlists.</p>;
 
   return (
     <div className="user-playlists">
