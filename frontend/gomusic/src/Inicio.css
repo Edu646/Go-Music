@@ -6,148 +6,493 @@ html, body {
   margin: 0;
   padding: 0;
   font-family: 'Segoe UI', Arial, sans-serif;
-  background: linear-gradient(135deg, #1db954, #121212 80%);
-  background-attachment: fixed;
-  background-size: cover;
   color: #fff;
 }
 
+.page-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1db954 0%, #191414 50%, #000000 100%);
+  background-attachment: fixed;
+  padding-bottom: 60px;
+}
+
+/* ------------------------------
+   HERO SECTION
+------------------------------ */
+.hero-section {
+  width: 100%;
+  height: 500px;
+  position: relative;
+  margin-bottom: 40px;
+}
+
+.carousel-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.carousel-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-content {
+  text-align: center;
+  z-index: 2;
+  padding: 0 20px;
+}
+
+.hero-title {
+  font-size: 3.5rem;
+  font-weight: bold;
+  margin-bottom: 16px;
+  text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+  letter-spacing: 1px;
+}
+
+.hero-subtitle {
+  font-size: 1.4rem;
+  margin-bottom: 32px;
+  color: #e0e0e0;
+  text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
+}
+
+.hero-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 40px;
+  background-color: #1db954;
+  border: none;
+  border-radius: 50px;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(29, 185, 84, 0.4);
+}
+
+.hero-button:hover {
+  background-color: #19a44d;
+  transform: scale(1.05);
+}
+
+.button-text {
+  margin-left: 4px;
+}
+
+.carousel-indicators {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 3;
+}
+
+.indicator {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background-color: rgba(255,255,255,0.5);
+  transition: all 0.3s ease;
+}
+
+.indicator.active {
+  background-color: #1db954;
+}
 
 /* ------------------------------
    CONTENEDOR PRINCIPAL
 ------------------------------ */
 .container {
-  max-width: 700px;
-  margin: 110px auto 0 auto;
-  padding: 40px 32px;
-  background: rgba(0, 0, 0, 0.55);
-  border-radius: 24px;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
-  text-align: center;
-  transition: 0.3s ease;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
 }
-
-.container:hover {
-  box-shadow: 0 14px 48px rgba(0, 0, 0, 0.45);
-}
-
 
 /* ------------------------------
-   TITULOS Y TEXTOS
+   SECCIÓN ABOUT
 ------------------------------ */
-.container h1,
-.container h3 {
-  font-size: 2.1rem;
+.about-section {
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 40px;
+  border-radius: 16px;
+  margin-bottom: 48px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  font-size: 2rem;
   color: #1db954;
-  margin-bottom: 15px;
-  letter-spacing: 1px;
+  margin-bottom: 24px;
+  font-weight: bold;
 }
 
-.container p {
+.title-icon {
+  margin-right: 12px;
+}
+
+.about-text {
   font-size: 1.15rem;
-  color: #dcdcdc;
-  line-height: 1.6;
-  margin-bottom: 28px;
+  line-height: 1.8;
+  color: #e0e0e0;
 }
-
 
 /* ------------------------------
-   BOTONES
+   SECCIONES GENERALES
 ------------------------------ */
-.container .btn {
-  display: inline-block;
-  padding: 12px 28px;
-  margin: 8px;
-  border: none;
-  border-radius: 12px;
-  background: #1db954;
-  color: #fff;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
-  text-decoration: none;
+.section {
+  margin-bottom: 48px;
 }
 
-.container .btn:hover {
-  background: #19a44d;
+/* ------------------------------
+   PLAYLISTS
+------------------------------ */
+.playlist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.playlist-card {
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.playlist-card.hovered {
+  transform: translateY(-8px);
+  box-shadow: 0 8px 24px rgba(29, 185, 84, 0.3);
+}
+
+.playlist-image-wrapper {
+  position: relative;
+  width: 100%;
+  padding-bottom: 100%;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.playlist-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.play-button {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 48px;
+  height: 48px;
+  background-color: #1db954;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.playlist-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+.playlist-info {
+  font-size: 0.9rem;
+  color: #b3b3b3;
+}
+
+/* ------------------------------
+   LISTA DE CANCIONES
+------------------------------ */
+.track-list {
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  padding: 24px;
+  backdrop-filter: blur(10px);
+}
+
+.track-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.track-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.track-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.track-number {
+  font-size: 1rem;
+  color: #b3b3b3;
+  min-width: 24px;
+}
+
+.track-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.track-title {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #fff;
+}
+
+.track-artist {
+  font-size: 0.9rem;
+  color: #b3b3b3;
+}
+
+.track-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.heart-icon {
+  color: #b3b3b3;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.heart-icon:hover {
+  color: #1db954;
+}
+
+.track-duration {
+  font-size: 0.9rem;
+  color: #b3b3b3;
+}
+
+/* ------------------------------
+   CTA SECTION
+------------------------------ */
+.cta-section {
+  text-align: center;
+  background-color: rgba(29, 185, 84, 0.1);
+  padding: 60px 40px;
+  border-radius: 16px;
+  border: 2px solid rgba(29, 185, 84, 0.3);
+  margin-top: 48px;
+}
+
+.cta-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 16px;
+  color: #1db954;
+}
+
+.cta-text {
+  font-size: 1.2rem;
+  margin-bottom: 32px;
+  color: #e0e0e0;
+}
+
+.cta-button {
+  padding: 16px 48px;
+  background-color: #1db954;
+  border: none;
+  border-radius: 50px;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(29, 185, 84, 0.4);
+}
+
+.cta-button:hover {
+  background-color: #19a44d;
   transform: scale(1.05);
 }
-
 
 /* ------------------------------
    RESPONSIVE TABLET
 ------------------------------ */
 @media (max-width: 900px) {
+  .hero-title {
+    font-size: 2.5rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.2rem;
+  }
+
   .container {
-    max-width: 80%;
-    margin-top: 80px;
-    padding: 32px 26px;
+    padding: 0 20px;
   }
 
-  .container h1,
-  .container h3 {
-    font-size: 1.8rem;
+  .about-section {
+    padding: 32px 24px;
   }
 
-  .container p {
-    font-size: 1.05rem;
+  .playlist-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+  }
+
+  .cta-title {
+    font-size: 2rem;
   }
 }
-
 
 /* ------------------------------
    RESPONSIVE MÓVIL
 ------------------------------ */
 @media (max-width: 600px) {
-  .container {
-    max-width: 92%;
-    margin-top: 50px;
-    padding: 26px 20px;
-    border-radius: 18px;
+  .hero-section {
+    height: 400px;
   }
 
-  .container h1,
-  .container h3 {
-    font-size: 1.6rem;
+  .hero-title {
+    font-size: 2rem;
   }
 
-  .container p {
+  .hero-subtitle {
     font-size: 1rem;
   }
 
-  .container .btn {
-    padding: 12px;
-    width: 100%;
+  .hero-button {
+    padding: 14px 32px;
     font-size: 1rem;
-    margin: 10px 0;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+  }
+
+  .about-section {
+    padding: 24px 20px;
+  }
+
+  .about-text {
+    font-size: 1rem;
+  }
+
+  .playlist-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+
+  .track-left {
+    gap: 12px;
+  }
+
+  .track-title {
+    font-size: 0.95rem;
+  }
+
+  .track-artist {
+    font-size: 0.85rem;
+  }
+
+  .cta-section {
+    padding: 40px 24px;
+  }
+
+  .cta-title {
+    font-size: 1.8rem;
+  }
+
+  .cta-text {
+    font-size: 1rem;
+  }
+
+  .cta-button {
+    padding: 14px 36px;
+    font-size: 1rem;
   }
 }
-
 
 /* ------------------------------
    RESPONSIVE MÓVILES PEQUEÑOS
 ------------------------------ */
 @media (max-width: 420px) {
-  .container {
-    padding: 22px 16px;
-    border-radius: 14px;
+  .hero-section {
+    height: 350px;
   }
 
-  .container h1,
-  .container h3 {
-    font-size: 1.35rem;
+  .hero-title {
+    font-size: 1.75rem;
   }
 
-  .container p {
-    font-size: 0.95rem;
-    margin-bottom: 20px;
+  .playlist-grid {
+    grid-template-columns: 1fr 1fr;
   }
 
-  .container .btn {
-    border-radius: 10px;
-    font-size: 0.95rem;
+  .track-number {
+    font-size: 0.9rem;
+  }
+
+  .track-title {
+    font-size: 0.9rem;
+  }
+
+  .track-artist {
+    font-size: 0.8rem;
+  }
+
+  .track-duration {
+    font-size: 0.85rem;
   }
 }
