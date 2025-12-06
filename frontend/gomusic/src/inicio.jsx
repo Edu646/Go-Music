@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Play, Music, TrendingUp, Clock, Heart } from "lucide-react";
 import "./Inicio.css";
 
 function Inicio() {
@@ -48,7 +47,7 @@ function Inicio() {
               <h1 className="hero-title">Descubre Tu Música</h1>
               <p className="hero-subtitle">Miles de canciones, artistas y playlists esperándote</p>
               <button className="hero-button">
-                <Play size={20} fill="white" />
+                <span className="play-icon">▶</span>
                 <span className="button-text">Comenzar a Escuchar</span>
               </button>
             </div>
@@ -72,7 +71,7 @@ function Inicio() {
         {/* Sección: Lo que trata */}
         <div className="about-section">
           <h2 className="section-title">
-            <Music size={28} className="title-icon" />
+            <span className="title-icon">🎵</span>
             Lo Que Trata
           </h2>
           <p className="about-text">
@@ -85,7 +84,7 @@ function Inicio() {
         {/* Playlists destacadas */}
         <div className="section">
           <h2 className="section-title">
-            <TrendingUp size={28} className="title-icon" />
+            <span className="title-icon">📈</span>
             Playlists Destacadas
           </h2>
           <div className="playlist-grid">
@@ -104,7 +103,7 @@ function Inicio() {
                   />
                   {hoveredCard === playlist.id && (
                     <div className="play-button">
-                      <Play size={24} fill="white" />
+                      <span className="play-icon-large">▶</span>
                     </div>
                   )}
                 </div>
@@ -118,7 +117,7 @@ function Inicio() {
         {/* Reproducidas recientemente */}
         <div className="section">
           <h2 className="section-title">
-            <Clock size={28} className="title-icon" />
+            <span className="title-icon">🕒</span>
             Reproducidas Recientemente
           </h2>
           <div className="track-list">
@@ -132,7 +131,7 @@ function Inicio() {
                   </div>
                 </div>
                 <div className="track-right">
-                  <Heart size={18} className="heart-icon" />
+                  <span className="heart-icon">♥</span>
                   <span className="track-duration">{track.duration}</span>
                 </div>
               </div>
