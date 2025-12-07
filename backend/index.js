@@ -139,10 +139,10 @@ app.delete("/songs/:id", async (req, res) => {
 });
 
 // -----------------
-// RUTAS PLAYLIST
+// RUTAS PLAYLIST (MODIFICADAS PARA SEGURIDAD)
 // -----------------
 
-// Crear playlist
+// 1. Crear playlist (Cualquiera puede crear)
 app.post("/playlists", upload.single("image"), async (req, res) => {
   try {
     const { name, owner } = req.body;
@@ -162,7 +162,18 @@ app.post("/playlists", upload.single("image"), async (req, res) => {
   }
 });
 
-// Obtener playlists de un usuario
+// 2. 🔥 NUEVO: Obtener TODAS las playlists (Públicas)
+app.get("/playlists", async (req, res) => {
+  try {
+    // Devuelve todas las playlists para la sección de "Explorar"
+    const playlists = await Playlist.find().populate("songs").sort({ createdAt: -1 });
+    res.json(playlists);
+  } catch (err) {
+    res.status(500).json({ error: "Error obteniendo playlists globales" });
+  }
+});
+
+// 3. Obtener playlists de un usuario específico
 app.get("/playlists/:username", async (req, res) => {
   try {
     const { username } = req.params;
@@ -174,23 +185,91 @@ app.get("/playlists/:username", async (req, res) => {
   }
 });
 
-// Agregar canción a playlist
+// 4. 🔥 MODIFICADO: Agregar canción (SOLO DUEÑO)
 app.post("/playlists/:id/add", async (req, res) => {
   try {
     const { id } = req.params;
-    const { song } = req.body;
-    if (!song) return res.status(400).json({ error: "Falta canción" });
+    const { song, username } = req.body; // Necesitamos 'username' para validar
+
+    if (!song || !username) return res.status(400).json({ error: "Faltan datos (canción o usuario)" });
 
     const playlist = await Playlist.findById(id);
     if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
 
+    // 🔒 VALIDACIÓN DE PROPIEDAD
+    if (playlist.owner !== username) {
+      return res.status(403).json({ error: "Solo el dueño puede editar esta playlist" });
+    }
+
+    // Evitar duplicados (opcional)
+    if (playlist.songs.includes(song._id || song.id)) {
+        return res.status(400).json({ error: "La canción ya está en la playlist" });
+    }
+
     playlist.songs.push(song._id || song.id);
     await playlist.save();
-    res.json({ success: true });
+    
+    // Devolvemos la playlist actualizada
+    const updated = await Playlist.findById(id).populate("songs");
+    res.json(updated);
   } catch (err) {
     console.error("Error agregando canción:", err);
-    res.status(500).json({ error: "Error agregando canción a playlist" });
+    res.status(500).json({ error: "Error interno" });
   }
+});
+
+// 5. 🔥 NUEVO: Quitar canción de playlist (SOLO DUEÑO)
+app.post("/playlists/:id/remove", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { songId, username } = req.body;
+  
+      const playlist = await Playlist.findById(id);
+      if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
+  
+      // 🔒 VALIDACIÓN DE PROPIEDAD
+      if (playlist.owner !== username) {
+        return res.status(403).json({ error: "Solo el dueño puede editar esta playlist" });
+      }
+  
+      playlist.songs = playlist.songs.filter(s => s.toString() !== songId);
+      await playlist.save();
+      
+      const updated = await Playlist.findById(id).populate("songs");
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ error: "Error eliminando canción de playlist" });
+    }
+  });
+
+// 6. 🔥 NUEVO: Borrar playlist completa (SOLO DUEÑO)
+app.delete("/playlists/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        // En DELETE, a veces se manda el user por query params o body. Asumiremos body.
+        // Nota: Algunos clientes HTTP no permiten body en DELETE, si falla, usa query params.
+        const { username } = req.body; 
+
+        const playlist = await Playlist.findById(id);
+        if (!playlist) return res.status(404).json({ error: "No encontrada" });
+
+        // 🔒 VALIDACIÓN DE PROPIEDAD
+        if (playlist.owner !== username) {
+            return res.status(403).json({ error: "No tienes permiso para borrar esto" });
+        }
+
+        // Eliminar imagen de Cloudinary si existe
+        if (playlist.image && playlist.image.includes("cloudinary")) {
+            // Lógica para extraer public_id si es necesario, o simplemente borrar el registro
+            // Simplificado:
+        }
+
+        await Playlist.findByIdAndDelete(id);
+        res.json({ success: true, message: "Playlist eliminada" });
+
+    } catch (err) {
+        res.status(500).json({ error: "Error al borrar playlist" });
+    }
 });
 
 

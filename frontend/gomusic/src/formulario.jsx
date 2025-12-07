@@ -12,10 +12,10 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import "./formulario.css";
 
 /* ==========================================================================================
-   COMPONENTE PARA CREAR PLAYLISTS
+  COMPONENTE PARA CREAR Y BORRAR PLAYLISTS (MODIFICADO)
 ========================================================================================== */
-function PlaylistCreator({ user, refreshPlaylists }) {
-  const [name, setName] = useState("");
+function PlaylistCreator({ user, refreshPlaylists, playlist }) {
+  const [name, setName] = useState(playlist ? playlist.name : "");
   const [image, setImage] = useState(null);
   const [msg, setMsg] = useState("");
 
@@ -43,19 +43,148 @@ function PlaylistCreator({ user, refreshPlaylists }) {
     }
   };
 
+  const handleDelete = async (p) => {
+    if (!window.confirm(`¿Seguro que quieres borrar la playlist "${p.name}"?`)) return;
+    setMsg("");
+    try {
+      const res = await fetch(`/playlists/${p._id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        // 🚨 CRÍTICO: Envío del username para validación de propiedad en el backend
+        body: JSON.stringify({ username: user.username }),
+      });
+
+      if (res.ok) {
+        setMsg(`Playlist "${p.name}" eliminada ✔️`);
+        refreshPlaylists();
+      } else {
+        const data = await res.json();
+        setMsg(data.error || "Error al borrar playlist");
+      }
+    } catch {
+      setMsg("Error de conexión al borrar");
+    }
+  };
+
+
   return (
-    <form className="playlist-creator" onSubmit={handleCreate}>
-      <h3>Crear Playlist</h3>
-      <input type="text" placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} />
-      <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} />
-      <button type="submit">Crear</button>
-      {msg && <p>{msg}</p>}
-    </form>
+    <>
+      <form className="playlist-creator" onSubmit={handleCreate}>
+        <h3>Crear Playlist</h3>
+        <input type="text" placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} required />
+        <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} />
+        <button type="submit">Crear</button>
+        {msg && <p>{msg}</p>}
+      </form>
+
+      {/* Si es una lista de Playlists del usuario, agregamos el botón de borrar */}
+      {playlist && (
+        <button onClick={() => handleDelete(playlist)} className="btn-delete">
+          🗑️ Eliminar
+        </button>
+      )}
+    </>
   );
 }
 
 /* ==========================================================================================
-   MAIN COMPONENT
+  NUEVO COMPONENTE: ACCIONES DE CANCIÓN (Añadir a Playlist)
+========================================================================================== */
+function SongActions({ song, playlists, user, refreshPlaylists }) {
+    const [msg, setMsg] = useState("");
+    const [isAdding, setIsAdding] = useState(false);
+
+    const handleAddSong = async (playlistId, playlistName) => {
+        setMsg("Añadiendo...");
+        try {
+            const res = await fetch(`/playlists/${playlistId}/add`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                // 🚨 CRÍTICO: Envío del username para validación de propiedad en el backend
+                body: JSON.stringify({ 
+                    song: song, 
+                    username: user.username 
+                }), 
+            });
+
+            if (res.ok) {
+                setMsg(`✔️ Agregada a "${playlistName}"`);
+                refreshPlaylists(); // Para actualizar el número de canciones
+                setIsAdding(false);
+            } else {
+                const data = await res.json();
+                // El backend devuelve 403 si no es el dueño
+                setMsg(data.error || "Error al añadir"); 
+            }
+        } catch {
+            setMsg("Error de conexión");
+        }
+    };
+
+    return (
+        <div className="song-actions">
+            <button onClick={() => setIsAdding(!isAdding)} className="btn-action">
+                {isAdding ? "Cerrar" : "➕ Agregar a Playlist"}
+            </button>
+            {isAdding && (
+                <div className="playlist-selection">
+                    <h4>Selecciona una playlist:</h4>
+                    {playlists.length > 0 ? (
+                        playlists.map(p => (
+                            <button 
+                                key={p._id} 
+                                onClick={() => handleAddSong(p._id, p.name)}
+                                disabled={p.owner !== user.username} // Deshabilita si no es el dueño
+                                title={p.owner !== user.username ? "Solo puedes añadir a tus playlists" : ""}
+                            >
+                                {p.name} {p.owner !== user.username ? "(Solo dueño: 🔒)" : ""}
+                            </button>
+                        ))
+                    ) : (
+                        <p>No tienes playlists.</p>
+                    )}
+                </div>
+            )}
+            {msg && <p className="action-message">{msg}</p>}
+        </div>
+    );
+}
+
+/* ==========================================================================================
+  LISTA DE CANCIONES (MODIFICADO)
+========================================================================================== */
+function SongList({ songs, search, setSearch, refreshSongs, user, playlists, refreshPlaylists }) {
+  return (
+    <div className="song-list">
+      <h3>Buscar canciones ({songs.length})</h3>
+      <input placeholder="Nombre o artista" value={search} onChange={(e) => setSearch(e.target.value)} />
+      <button onClick={refreshSongs}>Recargar</button>
+
+      <ul>
+        {songs.length ? songs.map((s, i) => (
+          <li key={s._id || i}>
+            <div className="song-details">
+                <b>{s.name}</b> - {s.artist} ({s.uploadedBy})
+                <a href={s.audio} target="_blank" rel="noopener noreferrer"> 🎧 </a>
+            </div>
+            {user && ( // Solo muestra las acciones si el usuario está logueado
+                <SongActions 
+                    song={s} 
+                    playlists={playlists} 
+                    user={user} 
+                    refreshPlaylists={refreshPlaylists} 
+                />
+            )}
+          </li>
+        )) : "Sin canciones"}
+      </ul>
+    </div>
+  );
+}
+
+
+/* ==========================================================================================
+  MAIN COMPONENT
 ========================================================================================== */
 export default function Formulario() {
   const [isLogin, setIsLogin] = useState(true);
@@ -74,15 +203,16 @@ export default function Formulario() {
     try {
       const res = await fetch(search ? `/search?q=${search}` : "/songs");
       setSongs(await res.json());
-    } catch {}
+    } catch (e) { console.error("Error fetching songs:", e); }
   }, [search]);
 
+  // Modificado: Ahora el frontend usa la ruta /playlists/:username
   const fetchPlaylists = useCallback(async () => {
     if (!user) return;
     try {
       const res = await fetch(`/playlists/${user.username}`);
       setPlaylists(await res.json());
-    } catch {}
+    } catch (e) { console.error("Error fetching playlists:", e); }
   }, [user]);
 
   useEffect(() => { fetchSongs(); fetchPlaylists(); }, [fetchSongs, fetchPlaylists]);
@@ -162,7 +292,7 @@ export default function Formulario() {
   const toggleForm = () => { setIsLogin(!isLogin); setMessage(""); };
 
   /* ==========================================================================================
-     RENDER UI
+      RENDER UI
   ========================================================================================== */
   return (
     <div className="auth-container">
@@ -213,7 +343,7 @@ export default function Formulario() {
 
           <button className="btn-playlist-toggle"
           onClick={()=>setShowPlaylistCreator(!showPlaylistCreator)}>
-            {showPlaylistCreator ? "Ocultar" : "Crear Playlist"}
+            {showPlaylistCreator ? "Ocultar Creador" : "Crear Nueva Playlist"}
           </button>
 
           {showPlaylistCreator && <PlaylistCreator user={user} refreshPlaylists={fetchPlaylists} />}
@@ -227,13 +357,23 @@ export default function Formulario() {
                     <img src={p.image || "https://i.ibb.co/4pDNDk1/avatar-default.png"} alt={p.name} />
                     <h4>{p.name}</h4>
                     <p>{p.songs?.length || 0} canciones</p>
+                    {/* Botón de Borrar Playlist (solo para el creador) */}
+                    <PlaylistCreator user={user} refreshPlaylists={fetchPlaylists} playlist={p} />
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          <SongList songs={songs} search={search} setSearch={setSearch} refreshSongs={fetchSongs} />
+          <SongList 
+              songs={songs} 
+              search={search} 
+              setSearch={setSearch} 
+              refreshSongs={fetchSongs} 
+              user={user} // Pasamos el usuario para las acciones
+              playlists={playlists} // Pasamos las playlists para el selector
+              refreshPlaylists={fetchPlaylists}
+          />
         </>
       )}
     </div>
@@ -241,7 +381,7 @@ export default function Formulario() {
 }
 
 /* ==========================================================================================
-   SUBIDA DE CANCIONES
+  SUBIDA DE CANCIONES
 ========================================================================================== */
 function FormularioSubida({ user, refreshSongs }) {
   const [file,setFile]=useState(null),[name,setName]=useState(""),[artist,setArtist]=useState(""),[msg,setMsg]=useState("");
@@ -272,27 +412,5 @@ function FormularioSubida({ user, refreshSongs }) {
       <button>Subir</button>
       {msg && <p>{msg}</p>}
     </form>
-  );
-}
-
-/* ==========================================================================================
-   LISTA DE CANCIONES
-========================================================================================== */
-function SongList({ songs,search,setSearch,refreshSongs }) {
-  return (
-    <div className="song-list">
-      <h3>Buscar canciones ({songs.length})</h3>
-      <input placeholder="Nombre o artista" value={search} onChange={(e)=>setSearch(e.target.value)} />
-      <button onClick={refreshSongs}>Recargar</button>
-
-      <ul>
-        {songs.length? songs.map((s,i)=>(
-          <li key={s._id||i}>
-            <b>{s.name}</b> - {s.artist} ({s.uploadedBy})
-            <a href={s.audio} target="_blank"> 🎧 </a>
-          </li>
-        )):"Sin canciones"}
-      </ul>
-    </div>
   );
 }
