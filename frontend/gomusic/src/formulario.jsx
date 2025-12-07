@@ -17,7 +17,6 @@ import "./formulario.css";
 function PlaylistCreator({ user, refreshPlaylists }) {
   const [name, setName] = useState("");
   const [image, setImage] = useState(null);
-  const [isPublic, setIsPublic] = useState(false);
   const [msg, setMsg] = useState("");
 
   const handleCreate = async (e) => {
@@ -27,17 +26,15 @@ function PlaylistCreator({ user, refreshPlaylists }) {
     const formData = new FormData();
     formData.append("name", name);
     formData.append("owner", user.username);
-    formData.append("isPublic", isPublic);
     if (image) formData.append("image", image);
 
     try {
       const res = await fetch("/playlists", { method: "POST", body: formData });
       const data = await res.json();
       if (res.ok) {
-        setMsg(`Playlist ${isPublic ? 'pública' : 'privada'} creada ✔️`);
+        setMsg("Playlist creada ✔️");
         setName("");
         setImage(null);
-        setIsPublic(false);
         refreshPlaylists && refreshPlaylists();
       } else {
         setMsg(data.error || "Error creando playlist");
@@ -62,18 +59,6 @@ function PlaylistCreator({ user, refreshPlaylists }) {
         accept="image/*"
         onChange={(e) => setImage(e.target.files[0])}
       />
-      
-      <div className="public-toggle">
-        <label>
-          <input
-            type="checkbox"
-            checked={isPublic}
-            onChange={(e) => setIsPublic(e.target.checked)}
-          />
-          <span>Hacer pública (visible para todos)</span>
-        </label>
-      </div>
-
       <button type="submit">Crear Playlist</button>
       {msg && <p>{msg}</p>}
     </form>
@@ -210,7 +195,7 @@ export default function Formulario() {
     setUser(null);
     localStorage.removeItem("gomusic_user");
     setMessage("Sesión cerrada");
-    setShowPlaylistCreator(false);
+    setShowPlaylistCreator(false); // Oculta formulario playlist al cerrar sesión
   };
 
   const toggleForm = () => {
@@ -274,7 +259,6 @@ export default function Formulario() {
                     <img src={p.image || "https://i.ibb.co/4pDNDk1/avatar-default.png"} alt={p.name} />
                     <h4>{p.name}</h4>
                     <p>{p.songs.length} canciones</p>
-                    {p.isPublic && <span className="public-badge">🌐 Pública</span>}
                   </div>
                 ))}
               </div>

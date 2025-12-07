@@ -193,15 +193,6 @@ app.post("/playlists/:id/add", async (req, res) => {
   }
 });
 
-app.get("/api/playlists/public", async (req, res) => {
-  try {
-    const playlists = await Playlist.find().populate("songs").sort({ createdAt: -1 }).limit(8);
-    res.json(playlists);
-  } catch (err) {
-    console.error("Error obteniendo playlists públicas:", err);
-    res.status(500).json({ error: "Error obteniendo playlists públicas" });
-  }
-});
 
 // -----------------
 // RUTAS SEARCH Y USUARIOS
