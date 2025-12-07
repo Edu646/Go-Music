@@ -6,14 +6,14 @@ import {
   updateProfile,
   signInWithPopup,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
 } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import "./formulario.css";
 
-// ---------------------
-// Componente PlaylistCreator
-// ---------------------
+/* ==========================================================================================
+   COMPONENTE PARA CREAR PLAYLISTS
+========================================================================================== */
 function PlaylistCreator({ user, refreshPlaylists }) {
   const [name, setName] = useState("");
   const [image, setImage] = useState(null);
@@ -31,43 +31,32 @@ function PlaylistCreator({ user, refreshPlaylists }) {
     try {
       const res = await fetch("/playlists", { method: "POST", body: formData });
       const data = await res.json();
+
       if (res.ok) {
         setMsg("Playlist creada ✔️");
-        setName("");
-        setImage(null);
-        refreshPlaylists && refreshPlaylists();
-      } else {
-        setMsg(data.error || "Error creando playlist");
-      }
-    } catch (err) {
-      console.error("Error creando playlist:", err);
+        setName(""); setImage(null);
+        refreshPlaylists();
+      } else setMsg(data.error || "Error creando playlist");
+
+    } catch {
       setMsg("Error creando playlist");
     }
   };
 
   return (
     <form className="playlist-creator" onSubmit={handleCreate}>
-      <h3>Crear nueva Playlist</h3>
-      <input
-        type="text"
-        placeholder="Nombre de la playlist"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => setImage(e.target.files[0])}
-      />
-      <button type="submit">Crear Playlist</button>
+      <h3>Crear Playlist</h3>
+      <input type="text" placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} />
+      <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} />
+      <button type="submit">Crear</button>
       {msg && <p>{msg}</p>}
     </form>
   );
 }
 
-// ---------------------
-// Componente principal
-// ---------------------
+/* ==========================================================================================
+   MAIN COMPONENT
+========================================================================================== */
 export default function Formulario() {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ username: "", email: "", password: "" });
@@ -77,46 +66,35 @@ export default function Formulario() {
 
   const [songs, setSongs] = useState([]);
   const [search, setSearch] = useState("");
-
-  // Estado para mostrar formulario de playlist
-  const [showPlaylistCreator, setShowPlaylistCreator] = useState(false);
   const [playlists, setPlaylists] = useState([]);
+  const [showPlaylistCreator, setShowPlaylistCreator] = useState(false);
 
+  /* ============================= GET SONGS & PLAYLISTS ============================= */
   const fetchSongs = useCallback(async () => {
     try {
-      const query = search ? `/search?q=${search}` : '/songs';
-      const res = await fetch(query);
-      const data = await res.json();
-      setSongs(data);
-    } catch (err) {
-      console.error("Error al cargar canciones:", err);
-    }
+      const res = await fetch(search ? `/search?q=${search}` : "/songs");
+      setSongs(await res.json());
+    } catch {}
   }, [search]);
 
   const fetchPlaylists = useCallback(async () => {
     if (!user) return;
     try {
       const res = await fetch(`/playlists/${user.username}`);
-      const data = await res.json();
-      setPlaylists(data);
-    } catch (err) {
-      console.error("Error cargando playlists:", err);
-    }
+      setPlaylists(await res.json());
+    } catch {}
   }, [user]);
 
-  useEffect(() => {
-    fetchSongs();
-    fetchPlaylists();
-  }, [fetchSongs, fetchPlaylists]);
+  useEffect(() => { fetchSongs(); fetchPlaylists(); }, [fetchSongs, fetchPlaylists]);
 
-  // Escucha de estado de Firebase Auth
+  /* ============================= AUTH STATE SAVE & RESTORE ============================= */
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    return onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         const u = {
           username: firebaseUser.displayName || firebaseUser.email.split("@")[0],
           email: firebaseUser.email,
-          avatar: firebaseUser.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png"
+          avatar: firebaseUser.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png",
         };
         setUser(u);
         localStorage.setItem("gomusic_user", JSON.stringify(u));
@@ -125,147 +103,136 @@ export default function Formulario() {
         localStorage.removeItem("gomusic_user");
       }
     });
-    return () => unsubscribe();
   }, []);
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-  const handlePhotoChange = (e) => setPhotoFile(e.target.files[0]);
-
-  const uploadPhoto = async (uid) => {
-    if (!photoFile) return null;
-    const photoRef = ref(storage, `avatars/${uid}`);
-    await uploadBytes(photoRef, photoFile);
-    return await getDownloadURL(photoRef);
-  };
-
+  /* ============================= AUTH EMAIL/PASSWORD ============================= */
   const handleAuth = async (e) => {
     e.preventDefault();
     setMessage("");
+
     try {
       if (isLogin) {
         const cred = await signInWithEmailAndPassword(auth, formData.email, formData.password);
-        const u = {
+        setUser({
           username: cred.user.displayName || cred.user.email.split("@")[0],
           email: cred.user.email,
-          avatar: cred.user.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png"
-        };
-        setUser(u);
-        localStorage.setItem("gomusic_user", JSON.stringify(u));
-        setMessage("Sesión iniciada correctamente");
+          avatar: cred.user.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png",
+        });
+        setMessage("Sesión iniciada ✔");
       } else {
         const cred = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        const photoURL = photoFile ? await uploadPhoto(cred.user.uid) : null;
-        await updateProfile(cred.user, { displayName: formData.username, photoURL });
-        const u = {
-          username: formData.username,
-          email: cred.user.email,
-          avatar: photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png"
-        };
-        setUser(u);
-        localStorage.setItem("gomusic_user", JSON.stringify(u));
-        setMessage("Cuenta creada correctamente");
+
+        let photoURL=null;
+        if(photoFile){
+          const refPath=ref(storage,`avatars/${cred.user.uid}`);
+          await uploadBytes(refPath,photoFile);
+          photoURL=await getDownloadURL(refPath);
+        }
+
+        await updateProfile(cred.user,{ displayName:formData.username,photoURL });
+        setUser({ username:formData.username,email:cred.user.email,avatar:photoURL || null });
+        setMessage("Cuenta creada ✔");
       }
-      setFormData({ username: "", email: "", password: "" });
+
+      setFormData({ username:"",email:"",password:"" });
       setPhotoFile(null);
-    } catch (err) {
-      console.log(err);
-      setMessage(err.message);
-    }
+
+    } catch (err) { setMessage(err.message); }
   };
 
+  /* ============================= LOGIN GOOGLE ============================= */
   const handleGoogle = async () => {
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const u = {
-        username: result.user.displayName,
-        email: result.user.email,
-        avatar: result.user.photoURL
-      };
-      setUser(u);
-      localStorage.setItem("gomusic_user", JSON.stringify(u));
-      setMessage("Sesión iniciada con Google");
-    } catch (err) {
-      console.log(err);
-      setMessage("Error iniciando con Google");
-    }
+      const res = await signInWithPopup(auth, googleProvider);
+      setUser({
+        username: res.user.displayName,
+        email: res.user.email,
+        avatar: res.user.photoURL
+      });
+      setMessage("Inicio con Google ✔");
+    } catch { setMessage("Error con Google"); }
   };
 
+  /* ============================= LOGOUT ============================= */
   const handleLogout = async () => {
     await signOut(auth);
-    setUser(null);
-    localStorage.removeItem("gomusic_user");
-    setMessage("Sesión cerrada");
-    setShowPlaylistCreator(false); // Oculta formulario playlist al cerrar sesión
+    setShowPlaylistCreator(false);
   };
 
-  const toggleForm = () => {
-    setIsLogin(!isLogin);
-    setMessage("");
-  };
+  const toggleForm = () => { setIsLogin(!isLogin); setMessage(""); };
 
+  /* ==========================================================================================
+     RENDER UI
+  ========================================================================================== */
   return (
     <div className="auth-container">
-      {!user ? (
+
+      {/* ==================== LOGIN / REGISTRO ==================== */}
+      {!user && (
         <>
           <h2>{isLogin ? "Iniciar sesión" : "Crear cuenta"}</h2>
+
           <form onSubmit={handleAuth} className="auth-form">
             {!isLogin && (
               <>
-                <input type="text" name="username" placeholder="Nombre de usuario" value={formData.username} onChange={handleChange} required />
-                <input type="file" accept="image/*" onChange={handlePhotoChange} />
+                <input type="text" name="username" placeholder="Nombre de usuario"
+                value={formData.username} onChange={(e)=>setFormData({...formData,username:e.target.value})} required />
+                <input type="file" accept="image/*" onChange={(e)=>setPhotoFile(e.target.files[0])} />
               </>
             )}
-            <input type="email" name="email" placeholder="Correo electrónico" value={formData.email} onChange={handleChange} required />
-            <input type="password" name="password" placeholder="Contraseña" value={formData.password} onChange={handleChange} required />
-            <button type="submit">{isLogin ? "Iniciar sesión" : "Crear cuenta"}</button>
+
+            <input type="email" name="email" placeholder="Correo"
+            value={formData.email} onChange={(e)=>setFormData({...formData,email:e.target.value})} required />
+
+            <input type="password" name="password" placeholder="Contraseña"
+            value={formData.password} onChange={(e)=>setFormData({...formData,password:e.target.value})} required />
+
+            <button type="submit">{isLogin ? "Entrar" : "Registrar"}</button>
           </form>
 
-          <button onClick={handleGoogle} className="google-btn">Iniciar sesión con Google</button>
-          <button onClick={toggleForm} className="auth-toggle">{isLogin ? "¿No tienes cuenta? Crear cuenta" : "¿Ya tienes cuenta? Iniciar sesión"}</button>
+          <button onClick={handleGoogle} className="google-btn">Google</button>
+          <button onClick={toggleForm} className="auth-toggle">
+            {isLogin ? "Crear cuenta" : "Iniciar sesión"}
+          </button>
+
           {message && <p className="message">{message}</p>}
         </>
-      ) : (
+      )}
+
+      {/* ==================== USER LOGGED ==================== */}
+      {user && (
         <>
           <div className="user-info-box">
             <img src={user.avatar} alt="Avatar" className="avatar-img" />
             <h3>{user.username}</h3>
             <p>{user.email}</p>
-            <button onClick={handleLogout} className="logout-btn">Cerrar sesión</button>
+            <button onClick={handleLogout}>Cerrar sesión</button>
           </div>
 
-          {/* Formulario de subida de canciones */}
           <FormularioSubida user={user} refreshSongs={fetchSongs} />
 
-          {/* Botón para mostrar el formulario PlaylistCreator */}
-          <button
-            className="btn-playlist-toggle"
-            onClick={() => setShowPlaylistCreator(!showPlaylistCreator)}
-          >
-            {showPlaylistCreator ? "Ocultar Crear Playlist" : "Crear Playlist"}
+          <button className="btn-playlist-toggle"
+          onClick={()=>setShowPlaylistCreator(!showPlaylistCreator)}>
+            {showPlaylistCreator ? "Ocultar" : "Crear Playlist"}
           </button>
 
-          {/* Mostrar PlaylistCreator solo si el usuario ha iniciado sesión y clic en botón */}
-          {showPlaylistCreator && (
-            <PlaylistCreator user={user} refreshPlaylists={fetchPlaylists} />
-          )}
+          {showPlaylistCreator && <PlaylistCreator user={user} refreshPlaylists={fetchPlaylists} />}
 
-          {/* Lista de playlists */}
-          {playlists.length > 0 && (
+          {playlists.length>0 && (
             <div className="user-playlists">
               <h3>Mis Playlists</h3>
               <div className="playlist-grid">
-                {playlists.map(p => (
+                {playlists.map(p=>(
                   <div key={p._id} className="playlist-card">
                     <img src={p.image || "https://i.ibb.co/4pDNDk1/avatar-default.png"} alt={p.name} />
                     <h4>{p.name}</h4>
-                    <p>{p.songs.length} canciones</p>
+                    <p>{p.songs?.length || 0} canciones</p>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Lista de canciones */}
           <SongList songs={songs} search={search} setSearch={setSearch} refreshSongs={fetchSongs} />
         </>
       )}
@@ -273,74 +240,58 @@ export default function Formulario() {
   );
 }
 
-// ---------------------
-// Componente Subida
-// ---------------------
+/* ==========================================================================================
+   SUBIDA DE CANCIONES
+========================================================================================== */
 function FormularioSubida({ user, refreshSongs }) {
-  const [file, setFile] = useState(null);
-  const [name, setName] = useState("");
-  const [artist, setArtist] = useState("");
-  const [msg, setMsg] = useState("");
+  const [file,setFile]=useState(null),[name,setName]=useState(""),[artist,setArtist]=useState(""),[msg,setMsg]=useState("");
 
-  const handleUpload = async (e) => {
+  const handleUpload=async(e)=>{
     e.preventDefault();
-    if (!file) return setMsg("Selecciona un archivo primero.");
+    if(!file) return setMsg("Sube un archivo");
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("name", name);
-    formData.append("artist", artist);
-    formData.append("username", user.username);
+    const fd=new FormData();
+    fd.append("file",file); fd.append("name",name);
+    fd.append("artist",artist); fd.append("username",user.username);
 
-    try {
-      setMsg("Subiendo a Cloudinary...");
-      const res = await fetch("/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      if (res.ok) {
-        setMsg(`✅ Canción '${data.name}' subida correctamente.`);
-        setFile(null);
-        setName("");
-        setArtist("");
-        refreshSongs();
-      } else {
-        setMsg(`❌ Error: ${data.error || "Desconocido"}`);
-      }
-    } catch (err) {
-      console.error(err);
-      setMsg("❌ Error subiendo la canción. ¿Servidor activo?");
-    }
+    try{
+      const res=await fetch("/upload",{method:"POST",body:fd});
+      const data=await res.json();
+
+      if(res.ok){ setMsg("✔ subida"); setName("");setArtist("");setFile(null);refreshSongs(); }
+      else setMsg(data.error||"Error");
+    }catch{ setMsg("Falló el servidor"); }
   };
 
   return (
-    <form onSubmit={handleUpload} className="formulario">
+    <form className="formulario" onSubmit={handleUpload}>
       <h3>Subir Canción</h3>
-      <input type="text" placeholder="Nombre de la canción" value={name} onChange={(e) => setName(e.target.value)} required />
-      <input type="text" placeholder="Artista" value={artist} onChange={(e) => setArtist(e.target.value)} />
-      <input type="file" accept="audio/*" onChange={(e) => setFile(e.target.files[0])} required />
-      <button type="submit">Subir canción</button>
+      <input placeholder="Nombre" value={name} onChange={(e)=>setName(e.target.value)} required />
+      <input placeholder="Artista" value={artist} onChange={(e)=>setArtist(e.target.value)} />
+      <input type="file" accept="audio/*" onChange={(e)=>setFile(e.target.files[0])} required />
+      <button>Subir</button>
       {msg && <p>{msg}</p>}
     </form>
   );
 }
 
-// ---------------------
-// Componente Lista
-// ---------------------
-function SongList({ songs, search, setSearch, refreshSongs }) {
-  const handleSearchChange = (e) => setSearch(e.target.value);
-
+/* ==========================================================================================
+   LISTA DE CANCIONES
+========================================================================================== */
+function SongList({ songs,search,setSearch,refreshSongs }) {
   return (
     <div className="song-list">
-      <h3>Buscar Canciones ({songs.length} resultados)</h3>
-      <input type="text" placeholder="Buscar por nombre o artista" value={search} onChange={handleSearchChange} />
-      <button onClick={refreshSongs} style={{ marginLeft: '10px' }}>Recargar Lista</button>
+      <h3>Buscar canciones ({songs.length})</h3>
+      <input placeholder="Nombre o artista" value={search} onChange={(e)=>setSearch(e.target.value)} />
+      <button onClick={refreshSongs}>Recargar</button>
+
       <ul>
-        {songs.length > 0 ? songs.map((song, idx) => (
-          <li key={song._id || idx}>
-            <strong>{song.name}</strong> - {song.artist} (Subida por: {song.uploadedBy}){" "}
-            <a href={song.audio} target="_blank" rel="noopener noreferrer">🎵 Escuchar / Descargar</a>
+        {songs.length? songs.map((s,i)=>(
+          <li key={s._id||i}>
+            <b>{s.name}</b> - {s.artist} ({s.uploadedBy})
+            <a href={s.audio} target="_blank"> 🎧 </a>
           </li>
-        )) : <li>{search ? "No se encontraron resultados." : "No hay canciones subidas aún."}</li>}
+        )):"Sin canciones"}
       </ul>
     </div>
   );
