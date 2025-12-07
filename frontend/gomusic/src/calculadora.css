@@ -1,85 +1,142 @@
-/* Contenedor general */
+/* ===================================
+   CONTENEDOR GENERAL
+   =================================== */
 .search-container {
   max-width: 600px;
-  margin: 80px auto; /* Baja el componente para que no lo tape el nav */
-  padding: 20px;
-  background: #121212;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  margin: 80px auto;
+  padding: 24px;
+  background: linear-gradient(145deg, #1a1a1a 0%, #121212 100%);
+  border-radius: 20px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(29, 185, 84, 0.1);
   color: #fff;
-  font-family: "Arial", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  transition: transform 0.3s ease;
 }
 
-/* Título */
+.search-container:hover {
+  transform: translateY(-2px);
+}
+
+/* ===================================
+   TÍTULO
+   =================================== */
 .search-container h2 {
   text-align: center;
-  font-size: 1.6rem;
-  margin-bottom: 20px;
-  color: #1db954; /* Verde Spotify */
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
 }
 
-/* Caja de búsqueda */
+/* ===================================
+   CAJA DE BÚSQUEDA
+   =================================== */
 .search-box {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
 .search-box input {
   flex: 1;
-  padding: 10px 14px;
+  padding: 12px 16px;
   font-size: 1rem;
-  border-radius: 10px;
-  border: none;
+  border-radius: 12px;
+  border: 2px solid transparent;
   outline: none;
   background: #1e1e1e;
   color: #fff;
+  transition: all 0.3s ease;
+}
+
+.search-box input:focus {
+  border-color: #1db954;
+  background: #252525;
+  box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.1);
+}
+
+.search-box input::placeholder {
+  color: #888;
 }
 
 .search-box button {
-  background: #1db954;
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
   color: #fff;
   border: none;
-  padding: 10px 18px;
+  padding: 12px 24px;
   font-size: 1rem;
-  border-radius: 10px;
+  font-weight: 600;
+  border-radius: 12px;
   cursor: pointer;
-  transition: 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
 }
 
 .search-box button:hover {
-  background: #1ed760;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(29, 185, 84, 0.4);
 }
 
-/* LISTA DE RESULTADOS */
+.search-box button:active {
+  transform: translateY(0);
+}
+
+/* ===================================
+   LISTA DE RESULTADOS
+   =================================== */
 .results-list {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
 }
 
-/* Item de canción */
+/* ===================================
+   ITEM DE CANCIÓN
+   =================================== */
 .song-item {
   background: #1e1e1e;
-  padding: 14px;
-  border-radius: 12px;
+  padding: 16px;
+  border-radius: 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: 0.2s ease;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
 }
 
 .song-item:hover {
   background: #242424;
+  border-color: #2a2a2a;
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* Nombre y artista */
+/* ===================================
+   INFORMACIÓN DE LA CANCIÓN
+   =================================== */
 .song-info {
   font-size: 1rem;
   font-weight: 500;
+  line-height: 1.5;
+  color: #fff;
 }
 
-/* Acciones */
+.song-info .artist {
+  display: block;
+  font-size: 0.875rem;
+  color: #b3b3b3;
+  margin-top: 2px;
+}
+
+/* ===================================
+   ACCIONES
+   =================================== */
 .song-actions {
   display: flex;
   align-items: center;
@@ -87,84 +144,198 @@
 }
 
 .song-actions button {
-  background: #1db954;
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
   border: none;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
   color: #fff;
+  font-weight: 600;
   cursor: pointer;
-  transition: 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(29, 185, 84, 0.3);
 }
 
 .song-actions button:hover {
-  background: #1ed760;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.4);
 }
 
-/* Botón de descarga */
+.song-actions button:active {
+  transform: translateY(0);
+}
+
+/* ===================================
+   BOTÓN DE DESCARGA
+   =================================== */
 .btn-download {
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
   background: #2a2a2a;
-  border: 1px solid #444;
+  border: 1px solid #3a3a3a;
   color: #fff !important;
   text-decoration: none !important;
-  transition: 0.2s ease;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .btn-download:hover {
   background: #3a3a3a;
-  border-color: #666;
+  border-color: #1db954;
+  box-shadow: 0 2px 8px rgba(29, 185, 84, 0.2);
+  transform: translateY(-2px);
 }
 
-/* ----------------------------------- */
-/* 📱 VISTA MÓVIL (MEDIA QUERY) 📱 */
-/* ----------------------------------- */
+/* ===================================
+   ESTADOS DE CARGA Y VACÍO
+   =================================== */
+.loading,
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #888;
+  font-size: 0.95rem;
+}
 
-@media (max-width: 500px) {
-  /* Reducción general de padding y margen en el contenedor */
+.loading::after {
+  content: "...";
+  animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0%, 20% { content: "."; }
+  40% { content: ".."; }
+  60%, 100% { content: "..."; }
+}
+
+/* ===================================
+   SCROLLBAR PERSONALIZADO
+   =================================== */
+.results-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.results-list::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 10px;
+}
+
+.results-list::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 10px;
+}
+
+.results-list::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
+}
+
+/* ===================================
+   📱 RESPONSIVE - TABLETS
+   =================================== */
+@media (max-width: 768px) {
   .search-container {
-    margin: 40px 10px; /* Menos margen vertical y horizontal */
-    padding: 15px;
-    border-radius: 10px; /* Borde un poco más pequeño */
+    margin: 60px 16px;
+    padding: 20px;
   }
 
-  /* Título: Aún más compacto */
   .search-container h2 {
-    font-size: 1.4rem;
-    margin-bottom: 15px;
+    font-size: 1.6rem;
+    margin-bottom: 20px;
+  }
+}
+
+/* ===================================
+   📱 RESPONSIVE - MÓVILES
+   =================================== */
+@media (max-width: 500px) {
+  .search-container {
+    margin: 20px 12px;
+    padding: 16px;
+    border-radius: 16px;
   }
 
-  /* Caja de búsqueda: Padding más compacto y fuente más pequeña */
+  .search-container h2 {
+    font-size: 1.5rem;
+    margin-bottom: 16px;
+  }
+
+  .search-box {
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
   .search-box input,
   .search-box button {
-    padding: 8px 12px;
-    font-size: 0.9rem;
-    border-radius: 8px;
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 0.95rem;
+    border-radius: 10px;
   }
 
-  /* Item de canción: Cambiamos a una disposición apilada para más espacio */
   .song-item {
-    flex-direction: column; /* Apila la info y las acciones */
-    align-items: flex-start; /* Alinea los elementos a la izquierda */
-    padding: 10px;
-    gap: 8px; /* Espacio entre info y acciones */
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px;
+    gap: 12px;
   }
 
-  /* Nombre y artista: Fuente más pequeña para ahorrar espacio */
+  .song-item:hover {
+    transform: translateX(0);
+  }
+
   .song-info {
     font-size: 0.95rem;
+    width: 100%;
   }
 
-  /* Acciones: Asegura que los botones sean cómodos de presionar */
   .song-actions {
-    width: 100%; /* Ocupa todo el ancho disponible */
-    justify-content: flex-end; /* Mueve los botones a la derecha si es necesario */
+    width: 100%;
+    justify-content: space-between;
     gap: 8px;
   }
 
   .song-actions button,
   .btn-download {
-    padding: 8px 10px; /* Botones más grandes para el dedo */
+    flex: 1;
+    padding: 10px 12px;
     font-size: 0.9rem;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Ajuste para botones muy pequeños en móvil */
+  .song-actions button {
+    min-height: 44px; /* Tamaño mínimo táctil recomendado */
+  }
+
+  .btn-download {
+    min-height: 44px;
+  }
+}
+
+/* ===================================
+   📱 RESPONSIVE - MÓVILES PEQUEÑOS
+   =================================== */
+@media (max-width: 360px) {
+  .search-container {
+    margin: 16px 8px;
+    padding: 12px;
+  }
+
+  .search-container h2 {
+    font-size: 1.3rem;
+  }
+
+  .song-info {
+    font-size: 0.9rem;
+  }
+
+  .song-actions button,
+  .btn-download {
+    font-size: 0.85rem;
+    padding: 10px 8px;
   }
 }
