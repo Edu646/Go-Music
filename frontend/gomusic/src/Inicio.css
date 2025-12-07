@@ -1,19 +1,15 @@
 /* ------------------------------
-   ESTILO GLOBAL
+   CONTENEDOR DE PÁGINA
 ------------------------------ */
-html, body {
-  min-height: 100vh;
-  margin: 0;
-  padding: 0;
-  font-family: 'Segoe UI', Arial, sans-serif;
-  color: #fff;
-}
-
 .page-wrapper {
   min-height: 100vh;
   background: linear-gradient(135deg, #1db954 0%, #191414 50%, #000000 100%);
   background-attachment: fixed;
   padding-bottom: 60px;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  color: #fff;
 }
 
 /* ------------------------------
@@ -76,6 +72,7 @@ html, body {
 .hero-button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   padding: 16px 40px;
   background-color: #1db954;
@@ -87,6 +84,8 @@ html, body {
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(29, 185, 84, 0.4);
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .hero-button:hover {
@@ -248,80 +247,6 @@ html, body {
   color: #b3b3b3;
 }
 
-/* ------------------------------
-   LISTA DE CANCIONES
------------------------------- */
-.track-list {
-  background-color: rgba(0, 0, 0, 0.5);
-  border-radius: 12px;
-  padding: 24px;
-  backdrop-filter: blur(10px);
-}
-
-.track-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  margin-bottom: 8px;
-}
-
-.track-item:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.track-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.track-number {
-  font-size: 1rem;
-  color: #b3b3b3;
-  min-width: 24px;
-}
-
-.track-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.track-title {
-  font-size: 1rem;
-  font-weight: 500;
-  color: #fff;
-}
-
-.track-artist {
-  font-size: 0.9rem;
-  color: #b3b3b3;
-}
-
-.track-right {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.heart-icon {
-  color: #b3b3b3;
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.heart-icon:hover {
-  color: #1db954;
-}
-
-.track-duration {
-  font-size: 0.9rem;
-  color: #b3b3b3;
-}
 
 /* ------------------------------
    CTA SECTION
@@ -349,6 +274,9 @@ html, body {
 }
 
 .cta-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 16px 48px;
   background-color: #1db954;
   border: none;
@@ -359,6 +287,8 @@ html, body {
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(29, 185, 84, 0.4);
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .cta-button:hover {

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Inicio.css";
 
 function Inicio() {
+  const navigate = useNavigate();
   const images = [
     "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&q=80",
     "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80",
@@ -10,6 +12,7 @@ function Inicio() {
 
   const [index, setIndex] = useState(0);
   const [hoveredCard, setHoveredCard] = useState(null);
+  const [playlists, setPlaylists] = useState([]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -19,18 +22,21 @@ function Inicio() {
     return () => clearInterval(interval);
   }, [images.length]);
 
-  const playlists = [
-    { id: 1, title: "Rock Clásico", songs: 50, image: "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=300&q=80" },
-    { id: 2, title: "Éxitos Pop", songs: 75, image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&q=80" },
-    { id: 3, title: "Jazz Suave", songs: 40, image: "https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=300&q=80" },
-    { id: 4, title: "Electrónica", songs: 60, image: "https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=300&q=80" }
-  ];
+  useEffect(() => {
+    fetchPublicPlaylists();
+  }, []);
 
-  const recentTracks = [
-    { title: "Bohemian Rhapsody", artist: "Queen", duration: "5:55" },
-    { title: "Hotel California", artist: "Eagles", duration: "6:30" },
-    { title: "Stairway to Heaven", artist: "Led Zeppelin", duration: "8:02" }
-  ];
+  const fetchPublicPlaylists = async () => {
+    try {
+      const response = await fetch("/api/playlists/public");
+      if (response.ok) {
+        const data = await response.json();
+        setPlaylists(data);
+      }
+    } catch (error) {
+      console.error("Error obteniendo playlists públicas:", error);
+    }
+  };
 
   return (
     <div className="page-wrapper">
@@ -114,30 +120,6 @@ function Inicio() {
           </div>
         </div>
 
-        {/* Reproducidas recientemente */}
-        <div className="section">
-          <h2 className="section-title">
-            <span className="title-icon">🕒</span>
-            Reproducidas Recientemente
-          </h2>
-          <div className="track-list">
-            {recentTracks.map((track, idx) => (
-              <div key={idx} className="track-item">
-                <div className="track-left">
-                  <div className="track-number">{idx + 1}</div>
-                  <div className="track-info">
-                    <div className="track-title">{track.title}</div>
-                    <div className="track-artist">{track.artist}</div>
-                  </div>
-                </div>
-                <div className="track-right">
-                  <span className="heart-icon">♥</span>
-                  <span className="track-duration">{track.duration}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
         {/* CTA Final */}
         <div className="cta-section">
