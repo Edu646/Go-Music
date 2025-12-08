@@ -5,13 +5,7 @@ import './chat.css'; // Asegúrate de tener este archivo o borrar esta línea si
 // NOTA: Para producción, comenta este mock y usa: import io from 'socket.io-client';
 // const socket = io('http://tu-backend-url.com');
 // -------------------------------------------------------------------------
-const socket = {
-  connected: false,
-  connect: () => { socket.connected = true; console.log('Socket connected'); },
-  emit: (event, data) => console.log('Socket emit:', event, data),
-  on: (event, callback) => console.log('Socket listening:', event),
-  off: (event) => console.log('Socket off:', event)
-};
+ const socket = io('https://go-music-3mgo.onrender.com');
 
 const getUsername = () => {
   try {
