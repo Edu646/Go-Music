@@ -21,31 +21,38 @@ export default function UserPlaylists() {
 
   // --- CORRECCIÓN PRINCIPAL AQUÍ ---
   // Fetch playlists del usuario con validación de Array
-  const fetchPlaylists = async () => {
-    if (!user) return;
-    try {
-      const res = await fetch(`/playlists/${user.username}`);
-      const data = await res.json();
+ const fetchPlaylists = async () => {
+  if (!user) return;
+  const url = `/playlists/${user.username}`; 
 
-      // Verificamos si la respuesta es realmente un array
-      if (Array.isArray(data)) {
-        setPlaylists(data);
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
 
-        // Si estamos editando una, actualizamos su estado local también
-        if (selected) {
-          const updated = data.find((p) => p._id === selected._id);
-          setSelected(updated || null);
-        }
-      } else {
-        console.warn("La API no devolvió un array de playlists:", data);
-        setPlaylists([]); // Evita que explote el .map
+    // --- CORRECCIÓN AQUÍ ---
+    // 1. Verificamos que 'data' sea un objeto y contenga las claves esperadas
+    if (data && typeof data === 'object' && Array.isArray(data.own) && Array.isArray(data.shared)) {
+      
+      // 2. Combinamos las playlists propias y compartidas en un solo array
+      const allPlaylists = [...data.own, ...data.shared];
+      
+      setPlaylists(allPlaylists);
+
+      // Lógica de actualización de 'selected' (la dejamos simple y segura)
+      if (selected) {
+        const updated = allPlaylists.find(p => p._id === selected._id);
+        setSelected(updated || null);
       }
-    } catch (err) {
-      console.error("Error cargando playlists:", err);
-      setPlaylists([]); // En error, aseguramos array vacío
+      
+    } else {
+      console.warn("La API no devolvió el formato esperado {own: [], shared: []}:", data);
+      setPlaylists([]);
     }
-  };
-
+  } catch (err) {
+    console.error("Error cargando playlists:", err);
+    setPlaylists([]); 
+  }
+};
   // Fetch de canciones
   const fetchSongs = async () => {
     try {
