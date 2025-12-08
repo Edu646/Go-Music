@@ -82,10 +82,16 @@ export default function UserPlaylists() {
       const res = await fetch(`/playlists/${playlistId}/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ song }),
+        // Asegúrate que el backend espere { song: ... }
+        body: JSON.stringify({ song }), 
       });
 
       if (res.ok) fetchPlaylists();
+      // Si la respuesta no es OK (ej. 400), debes leer el mensaje de error
+      else {
+        const errorData = await res.json();
+        console.error("Error del Servidor al añadir canción:", errorData);
+      }
     } catch (err) {
       console.error("Error agregando canción:", err);
     }
