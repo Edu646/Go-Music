@@ -77,26 +77,42 @@ export default function UserPlaylists() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, search]);
 
-  const addSong = async (playlistId, song) => {
+ const addSong = async (playlistId, song) => {
+    // Asegúrate de que 'user' esté accesible y no sea null
+    if (!user || !user.username) {
+        console.error("Usuario o username no disponible.");
+        return;
+    }
+
     try {
       const res = await fetch(`/playlists/${playlistId}/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Asegúrate que el backend espere { song: ... }
-        body: JSON.stringify({ song }), 
+        // --- ¡CAMBIO CRUCIAL AQUÍ! ---
+        body: JSON.stringify({ 
+            song, 
+            username: user.username // <-- AGREGAMOS EL USERNAME
+        }),
       });
 
-      if (res.ok) fetchPlaylists();
-      // Si la respuesta no es OK (ej. 400), debes leer el mensaje de error
-      else {
-        const errorData = await res.json();
-        console.error("Error del Servidor al añadir canción:", errorData);
+      if (res.ok) {
+        fetchPlaylists();
+      } else {
+        // Mejoramos la lectura del error 400
+        const errorText = await res.text();
+        try {
+            const errorData = JSON.parse(errorText);
+            console.error("Error del Servidor al añadir canción:", errorData.error || errorData.message);
+            alert("Error: " + (errorData.error || "No se pudo añadir la canción."));
+        } catch {
+            console.error("Error del Servidor (no JSON):", errorText);
+            alert("Error desconocido al añadir la canción.");
+        }
       }
     } catch (err) {
-      console.error("Error agregando canción:", err);
+      console.error("Error de red agregando canción:", err);
     }
   };
-
   const removeSong = async (playlistId, songId) => {
     try {
       const playlist = playlists.find((p) => p._id === playlistId);
