@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './chat.css'; // Asegúrate de tener este archivo o borrar esta línea si no lo usas
-
+import io from 'socket.io-client'
 // -------------------------------------------------------------------------
 // NOTA: Para producción, comenta este mock y usa: import io from 'socket.io-client';
 // const socket = io('http://tu-backend-url.com');
 // -------------------------------------------------------------------------
- const socket = io('https://go-music-3mgo.onrender.com');
+const socket = io('https://go-music-3mgo.onrender.com');
 
 const getUsername = () => {
   try {
