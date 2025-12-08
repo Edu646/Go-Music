@@ -12,6 +12,7 @@ const { Server } = require("socket.io");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
+const crypto = require("crypto");
 
 app.use(cors());
 app.use(express.json());
@@ -66,8 +67,12 @@ const PlaylistSchema = new mongoose.Schema({
   owner: String,
   image: String,
   songs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Song" }],
+  isPublic: { type: Boolean, default: true }, // Nueva propiedad
+  shareToken: { type: String, unique: true, sparse: true }, // Token para compartir privadas
+  sharedWith: [String], // Array de usernames que tienen acceso
   createdAt: { type: Date, default: Date.now }
 });
+
 const Playlist = mongoose.model("Playlist", PlaylistSchema);
 
 // --- CONFIG CLOUDINARY ---
@@ -141,11 +146,10 @@ app.delete("/songs/:id", async (req, res) => {
 // -----------------
 // RUTAS PLAYLIST (MODIFICADAS PARA SEGURIDAD)
 // -----------------
-
-// 1. Crear playlist (Cualquiera puede crear)
+// 1. Crear playlist (con opción de privacidad)
 app.post("/playlists", upload.single("image"), async (req, res) => {
   try {
-    const { name, owner } = req.body;
+    const { name, owner, isPublic } = req.body;
     if (!name || !owner) return res.status(400).json({ error: "Falta nombre o propietario" });
 
     let imageUrl = "";
@@ -154,7 +158,18 @@ app.post("/playlists", upload.single("image"), async (req, res) => {
       imageUrl = result.secure_url;
     }
 
-    const playlist = await Playlist.create({ name, owner, image: imageUrl, songs: [] });
+    // Generar token único para compartir si es privada
+    const shareToken = isPublic === "false" ? crypto.randomBytes(16).toString("hex") : null;
+
+    const playlist = await Playlist.create({ 
+      name, 
+      owner, 
+      image: imageUrl, 
+      songs: [],
+      isPublic: isPublic !== "false", // Por defecto true
+      shareToken,
+      sharedWith: []
+    });
     res.json(playlist);
   } catch (err) {
     console.error("Error creando playlist:", err);
@@ -162,114 +177,178 @@ app.post("/playlists", upload.single("image"), async (req, res) => {
   }
 });
 
-// 2. 🔥 NUEVO: Obtener TODAS las playlists (Públicas)
+// 2. Obtener playlists PÚBLICAS (para explorar)
 app.get("/playlists", async (req, res) => {
   try {
-    // Devuelve todas las playlists para la sección de "Explorar"
-    const playlists = await Playlist.find().populate("songs").sort({ createdAt: -1 });
+    const playlists = await Playlist.find({ isPublic: true })
+      .populate("songs")
+      .sort({ createdAt: -1 });
     res.json(playlists);
   } catch (err) {
-    res.status(500).json({ error: "Error obteniendo playlists globales" });
+    res.status(500).json({ error: "Error obteniendo playlists públicas" });
   }
 });
 
-// 3. Obtener playlists de un usuario específico
+// 3. Obtener playlists del usuario (propias + compartidas)
 app.get("/playlists/:username", async (req, res) => {
   try {
     const { username } = req.params;
-    const playlists = await Playlist.find({ owner: username }).populate("songs");
-    res.json(playlists);
+    
+    // Playlists propias (públicas y privadas)
+    const ownPlaylists = await Playlist.find({ owner: username }).populate("songs");
+    
+    // Playlists compartidas con el usuario
+    const sharedPlaylists = await Playlist.find({ 
+      sharedWith: username,
+      owner: { $ne: username } // No incluir las propias
+    }).populate("songs");
+    
+    res.json({
+      own: ownPlaylists,
+      shared: sharedPlaylists
+    });
   } catch (err) {
     console.error("Error obteniendo playlists:", err);
     res.status(500).json({ error: "Error obteniendo playlists" });
   }
 });
 
-// 4. 🔥 MODIFICADO: Agregar canción (SOLO DUEÑO)
-app.post("/playlists/:id/add", async (req, res) => {
+// 4. 🆕 Aceptar playlist compartida por token
+app.post("/playlists/accept-share", async (req, res) => {
+  try {
+    const { token, username } = req.body;
+    
+    if (!token || !username) {
+      return res.status(400).json({ error: "Faltan datos" });
+    }
+
+    const playlist = await Playlist.findOne({ shareToken: token });
+    
+    if (!playlist) {
+      return res.status(404).json({ error: "Link inválido o expirado" });
+    }
+
+    // Verificar que no sea el dueño
+    if (playlist.owner === username) {
+      return res.status(400).json({ error: "Ya eres el dueño de esta playlist" });
+    }
+
+    // Verificar si ya está compartida
+    if (playlist.sharedWith.includes(username)) {
+      return res.status(400).json({ error: "Ya tienes acceso a esta playlist" });
+    }
+
+    // Agregar usuario a la lista de compartidos
+    playlist.sharedWith.push(username);
+    await playlist.save();
+
+    const updated = await Playlist.findById(playlist._id).populate("songs");
+    res.json({ success: true, playlist: updated });
+  } catch (err) {
+    console.error("Error aceptando playlist:", err);
+    res.status(500).json({ error: "Error al aceptar playlist" });
+  }
+});
+
+// 5. 🆕 Generar/regenerar token de compartir
+app.post("/playlists/:id/regenerate-token", async (req, res) => {
   try {
     const { id } = req.params;
-    const { song, username } = req.body; // Necesitamos 'username' para validar
-
-    if (!song || !username) return res.status(400).json({ error: "Faltan datos (canción o usuario)" });
+    const { username } = req.body;
 
     const playlist = await Playlist.findById(id);
     if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
 
-    // 🔒 VALIDACIÓN DE PROPIEDAD
+    // Solo el dueño puede regenerar el token
+    if (playlist.owner !== username) {
+      return res.status(403).json({ error: "Solo el dueño puede hacer esto" });
+    }
+
+    // Generar nuevo token
+    playlist.shareToken = crypto.randomBytes(16).toString("hex");
+    await playlist.save();
+
+    res.json({ shareToken: playlist.shareToken });
+  } catch (err) {
+    res.status(500).json({ error: "Error regenerando token" });
+  }
+});
+
+// 6. 🆕 Cambiar privacidad de playlist
+app.patch("/playlists/:id/privacy", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username, isPublic } = req.body;
+
+    const playlist = await Playlist.findById(id);
+    if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
+
+    if (playlist.owner !== username) {
+      return res.status(403).json({ error: "Solo el dueño puede cambiar la privacidad" });
+    }
+
+    playlist.isPublic = isPublic;
+    
+    // Si se hace privada y no tiene token, generar uno
+    if (!isPublic && !playlist.shareToken) {
+      playlist.shareToken = crypto.randomBytes(16).toString("hex");
+    }
+
+    await playlist.save();
+    res.json(playlist);
+  } catch (err) {
+    res.status(500).json({ error: "Error cambiando privacidad" });
+  }
+});
+
+// 7. Modificar ruta de agregar canción (validar permisos)
+app.post("/playlists/:id/add", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { song, username } = req.body;
+
+    if (!song || !username) return res.status(400).json({ error: "Faltan datos" });
+
+    const playlist = await Playlist.findById(id);
+    if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
+
+    // Solo el DUEÑO puede editar (usuarios con acceso compartido NO pueden)
     if (playlist.owner !== username) {
       return res.status(403).json({ error: "Solo el dueño puede editar esta playlist" });
     }
 
-    // Evitar duplicados (opcional)
     if (playlist.songs.includes(song._id || song.id)) {
-        return res.status(400).json({ error: "La canción ya está en la playlist" });
+      return res.status(400).json({ error: "La canción ya está en la playlist" });
     }
 
     playlist.songs.push(song._id || song.id);
     await playlist.save();
     
-    // Devolvemos la playlist actualizada
     const updated = await Playlist.findById(id).populate("songs");
     res.json(updated);
   } catch (err) {
-    console.error("Error agregando canción:", err);
-    res.status(500).json({ error: "Error interno" });
+    res.status(500).json({ error: "Error agregando canción" });
   }
 });
 
-// 5. 🔥 NUEVO: Quitar canción de playlist (SOLO DUEÑO)
-app.post("/playlists/:id/remove", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { songId, username } = req.body;
-  
-      const playlist = await Playlist.findById(id);
-      if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
-  
-      // 🔒 VALIDACIÓN DE PROPIEDAD
-      if (playlist.owner !== username) {
-        return res.status(403).json({ error: "Solo el dueño puede editar esta playlist" });
-      }
-  
-      playlist.songs = playlist.songs.filter(s => s.toString() !== songId);
-      await playlist.save();
-      
-      const updated = await Playlist.findById(id).populate("songs");
-      res.json(updated);
-    } catch (err) {
-      res.status(500).json({ error: "Error eliminando canción de playlist" });
-    }
-  });
-
-// 6. 🔥 NUEVO: Borrar playlist completa (SOLO DUEÑO)
+// 8. Modificar ruta de eliminar playlist
 app.delete("/playlists/:id", async (req, res) => {
-    try {
-        const { id } = req.params;
-        // En DELETE, a veces se manda el user por query params o body. Asumiremos body.
-        // Nota: Algunos clientes HTTP no permiten body en DELETE, si falla, usa query params.
-        const { username } = req.body; 
+  try {
+    const { id } = req.params;
+    const { username } = req.body;
 
-        const playlist = await Playlist.findById(id);
-        if (!playlist) return res.status(404).json({ error: "No encontrada" });
+    const playlist = await Playlist.findById(id);
+    if (!playlist) return res.status(404).json({ error: "No encontrada" });
 
-        // 🔒 VALIDACIÓN DE PROPIEDAD
-        if (playlist.owner !== username) {
-            return res.status(403).json({ error: "No tienes permiso para borrar esto" });
-        }
-
-        // Eliminar imagen de Cloudinary si existe
-        if (playlist.image && playlist.image.includes("cloudinary")) {
-            // Lógica para extraer public_id si es necesario, o simplemente borrar el registro
-            // Simplificado:
-        }
-
-        await Playlist.findByIdAndDelete(id);
-        res.json({ success: true, message: "Playlist eliminada" });
-
-    } catch (err) {
-        res.status(500).json({ error: "Error al borrar playlist" });
+    if (playlist.owner !== username) {
+      return res.status(403).json({ error: "Solo el dueño puede eliminar" });
     }
+
+    await Playlist.findByIdAndDelete(id);
+    res.json({ success: true, message: "Playlist eliminada" });
+  } catch (err) {
+    res.status(500).json({ error: "Error al borrar playlist" });
+  }
 });
 
 
