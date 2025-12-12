@@ -291,17 +291,26 @@ export default function Chat() {
       </div>
 
       <div className="chat-area">
-        <div className="chat-header">
-          <button className="back-btn" onClick={() => setSidebarOpen(true)}>←</button>
-          <div className="header-info">
-            {view === 'global' ? <h2>Chat Global</h2> : <>
-              <h2>{selectedUser}</h2>
-              <span className={`status-indicator ${getUserChatDetails(selectedUser).isOnline ? 'on' : ''}`}>
-                {getUserChatDetails(selectedUser).isOnline ? 'En línea' : 'Desconectado'}
-              </span>
-            </>}
-          </div>
-        </div>
+        <div className="chat-header">
+          {/* Botón de menú en móvil (se muestra con CSS) */}
+          <button className="back-btn" onClick={() => setSidebarOpen(true)}>←</button>
+
+          <div className="header-info">
+            {view === 'global' ? <h2>Chat Global</h2> : <>
+              <h2>{selectedUser}</h2>
+              <span className={`status-indicator ${getUserChatDetails(selectedUser).isOnline ? 'on' : ''}`}>
+                {getUserChatDetails(selectedUser).isOnline ? 'En línea' : 'Desconectado'}
+              </span>
+            </>}
+          </div>
+
+          {/* NUEVO: Botón de Chat Global para Escritorio (se muestra con CSS) */}
+          {(view === 'private' && selectedUser) && (
+            <button className="global-chat-btn" onClick={() => { setView('global'); setSelectedUser(null); }}>
+              Chat Global
+            </button>
+          )}
+        </div>
 
         <div className="messages-container">
           {currentMessages.length ? currentMessages.map((msg, i) => (
