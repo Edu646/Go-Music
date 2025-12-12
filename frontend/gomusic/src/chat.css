@@ -527,58 +527,33 @@
 /* =========================================== */
 /* ========== RESPONSIVE MÓVIL (FIX) ========= */
 /* =========================================== */
-
 @media (max-width: 768px) {
 
-  /* 1. ROMPER EL CONTENEDOR PADRE
-     Usamos position: fixed para que el chat ignore los márgenes 
-     de tu web y ocupe toda la pantalla disponible. */
+  /* 1. CONTENEDOR PRINCIPAL: Ocupa 100% de la pantalla */
   .chat-container {
-    position: fixed;
-    top: 70px; /* Respetamos tu header superior si lo quieres mantener */
+    position: fixed; /* Clave para ignorar márgenes externos */
+    top: 70px; 
     left: 0;
     right: 0;
     bottom: 0;
-    width: 100vw;     /* Forzar ancho total de la ventana */
-    height: calc(100vh - 70px); /* Altura total menos el header */
-    margin: 0 !important; /* Sobrescribir cualquier margen externo */
+    width: 100vw;
+    height: calc(100vh - 70px); 
+    margin: 0 !important;
     padding: 0 !important;
-    border: none;
-    z-index: 990; /* Asegurar que flote sobre otros elementos */
-    background: #000; /* Fondo negro para tapar lo de atrás */
+    z-index: 990; 
+    background: #000;
     flex-direction: column;
   }
 
-  /* 2. SIDEBAR (MENÚ) */
+  /* 2. SIDEBAR (Se mantiene oculto y flotante) */
   .sidebar {
     position: fixed;
-    top: 0; /* Ocupa desde arriba del todo */
-    left: 0;
+    top: 0; /* Empieza desde el borde superior de la ventana */
     height: 100vh;
-    width: 85%; 
-    max-width: 320px;
-    transform: translateX(-100%);
-    box-shadow: 10px 0 20px rgba(0,0,0,0.8);
-    z-index: 1000;
-    border-right: 1px solid #333;
-    padding-top: 20px;
+    /* ... otros estilos de sidebar ... */
   }
 
-  .sidebar.mobile-open {
-    transform: translateX(0);
-  }
-
-  /* Fondo oscuro al abrir menú */
-  .sidebar-overlay.active {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.8);
-    z-index: 999;
-    backdrop-filter: blur(3px);
-  }
-
-  /* 3. ÁREA DE CHAT */
+  /* 3. CHAT AREA: La sección visible que ocupa el resto */
   .chat-area {
     width: 100%;
     height: 100%;
@@ -586,86 +561,68 @@
     flex-direction: column;
     position: relative;
   }
-
+  
   /* Header del chat fijo arriba */
   .chat-header {
     height: 60px;
     padding: 0 15px;
-    background: #181818; /* Ligeramente más claro que el fondo */
-    border-bottom: 1px solid #222;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
+    background: #181818;
+    flex-shrink: 0; /* Asegura que el header no cambie de tamaño */
   }
   
   .back-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    margin-right: 10px;
-    font-size: 24px;
+    display: flex; /* Muestra el botón de menú/atrás */
+    /* ... estilos ... */
   }
 
-  /* 4. MENSAJES */
+  /* 4. CONTENEDOR DE MENSAJES */
   .messages-container {
     flex: 1;
     width: 100%;
-    box-sizing: border-box; /* Importante para que el padding no rompa el ancho */
+    box-sizing: border-box; 
     padding: 15px;
-    padding-bottom: 20px;
+    /* Dejamos un espacio abajo para que el último mensaje no se esconda bajo el input fijo */
+    padding-bottom: 75px; 
     overflow-y: auto;
     overflow-x: hidden;
     background: #000;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .message-wrapper {
-    margin-bottom: 10px;
-    width: 100%;
   }
 
   .message-bubble {
-    max-width: 80%; /* Las burbujas ocupan más espacio */
-    padding: 10px 15px;
-    font-size: 15px;
-    border-radius: 18px;
+    max-width: 85%; /* Se ven mejor */
   }
 
-  /* 5. INPUT AREA (SOLUCIÓN TECLADO) */
+  /* 5. INPUT AREA (LA CLAVE: Área de Escritura Fija) */
   .input-area {
+    /* Usamos 'position: sticky' para que se mantenga en la parte inferior del viewport
+       sin los problemas de 'fixed' con el teclado virtual del móvil. */
+    position: sticky; 
+    bottom: 0;
     width: 100%;
-    position: relative; /* Cambiado de sticky/fixed para mejor control */
-    background: #181818;
-    border-top: 1px solid #222;
+    background: var(--bg-card); /* #181818 */
+    border-top: 1px solid var(--border-color); /* #282828 */
     padding: 10px;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    flex-shrink: 0; /* Evita que se aplaste */
+    box-sizing: border-box; /* Fundamental */
+    flex-shrink: 0; /* Evita que el área de input se reduzca */
+    z-index: 200;
     gap: 8px;
   }
 
   .chat-input {
-    font-size: 16px; /* Evita zoom en iPhone */
+    flex: 1;
+    font-size: 16px; /* Importante para prevenir zoom automático */
     padding: 10px 15px;
-    border-radius: 20px;
-    height: 45px; /* Altura táctil cómoda */
+    height: 45px; /* Altura cómoda para tocar */
     box-sizing: border-box;
   }
   
-  .send-btn {
-     width: 45px;
-     height: 45px;
-     display: flex;
-     align-items: center;
-     justify-content: center;
+  .icon-btn, .send-btn {
+    width: 45px;
+    height: 45px;
+    flex-shrink: 0; /* Asegura que no se deformen */
   }
 
-  /* Ajustes para archivos y emojis en móvil */
+  /* 6. Ajuste de elementos flotantes (Previews y Emojis) */
   .emoji-picker {
     width: 90%;
     left: 5%;
@@ -675,7 +632,7 @@
   .file-preview {
     left: 10px;
     right: 10px;
-    bottom: 75px;
+    bottom: 75px; /* Encima del input area */
     max-width: none;
   }
 }
