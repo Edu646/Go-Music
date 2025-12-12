@@ -1,27 +1,27 @@
 /*
  * ===========================================
- * GOMUSIC CHAT STYLESHEET (VERSIÓN FINAL COMPLETA)
+ * GOMUSIC CHAT STYLESHEET (VERSIÓN FINAL Y COMPLETA)
  * ===========================================
  */
 
 :root {
-  --primary-color: #5d5dff; /* Un azul/violeta vibrante */
-  --secondary-color: #6c757d; /* Gris para texto secundario */
-  --background-light: #f4f6f9; /* Fondo muy claro (para mensajes recibidos/fondo general) */
-  --background-dark: #ffffff; /* Fondo del chat principal/input */
-  --sidebar-bg: #e9ecef; /* Fondo de la sidebar */
-  --message-sent-bg: #dcf8c6; /* Fondo de mensaje enviado (como WhatsApp) */
-  --message-received-bg: #ffffff; /* Fondo de mensaje recibido */
-  --border-color: #dee2e6; /* Color de bordes y separadores */
-  --online-dot: #28a745; /* Verde para 'En línea' */
-  --unread-bg: #dc3545; /* Rojo para no leídos */
+  --primary-color: #5d5dff;
+  --secondary-color: #6c757d;
+  --background-light: #f4f6f9;
+  --background-dark: #ffffff;
+  --sidebar-bg: #e9ecef;
+  --message-sent-bg: #dcf8c6;
+  --message-received-bg: #ffffff;
+  --border-color: #dee2e6;
+  --online-dot: #28a745;
+  --unread-bg: #dc3545;
   --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadow-medium: 0 4px 6px rgba(0, 0, 0, 0.15);
 }
 
 body {
   margin: 0;
-  font-family: 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: 'Segoe UI', 'Roboto', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--background-light);
@@ -44,10 +44,6 @@ body {
 .login-warning h2 {
   color: var(--primary-color);
   margin-bottom: 10px;
-}
-
-.login-warning p {
-  font-size: 1.1em;
 }
 
 /* --- Contenedor Principal del Chat --- */
@@ -201,7 +197,7 @@ body {
   display: flex;
   flex-direction: column;
   background-color: var(--background-dark);
-  position: relative; /* Clave para posicionar correctamente el emoji picker */
+  position: relative; /* Clave para el posicionamiento del emoji picker */
 }
 
 .chat-header {
@@ -361,6 +357,8 @@ body {
   padding: 10px 15px;
   border-top: 1px solid var(--border-color);
   background-color: var(--background-dark);
+  position: relative; /* Asegura que el z-index funcione correctamente */
+  z-index: 12;
 }
 
 .chat-input {
@@ -428,32 +426,6 @@ body {
   justify-content: space-between;
 }
 
-.file-preview-content {
-  display: flex;
-  align-items: center;
-  position: relative;
-}
-
-.preview-image {
-  max-height: 80px;
-  max-width: 120px;
-  border-radius: 8px;
-  margin-right: 10px;
-}
-
-.file-info {
-  display: flex;
-  align-items: center;
-  font-size: 0.9em;
-  color: #333;
-}
-
-.file-icon-large {
-  font-size: 1.5em;
-  margin-right: 5px;
-  color: var(--primary-color);
-}
-
 .remove-file-btn {
   background: var(--unread-bg);
   color: white;
@@ -473,9 +445,8 @@ body {
 /* --- Emoji Picker (CORRECCIÓN DE POSICIONAMIENTO) --- */
 
 .emoji-picker {
-  /* Posicionamiento relativo al .chat-area */
   position: absolute;
-  /* La altura es un estimado para que quede justo encima del input-area */
+  /* Posicionamiento: 65px es la altura aproximada del input-area + padding */
   bottom: 65px; 
   left: 10px; 
   
@@ -484,7 +455,7 @@ body {
   border-radius: 8px;
   padding: 10px;
   box-shadow: var(--shadow-medium);
-  z-index: 15; /* Asegura que esté por encima de todo */
+  z-index: 25; /* Máxima prioridad para el selector */
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 5px;
@@ -499,10 +470,6 @@ body {
   padding: 5px;
   transition: background-color 0.1s;
   border-radius: 4px;
-}
-
-.emoji-btn:hover {
-  background-color: var(--sidebar-bg);
 }
 
 /* --- Estilos y Responsividad Móvil (OPTIMIZACIÓN DEL 100% DE ANCHO) --- */
@@ -520,17 +487,16 @@ body {
     margin: 0;
   }
   
-  /* 1. Sidebar en Móvil */
+  /* 1. Sidebar en Móvil (Se superpone) */
   .sidebar {
     position: fixed;
     top: 0;
     left: 0;
-    z-index: 20;
+    z-index: 20; /* Está por encima del chat */
     width: 85%;
     max-width: 300px; 
     height: 100%;
     transform: translateX(-100%);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
   }
 
   .sidebar.mobile-open {
@@ -555,18 +521,20 @@ body {
   /* 2. Chat Area toma el 100% */
   .chat-area {
     width: 100%;
+    z-index: 10; /* Detrás del sidebar/overlay */
   }
 
-  /* 3. Input Area optimizado para Móvil (Ocupa todo el ancho y es compacto) */
+  /* 3. Input Area optimizado para Móvil */
   .input-area {
     padding: 8px 10px; 
     align-items: center; 
+    /* El z-index ya está en 12, lo mantiene sobre el área de mensajes */
   }
 
   .chat-input {
     margin: 0 8px;
     padding: 8px 12px;
-    min-height: 35px; /* Ligeramente más pequeño */
+    min-height: 35px; 
   }
   
   .icon-btn, .send-btn {
@@ -583,12 +551,12 @@ body {
     left: 5px; 
     right: 5px; 
     max-width: unset; 
-    grid-template-columns: repeat(8, 1fr); /* 8 emojis por fila */
+    grid-template-columns: repeat(8, 1fr); /* Más emojis por fila */
     padding: 8px;
-    bottom: 55px; /* Ajuste final para móvil */
+    bottom: 55px; /* Ajuste para el input más compacto en móvil */
   }
   
-  /* 5. Header y Botón de Retroceso/Menú en Móvil */
+  /* 5. Botón de Menú/Retroceso en Móvil */
   .back-btn {
     display: block;
     background: none;
