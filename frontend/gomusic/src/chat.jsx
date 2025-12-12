@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Smile, Paperclip, Image, X } from 'lucide-react';
+import './chat.css';
 import io from 'socket.io-client';
 
 const socket = io('https://go-music-3mgo.onrender.com', {
@@ -291,7 +291,7 @@ export default function Chat() {
 
   if (username === "Anónimo") {
     return (
-      <div style={styles.loginWarning}>
+      <div className="login-warning">
         <h2>🔒 Chat Bloqueado</h2>
         <p>Debes iniciar sesión para acceder al chat.</p>
       </div>
@@ -329,16 +329,16 @@ export default function Chat() {
 
   const renderMessage = (msg) => {
     return (
-      <div style={styles.messageContent}>
+      <div className="message-content">
         {msg.file && (
-          <div style={styles.fileContainer}>
+          <div className="file-container">
             {msg.file.type.startsWith('image/') ? (
-              <img src={msg.file.data} alt={msg.file.name} style={styles.messageImage} />
+              <img src={msg.file.data} alt={msg.file.name} className="message-image" />
             ) : (
-              <div style={styles.fileAttachment}>
-                <Paperclip size={16} />
-                <span>{msg.file.name}</span>
-                <span style={styles.fileSize}>({(msg.file.size / 1024).toFixed(1)} KB)</span>
+              <div className="file-attachment">
+                <span className="file-icon">📎</span>
+                <span className="file-name">{msg.file.name}</span>
+                <span className="file-size">({(msg.file.size / 1024).toFixed(1)} KB)</span>
               </div>
             )}
           </div>
@@ -349,22 +349,25 @@ export default function Chat() {
   };
 
   return !isChatDataLoaded ? (
-    <div style={styles.loadingContainer}>
+    <div className="loading-container">
       <h2>Cargar Mensajes</h2>
       <p>El chat está listo, pero la carga de mensajes está suspendida.</p>
-      <button onClick={loadChatData} style={styles.loadBtn}>
+      <button onClick={loadChatData} className="load-btn">
         Abrir y Cargar Chats Ahora
       </button>
     </div>
   ) : (
-    <div style={styles.chatContainer}>
-      {sidebarOpen && <div style={styles.sidebarOverlay} onClick={() => setSidebarOpen(false)} />}
+    <div className="chat-container">
+      <div 
+        className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
 
-      <div style={{...styles.sidebar, ...(sidebarOpen ? styles.sidebarOpen : {})}}>
-        <div style={styles.sidebarHeader}>
-          <h3 style={styles.sidebarTitle}>Chats ({username})</h3>
+      <div className={`sidebar ${sidebarOpen ? 'mobile-open' : ''}`}>
+        <div className="sidebar-header">
+          <h3>Chats ({username})</h3>
           <button 
-            style={{...styles.globalChatBtn, ...(view === 'global' ? styles.globalChatBtnActive : {})}}
+            className={`global-chat-btn ${view === 'global' ? 'active' : ''}`}
             onClick={() => { 
               setView('global'); 
               setSelectedUser(null);
@@ -377,57 +380,57 @@ export default function Chat() {
           <input 
             type="text" 
             placeholder="Buscar usuario..." 
-            style={styles.searchInput}
+            className="search-user-input"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         
-        <div style={styles.usersList}>
-          <h4 style={styles.listTitle}>Contactos:</h4>
+        <div className="users-list">
+          <h4 className="list-title">Contactos:</h4>
           {chatPartners.length > 0 ? chatPartners.map(user => {
             const details = getUserChatDetails(user);
             
             return (
               <div 
                 key={user} 
-                style={{...styles.userItem, ...(selectedUser === user ? styles.userItemSelected : {})}}
+                className={`user-item ${selectedUser === user ? 'selected' : ''}`}
                 onClick={() => handleUserSelect(user)}
               >
-                <div style={{...styles.avatar, ...(details.isOnline ? styles.avatarOnline : {})}}>
+                <div className={`avatar-placeholder ${details.isOnline ? 'online' : ''}`}>
                   {user[0].toUpperCase()}
                 </div>
-                <div style={styles.userDetails}>
-                  <span style={styles.username}>{user}</span>
-                  <span style={styles.statusText}>{details.lastMsgText}</span>
+                <div className="user-details">
+                  <span className="username">{user}</span>
+                  <span className="status-text">{details.lastMsgText}</span>
                 </div>
                 {details.unreadCount > 0 && (
-                  <div style={styles.unreadCount}>{details.unreadCount}</div>
+                  <div className="unread-count">{details.unreadCount}</div>
                 )}
               </div>
             );
           }) : (
-            <p style={styles.noUsers}>No hay usuarios para mostrar.</p>
+            <p className="no-users">No hay usuarios para mostrar.</p>
           )}
         </div>
       </div>
       
-      <div style={styles.chatArea}>
-        <div style={styles.chatHeader}>
+      <div className="chat-area">
+        <div className="chat-header">
           <button 
-            style={styles.backBtn}
+            className="back-btn" 
             onClick={() => setSidebarOpen(true)}
           >
             ←
           </button>
           
-          <div style={styles.headerInfo}>
+          <div className="header-info">
             {view === 'global' ? (
-              <h2 style={styles.headerTitle}>Chat Global</h2>
+              <h2>Chat Global</h2>
             ) : (
               <>
-                <h2 style={styles.headerTitle}>{selectedUser}</h2>
-                <span style={{...styles.statusIndicator, ...(getUserChatDetails(selectedUser).isOnline ? styles.statusOnline : {})}}>
+                <h2>{selectedUser}</h2>
+                <span className={`status-indicator ${getUserChatDetails(selectedUser).isOnline ? 'on' : ''}`}>
                   {getUserChatDetails(selectedUser).isOnline ? 'En línea' : 'Desconectado'}
                 </span>
               </>
@@ -435,23 +438,25 @@ export default function Chat() {
           </div>
         </div>
         
-        <div style={styles.messagesContainer}>
+        <div className="messages-container">
           {currentMessages.length > 0 ? currentMessages.map((msg, index) => (
-            <div key={index} style={{...styles.messageWrapper, ...(msg.sender === username ? styles.messageSent : styles.messageReceived)}}>
-              <div style={styles.messageBubble}>
+            <div key={index} className={`message-wrapper ${msg.sender === username ? 'sent' : 'received'}`}>
+              <div className="message-bubble">
                 {msg.sender !== username && (
-                  <div style={styles.messageSender}>{msg.sender}</div>
+                  <div className="message-sender">
+                    {msg.sender}
+                  </div>
                 )}
                 
                 {renderMessage(msg)}
                 
-                <span style={styles.messageTime}>
+                <span className="message-time">
                   {new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
             </div>
           )) : (
-            <p style={styles.emptyChatMsg}>
+            <p className="empty-chat-msg">
               {view === 'global' ? 'Sé el primero en saludar!' : `Es el inicio de tu chat con ${selectedUser}.`}
             </p>
           )}
@@ -460,18 +465,18 @@ export default function Chat() {
         
         {/* Preview de archivo seleccionado */}
         {selectedFile && (
-          <div style={styles.filePreview}>
-            <div style={styles.filePreviewContent}>
+          <div className="file-preview">
+            <div className="file-preview-content">
               {previewUrl ? (
-                <img src={previewUrl} alt="Preview" style={styles.previewImage} />
+                <img src={previewUrl} alt="Preview" className="preview-image" />
               ) : (
-                <div style={styles.fileInfo}>
-                  <Paperclip size={24} />
+                <div className="file-info">
+                  <span className="file-icon-large">📎</span>
                   <span>{selectedFile.name}</span>
                 </div>
               )}
-              <button onClick={removeFile} style={styles.removeFileBtn}>
-                <X size={20} />
+              <button onClick={removeFile} className="remove-file-btn">
+                ✕
               </button>
             </div>
           </div>
@@ -479,12 +484,12 @@ export default function Chat() {
         
         {/* Emoji picker */}
         {showEmojiPicker && (
-          <div style={styles.emojiPicker}>
+          <div className="emoji-picker">
             {EMOJI_LIST.map(emoji => (
               <button 
                 key={emoji} 
                 onClick={() => addEmoji(emoji)}
-                style={styles.emojiBtn}
+                className="emoji-btn"
               >
                 {emoji}
               </button>
@@ -492,37 +497,37 @@ export default function Chat() {
           </div>
         )}
         
-        <div style={styles.inputArea}>
+        <div className="input-area">
           <input 
             type="file"
             ref={fileInputRef}
             onChange={handleFileSelect}
-            style={styles.fileInput}
+            className="file-input"
             accept="image/*,.pdf,.doc,.docx,.txt"
           />
           
           <button 
             onClick={() => fileInputRef.current?.click()}
-            style={styles.iconBtn}
+            className="icon-btn"
             title="Adjuntar archivo"
             disabled={view === 'private' && !selectedUser}
           >
-            <Paperclip size={20} />
+            📎
           </button>
           
           <button 
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            style={styles.iconBtn}
+            className="icon-btn"
             title="Emojis"
             disabled={view === 'private' && !selectedUser}
           >
-            <Smile size={20} />
+            😊
           </button>
           
           <input 
             type="text"
             placeholder={view === 'global' ? "Escribe un mensaje..." : `Mensaje a ${selectedUser}...`}
-            style={styles.chatInput}
+            className="chat-input"
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyPress={handleKeyPress}
@@ -531,7 +536,7 @@ export default function Chat() {
           
           <button 
             onClick={send} 
-            style={{...styles.sendBtn, ...((view === 'private' && !selectedUser) ? styles.sendBtnDisabled : {})}}
+            className="send-btn" 
             disabled={view === 'private' && !selectedUser}
           >
             ➡️
