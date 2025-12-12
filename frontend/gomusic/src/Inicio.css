@@ -2,7 +2,7 @@
    CONTENEDOR DE PÁGINA
 ------------------------------ */
 .page-wrapper {
-  min-height: 100vh;
+  min-height: 100%;
   background: linear-gradient(135deg, #1db954 0%, #191414 50%, #000000 100%);
   background-attachment: fixed;
   padding-bottom: 60px;
