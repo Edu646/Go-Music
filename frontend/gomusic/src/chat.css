@@ -27,6 +27,8 @@ body {
   background-color: var(--background-light);
 }
 
+/* --- Estilo de Advertencia de Login --- */
+
 .login-warning {
   display: flex;
   flex-direction: column;
@@ -65,15 +67,16 @@ body {
   background-color: var(--sidebar-bg);
   border-right: 1px solid var(--border-color);
   display: flex;
-  flex-direction: column;
+  flex-direction: column; /* Clave para el layout vertical */
   transition: transform 0.3s ease-in-out;
-  overflow-y: auto;
+  overflow-y: auto; /* Permite el scroll en toda la sidebar */
 }
 
 .sidebar-header {
   padding: 15px;
   border-bottom: 1px solid var(--border-color);
   background-color: var(--background-dark);
+  flex-shrink: 0; /* No se encoge */
 }
 
 .sidebar-header h3 {
@@ -93,8 +96,8 @@ body {
 }
 
 .users-list {
-  flex-grow: 1;
-  overflow-y: auto;
+  flex-grow: 1; /* CLAVE: Ocupa todo el espacio restante */
+  overflow-y: auto; /* Permite el scroll solo en la lista */
 }
 
 .user-item {
@@ -184,7 +187,8 @@ body {
   box-shadow: var(--shadow-subtle);
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Alineación para el nuevo botón */
+  justify-content: space-between;
+  flex-shrink: 0;
 }
 
 .header-info {
@@ -199,7 +203,6 @@ body {
   color: #333;
 }
 
-/* NUEVO: Estilo para el botón de Chat Global */
 .global-chat-btn {
     background-color: var(--primary-color);
     color: white;
@@ -209,13 +212,12 @@ body {
     font-size: 0.9em;
     cursor: pointer;
     transition: background-color 0.2s;
-    flex-shrink: 0; /* No se encoge */
+    flex-shrink: 0;
 }
 
 .global-chat-btn:hover {
     background-color: #4a4adf;
 }
-
 
 .messages-container {
   flex-grow: 1;
@@ -285,6 +287,7 @@ body {
   background-color: var(--background-dark);
   position: relative;
   z-index: 12;
+  flex-shrink: 0; /* No se encoge */
 }
 
 .chat-input {
@@ -341,17 +344,19 @@ body {
   max-width: 250px;
 }
 
-/* --- Estilos y Responsividad Móvil (OPTIMIZADO 100% ANCHO) --- */
+/* --- Estilos y Responsividad Móvil (OPTIMIZADO 100% ANCHO Y SIDEBAR SCROLL) --- */
 
-/* Ocultar botón de menú en escritorio, mostrar botón de chat global */
 .back-btn {
   display: none;
 }
 
 @media (min-width: 769px) {
-    /* Asegura que el botón de chat global solo se muestre en escritorio */
     .global-chat-btn {
         display: block;
+    }
+    /* Asegura que el botón de menú móvil no se vea en desktop */
+    .back-btn {
+        display: none; 
     }
 }
 
@@ -368,7 +373,7 @@ body {
       display: none;
   }
   
-  /* 1. Sidebar en Móvil (Se superpone) */
+  /* 1. Sidebar en Móvil (Altura 100% y se superpone) */
   .sidebar {
     position: fixed;
     top: 0;
@@ -376,7 +381,7 @@ body {
     z-index: 20; 
     width: 85%;
     max-width: 300px; 
-    height: 100%;
+    height: 100vh; /* CLAVE: Ocupa toda la altura de la vista */
     transform: translateX(-100%);
   }
 
@@ -405,14 +410,14 @@ body {
     z-index: 10; 
   }
   
-  /* 3. Input Area optimizado para Móvil */
+  /* 3. Input Area Fija al fondo (100% visible) */
   .input-area {
     padding: 8px 10px; 
     align-items: center; 
-    position: fixed; /* Asegura que la barra de entrada siempre esté al final */
+    position: fixed; /* CLAVE: Fija al fondo */
     bottom: 0;
     width: 100%;
-    box-sizing: border-box; /* Incluye padding y border en el ancho */
+    box-sizing: border-box; 
   }
 
   .chat-input {
@@ -437,7 +442,7 @@ body {
     max-width: unset; 
     grid-template-columns: repeat(8, 1fr); 
     padding: 8px;
-    bottom: 55px; /* Ajuste para el input más compacto en móvil */
+    bottom: 55px;
   }
   
   /* 5. Botón de Menú/Retroceso en Móvil */
