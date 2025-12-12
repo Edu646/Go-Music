@@ -2,11 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './chat.css';
 import io from 'socket.io-client';
 
-const socket = io('https://go-music-3mgo.onrender.com', {
-    autoConnect: false 
-});
+const socket = io('https://go-music-3mgo.onrender.com', { autoConnect: false });
 
-// Emojis populares
 const EMOJI_LIST = ['😀', '😂', '😍', '🥰', '😎', '🤔', '👍', '👏', '🎉', '❤️', '🔥', '✨', '🎵', '🎸', '🎤', '🎧'];
 
 const getUsername = () => {
@@ -20,26 +17,23 @@ const getUsername = () => {
 
 export default function Chat() {
   const username = getUsername();
-  
-  const [view, setView] = useState("global"); 
+
+  const [view, setView] = useState("global");
   const [text, setText] = useState("");
   const [globalMessages, setGlobalMessages] = useState([]);
-  const [privateChats, setPrivateChats] = useState({}); 
-  const [isChatDataLoaded, setIsChatDataLoaded] = useState(false); 
+  const [privateChats, setPrivateChats] = useState({});
+  const [isChatDataLoaded, setIsChatDataLoaded] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [allPotentialUsers, setAllPotentialUsers] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null); 
+  const [selectedUser, setSelectedUser] = useState(null);
   const [search, setSearch] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
-  // Nuevos estados para multimedia
+
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  
-  // Para evitar duplicados
   const [sentMessageIds, setSentMessageIds] = useState(new Set());
-  
+
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -57,30 +51,27 @@ export default function Chat() {
     try {
       const privateRes = await fetch(`/private-messages?username=${username}`);
       const privateData = await privateRes.json();
-      
+
       const organizedChats = {};
       privateData.forEach(msg => {
         const otherUser = msg.sender === username ? msg.recipient : msg.sender;
-        if (!organizedChats[otherUser]) {
-          organizedChats[otherUser] = [];
-        }
+        if (!organizedChats[otherUser]) organizedChats[otherUser] = [];
         organizedChats[otherUser].push(msg);
       });
       setPrivateChats(organizedChats);
     } catch (err) {
       console.error("Error cargando mensajes privados:", err);
     }
-    
+
     try {
       const userRes = await fetch("/users");
       const userData = await userRes.json();
-      const safeUsernames = userData.filter(u => u && typeof u === 'string' && u !== "Anónimo");
-      setAllPotentialUsers(safeUsernames);
+      setAllPotentialUsers(userData.filter(u => u && typeof u === 'string' && u !== "Anónimo"));
     } catch (err) {
       console.error("Error cargando usuarios potenciales:", err);
     }
 
-    setIsChatDataLoaded(true); 
+    setIsChatDataLoaded(true);
   }, [username, isChatDataLoaded]);
 
   const markMessagesAsRead = useCallback(async (sender) => {
@@ -91,7 +82,7 @@ export default function Chat() {
         body: JSON.stringify({ username, sender }),
       });
       setPrivateChats(prev => {
-        const updatedMsgs = (prev[sender] || []).map(msg => 
+        const updatedMsgs = (prev[sender] || []).map(msg =>
           msg.recipient === username ? { ...msg, read: true } : msg
         );
         return { ...prev, [sender]: updatedMsgs };
@@ -100,76 +91,53 @@ export default function Chat() {
       console.error("Error marcando mensajes como leídos:", err);
     }
   }, [username]);
-  
+
   useEffect(() => {
-    if (isChatDataLoaded) {
-      if (!socket.connected) {
-        socket.connect();
-      }
-      
-      const handleConnect = () => {
-        socket.emit("userOnline", username);
-      };
-      
-      socket.on('connect', handleConnect);
-      
-      if (socket.connected) {
-        handleConnect();
-      }
+    loadChatData();
+  }, [loadChatData]);
 
-      socket.on("onlineUsers", (users) => {
-        setOnlineUsers(users);
+  useEffect(() => {
+    if (!socket.connected && isChatDataLoaded) socket.connect();
+
+    const handleConnect = () => {
+      socket.emit("userOnline", username);
+    };
+
+    socket.on('connect', handleConnect);
+    if (socket.connected) handleConnect();
+
+    socket.on("onlineUsers", setOnlineUsers);
+
+    socket.on("newMessage", msg => {
+      const msgId = `${msg.sender}-${msg.createdAt}-${msg.text}`;
+      if (!sentMessageIds.has(msgId)) setGlobalMessages(prev => [...prev, msg]);
+    });
+
+    socket.on("privateMessage", msg => {
+      const msgId = `${msg.sender}-${msg.recipient}-${msg.createdAt}-${msg.text}`;
+      if (msg.sender === username && sentMessageIds.has(msgId)) return;
+
+      const otherUser = msg.sender === username ? msg.recipient : msg.sender;
+      setPrivateChats(prev => {
+        const existingMsgs = prev[otherUser] || [];
+        if (existingMsgs.some(m => m.sender === msg.sender && m.text === msg.text && m.createdAt === msg.createdAt)) return prev;
+        return { ...prev, [otherUser]: [...existingMsgs, msg] };
       });
+    });
 
-      socket.on("newMessage", (msg) => {
-        // Evitar duplicados en chat global
-        const msgId = `${msg.sender}-${msg.createdAt}-${msg.text}`;
-        if (!sentMessageIds.has(msgId)) {
-          setGlobalMessages(prev => [...prev, msg]);
-        }
-      });
-
-      socket.on("privateMessage", (msg) => {
-        // Evitar duplicados en chat privado
-        const msgId = `${msg.sender}-${msg.recipient}-${msg.createdAt}-${msg.text}`;
-        
-        if (msg.sender === username && sentMessageIds.has(msgId)) {
-          return; 
-        }
-        
-        const otherUser = msg.sender === username ? msg.recipient : msg.sender;
-        
-        setPrivateChats(prev => {
-          const existingMsgs = prev[otherUser] || [];
-          const isDuplicate = existingMsgs.some(m => 
-            m.sender === msg.sender && 
-            m.text === msg.text && 
-            m.createdAt === msg.createdAt
-          );
-          
-          if (isDuplicate) return prev;
-          
-          return {
-            ...prev,
-            [otherUser]: [...existingMsgs, msg]
-          };
-        });
-      });
-
-      return () => {
-        socket.off('connect', handleConnect);
-        socket.off("onlineUsers");
-        socket.off("newMessage");
-        socket.off("privateMessage");
-        socket.disconnect(); 
-      };
-    }
-  }, [username, isChatDataLoaded, sentMessageIds]); 
+    return () => {
+      socket.off('connect', handleConnect);
+      socket.off("onlineUsers");
+      socket.off("newMessage");
+      socket.off("privateMessage");
+      socket.disconnect();
+    };
+  }, [username, isChatDataLoaded, sentMessageIds]);
 
   useEffect(() => {
     if (view === 'private' && selectedUser) {
       const chats = privateChats[selectedUser];
-      if (chats && chats.some(msg => msg.recipient === username && !msg.read)) {
+      if (chats?.some(msg => msg.recipient === username && !msg.read)) {
         markMessagesAsRead(selectedUser);
       }
     }
@@ -178,369 +146,199 @@ export default function Chat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [globalMessages, privateChats, selectedUser]);
-  
-  const handleFileSelect = (e) => {
+
+  const handleFileSelect = e => {
     const file = e.target.files[0];
     if (!file) return;
-    
-    // Validar tamaño (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert("El archivo es muy grande. Máximo 5MB.");
-      return;
-    }
-    
+    if (file.size > 5 * 1024 * 1024) return alert("Archivo máximo 5MB.");
+
     setSelectedFile(file);
-    
-    // Crear preview para imágenes
+
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result);
-      };
+      reader.onloadend = () => setPreviewUrl(reader.result);
       reader.readAsDataURL(file);
-    } else {
-      setPreviewUrl(null);
-    }
+    } else setPreviewUrl(null);
   };
-  
+
   const removeFile = () => {
     setSelectedFile(null);
     setPreviewUrl(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
-  
+
   const send = async () => {
     if (!text.trim() && !selectedFile) return;
-    
+
     const messageId = `${username}-${Date.now()}-${text || 'file'}-${Math.random()}`;
     const timestamp = new Date().toISOString();
-    
     let fileData = null;
-    
-    // Procesar archivo si existe
+
     if (selectedFile) {
       const reader = new FileReader();
-      fileData = await new Promise((resolve) => {
-        reader.onloadend = () => {
-          resolve({
-            name: selectedFile.name,
-            type: selectedFile.type,
-            size: selectedFile.size,
-            data: reader.result
-          });
-        };
+      fileData = await new Promise(resolve => {
+        reader.onloadend = () => resolve({
+          name: selectedFile.name,
+          type: selectedFile.type,
+          size: selectedFile.size,
+          data: reader.result
+        });
         reader.readAsDataURL(selectedFile);
       });
     }
-    
-    const messageData = {
-      text: text,
-      sender: username,
-      createdAt: timestamp,
-      file: fileData,
-      messageId
-    };
 
-    // Registrar el ID del mensaje enviado
+    const messageData = { text, sender: username, createdAt: timestamp, file: fileData, messageId };
     setSentMessageIds(prev => new Set(prev).add(messageId));
 
     if (view === "global") {
       socket.emit("sendMessage", messageData);
-      // Agregar localmente de inmediato
       setGlobalMessages(prev => [...prev, messageData]);
     } else if (view === "private" && selectedUser) {
       const privateMsgData = { ...messageData, recipient: selectedUser };
-      
       socket.emit("sendPrivateMessage", privateMsgData);
-      
-      // Agregar localmente de inmediato
-      setPrivateChats(prev => ({
-        ...prev,
-        [selectedUser]: [...(prev[selectedUser] || []), privateMsgData]
-      }));
+      setPrivateChats(prev => ({ ...prev, [selectedUser]: [...(prev[selectedUser] || []), privateMsgData] }));
     }
-    
+
     setText("");
     removeFile();
     setShowEmojiPicker(false);
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
+  const handleKeyPress = e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
   };
-  
-  const addEmoji = (emoji) => {
-    setText(prev => prev + emoji);
-    setShowEmojiPicker(false);
-  };
-  
-  const handleUserSelect = (user) => {
+
+  const addEmoji = emoji => { setText(prev => prev + emoji); setShowEmojiPicker(false); };
+
+  const handleUserSelect = user => {
     setSelectedUser(user);
     setView("private");
     setSidebarOpen(false);
-    
-    if (privateChats[user]?.some(msg => msg.recipient === username && !msg.read)) {
-      markMessagesAsRead(user);
-    }
+    if (privateChats[user]?.some(msg => msg.recipient === username && !msg.read)) markMessagesAsRead(user);
   };
 
-  if (username === "Anónimo") {
-    return (
-      <div className="login-warning">
-        <h2>🔒 Chat Bloqueado</h2>
-        <p>Debes iniciar sesión para acceder al chat.</p>
-      </div>
-    );
-  }
-
-  const combinedUsers = Array.from(new Set([
-    ...onlineUsers,
-    ...allPotentialUsers,
-    ...Object.keys(privateChats) 
-  ]));
-  
-  const filteredUsers = combinedUsers.filter(u => u && u !== username); 
-  
-  const chatPartners = filteredUsers.filter(u => 
-    u.toLowerCase().includes(search.toLowerCase())
+  if (username === "Anónimo") return (
+    <div className="login-warning">
+      <h2>🔒 Chat Bloqueado</h2>
+      <p>Debes iniciar sesión para acceder al chat.</p>
+    </div>
   );
-  
-  const getUserChatDetails = (user) => {
+
+  const combinedUsers = Array.from(new Set([...onlineUsers, ...allPotentialUsers, ...Object.keys(privateChats)]));
+  const filteredUsers = combinedUsers.filter(u => u && u !== username);
+  const chatPartners = filteredUsers.filter(u => u.toLowerCase().includes(search.toLowerCase()));
+
+  const getUserChatDetails = user => {
     const isOnline = onlineUsers.includes(user);
     const msgs = privateChats[user] || [];
     const lastMsg = msgs[msgs.length - 1];
     const unreadCount = msgs.filter(msg => msg.recipient === username && !msg.read).length;
-    
-    return {
-      isOnline,
-      lastMsgText: lastMsg ? (lastMsg.sender === username ? 'Tú: ' : '') + (lastMsg.text || '📎 Archivo') : 'Iniciar chat...',
-      unreadCount
-    };
-  };
-  
-  const currentMessages = view === "global" 
-    ? globalMessages 
-    : privateChats[selectedUser] || [];
-
-  const renderMessage = (msg) => {
-    return (
-      <div className="message-content">
-        {msg.file && (
-          <div className="file-container">
-            {msg.file.type.startsWith('image/') ? (
-              <img src={msg.file.data} alt={msg.file.name} className="message-image" />
-            ) : (
-              <div className="file-attachment">
-                <span className="file-icon">📎</span>
-                <span className="file-name">{msg.file.name}</span>
-                <span className="file-size">({(msg.file.size / 1024).toFixed(1)} KB)</span>
-              </div>
-            )}
-          </div>
-        )}
-        {msg.text && <div>{msg.text}</div>}
-      </div>
-    );
+    return { isOnline, lastMsgText: lastMsg ? (lastMsg.sender === username ? 'Tú: ' : '') + (lastMsg.text || '📎 Archivo') : 'Iniciar chat...', unreadCount };
   };
 
-  return !isChatDataLoaded ? (
-    <div className="loading-container">
-      <h2>Cargar Mensajes</h2>
-      <p>El chat está listo, pero la carga de mensajes está suspendida.</p>
-      <button onClick={loadChatData} className="load-btn">
-        Abrir y Cargar Chats Ahora
-      </button>
+  const currentMessages = view === "global" ? globalMessages : privateChats[selectedUser] || [];
+
+  const renderMessage = msg => (
+    <div className="message-content">
+      {msg.file && (
+        <div className="file-container">
+          {msg.file.type.startsWith('image/') ? (
+            <img src={msg.file.data} alt={msg.file.name} className="message-image" />
+          ) : (
+            <div className="file-attachment">
+              <span className="file-icon">📎</span>
+              <span className="file-name">{msg.file.name}</span>
+              <span className="file-size">({(msg.file.size / 1024).toFixed(1)} KB)</span>
+            </div>
+          )}
+        </div>
+      )}
+      {msg.text && <div>{msg.text}</div>}
     </div>
-  ) : (
+  );
+
+  return (
     <div className="chat-container">
-      <div 
-        className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`}
-        onClick={() => setSidebarOpen(false)}
-      />
+      <div className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
       <div className={`sidebar ${sidebarOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
           <h3>Chats ({username})</h3>
-          <button 
-            className={`global-chat-btn ${view === 'global' ? 'active' : ''}`}
-            onClick={() => { 
-              setView('global'); 
-              setSelectedUser(null);
-              setSidebarOpen(false);
-            }}
-          >
-            Chat Global {onlineUsers.length > 0 && `(${onlineUsers.length} en línea)`}
-          </button>
-          
-          <input 
-            type="text" 
-            placeholder="Buscar usuario..." 
+          <input
+            type="text"
+            placeholder="Buscar usuario..."
             className="search-user-input"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={e => setSearch(e.target.value)}
           />
         </div>
-        
+
         <div className="users-list">
-          <h4 className="list-title">Contactos:</h4>
-          {chatPartners.length > 0 ? chatPartners.map(user => {
+          {chatPartners.length ? chatPartners.map(user => {
             const details = getUserChatDetails(user);
-            
             return (
-              <div 
-                key={user} 
-                className={`user-item ${selectedUser === user ? 'selected' : ''}`}
-                onClick={() => handleUserSelect(user)}
-              >
-                <div className={`avatar-placeholder ${details.isOnline ? 'online' : ''}`}>
-                  {user[0].toUpperCase()}
-                </div>
+              <div key={user} className={`user-item ${selectedUser === user ? 'selected' : ''}`} onClick={() => handleUserSelect(user)}>
+                <div className={`avatar-placeholder ${details.isOnline ? 'online' : ''}`}>{user[0].toUpperCase()}</div>
                 <div className="user-details">
                   <span className="username">{user}</span>
                   <span className="status-text">{details.lastMsgText}</span>
                 </div>
-                {details.unreadCount > 0 && (
-                  <div className="unread-count">{details.unreadCount}</div>
-                )}
+                {details.unreadCount > 0 && <div className="unread-count">{details.unreadCount}</div>}
               </div>
             );
-          }) : (
-            <p className="no-users">No hay usuarios para mostrar.</p>
-          )}
+          }) : <p className="no-users">No hay usuarios para mostrar.</p>}
         </div>
       </div>
-      
+
       <div className="chat-area">
         <div className="chat-header">
-          <button 
-            className="back-btn" 
-            onClick={() => setSidebarOpen(true)}
-          >
-            ←
-          </button>
-          
+          <button className="back-btn" onClick={() => setSidebarOpen(true)}>←</button>
           <div className="header-info">
-            {view === 'global' ? (
-              <h2>Chat Global</h2>
-            ) : (
-              <>
-                <h2>{selectedUser}</h2>
-                <span className={`status-indicator ${getUserChatDetails(selectedUser).isOnline ? 'on' : ''}`}>
-                  {getUserChatDetails(selectedUser).isOnline ? 'En línea' : 'Desconectado'}
-                </span>
-              </>
-            )}
+            {view === 'global' ? <h2>Chat Global</h2> : <>
+              <h2>{selectedUser}</h2>
+              <span className={`status-indicator ${getUserChatDetails(selectedUser).isOnline ? 'on' : ''}`}>
+                {getUserChatDetails(selectedUser).isOnline ? 'En línea' : 'Desconectado'}
+              </span>
+            </>}
           </div>
         </div>
-        
+
         <div className="messages-container">
-          {currentMessages.length > 0 ? currentMessages.map((msg, index) => (
-            <div key={index} className={`message-wrapper ${msg.sender === username ? 'sent' : 'received'}`}>
+          {currentMessages.length ? currentMessages.map((msg, i) => (
+            <div key={i} className={`message-wrapper ${msg.sender === username ? 'sent' : 'received'}`}>
               <div className="message-bubble">
-                {msg.sender !== username && (
-                  <div className="message-sender">
-                    {msg.sender}
-                  </div>
-                )}
-                
+                {msg.sender !== username && <div className="message-sender">{msg.sender}</div>}
                 {renderMessage(msg)}
-                
-                <span className="message-time">
-                  {new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
+                <span className="message-time">{new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
             </div>
           )) : (
-            <p className="empty-chat-msg">
-              {view === 'global' ? 'Sé el primero en saludar!' : `Es el inicio de tu chat con ${selectedUser}.`}
-            </p>
+            <p className="empty-chat-msg">{view === 'global' ? 'Sé el primero en saludar!' : `Inicio del chat con ${selectedUser}.`}</p>
           )}
           <div ref={messagesEndRef} />
         </div>
-        
-        {/* Preview de archivo seleccionado */}
+
         {selectedFile && (
           <div className="file-preview">
             <div className="file-preview-content">
-              {previewUrl ? (
-                <img src={previewUrl} alt="Preview" className="preview-image" />
-              ) : (
-                <div className="file-info">
-                  <span className="file-icon-large">📎</span>
-                  <span>{selectedFile.name}</span>
-                </div>
-              )}
-              <button onClick={removeFile} className="remove-file-btn">
-                ✕
-              </button>
+              {previewUrl ? <img src={previewUrl} alt="Preview" className="preview-image" /> : <div className="file-info"><span className="file-icon-large">📎</span><span>{selectedFile.name}</span></div>}
+              <button onClick={removeFile} className="remove-file-btn">✕</button>
             </div>
           </div>
         )}
-        
-        {/* Emoji picker */}
+
         {showEmojiPicker && (
           <div className="emoji-picker">
-            {EMOJI_LIST.map(emoji => (
-              <button 
-                key={emoji} 
-                onClick={() => addEmoji(emoji)}
-                className="emoji-btn"
-              >
-                {emoji}
-              </button>
-            ))}
+            {EMOJI_LIST.map(emoji => <button key={emoji} onClick={() => addEmoji(emoji)} className="emoji-btn">{emoji}</button>)}
           </div>
         )}
-        
+
         <div className="input-area">
-          <input 
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileSelect}
-            className="file-input"
-            accept="image/*,.pdf,.doc,.docx,.txt"
-          />
-          
-          <button 
-            onClick={() => fileInputRef.current?.click()}
-            className="icon-btn"
-            title="Adjuntar archivo"
-            disabled={view === 'private' && !selectedUser}
-          >
-            📎
-          </button>
-          
-          <button 
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className="icon-btn"
-            title="Emojis"
-            disabled={view === 'private' && !selectedUser}
-          >
-            😊
-          </button>
-          
-          <input 
-            type="text"
-            placeholder={view === 'global' ? "Escribe un mensaje..." : `Mensaje a ${selectedUser}...`}
-            className="chat-input"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyPress={handleKeyPress}
-            disabled={view === 'private' && !selectedUser}
-          />
-          
-          <button 
-            onClick={send} 
-            className="send-btn" 
-            disabled={view === 'private' && !selectedUser}
-          >
-            ➡️
-          </button>
+          <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="file-input" accept="image/*,.pdf,.doc,.docx,.txt" />
+          <button onClick={() => fileInputRef.current?.click()} className="icon-btn" title="Adjuntar archivo" disabled={view === 'private' && !selectedUser}>📎</button>
+          <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="icon-btn" title="Emojis" disabled={view === 'private' && !selectedUser}>😊</button>
+          <input type="text" placeholder={view === 'global' ? "Escribe un mensaje..." : `Mensaje a ${selectedUser}...`} className="chat-input" value={text} onChange={e => setText(e.target.value)} onKeyPress={handleKeyPress} disabled={view === 'private' && !selectedUser} />
+          <button onClick={send} className="send-btn" disabled={view === 'private' && !selectedUser}>➡️</button>
         </div>
       </div>
     </div>
