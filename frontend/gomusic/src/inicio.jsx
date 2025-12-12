@@ -30,11 +30,10 @@ function Inicio() {
   const fetchPublicPlaylists = async () => {
     try {
       setLoading(true);
-      // Cambiado de /api/playlists/public a /playlists
       const response = await fetch("/playlists");
       if (response.ok) {
         const data = await response.json();
-        console.log("Playlists públicas:", data); // Para debugging
+        console.log("Playlists públicas:", data);
         setPlaylists(data);
       } else {
         console.error("Error al obtener playlists:", response.status);
@@ -44,6 +43,25 @@ function Inicio() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Función para navegar a buscar canciones
+  const handleStartListening = () => {
+    navigate("/buscar-canciones");
+  };
+
+  // Función para navegar a una playlist específica
+  const handlePlaylistClick = (playlistId) => {
+    navigate(`/playlist/${playlistId}`);
+  };
+
+  // Función para reproducir una playlist (si tienes un reproductor)
+  const handlePlayPlaylist = (e, playlistId) => {
+    e.stopPropagation(); // Evita que se active el click del card
+    // Aquí puedes agregar la lógica para reproducir la playlist
+    console.log("Reproduciendo playlist:", playlistId);
+    // Ejemplo: navigate(`/reproductor/${playlistId}`);
+    navigate(`/playlist/${playlistId}`);
   };
 
   return (
@@ -60,7 +78,7 @@ function Inicio() {
             <div className="hero-content">
               <h1 className="hero-title">Descubre Tu Música</h1>
               <p className="hero-subtitle">Miles de canciones, artistas y playlists esperándote</p>
-              <button className="hero-button">
+              <button className="hero-button" onClick={handleStartListening}>
                 <span className="play-icon">▶</span>
                 <span className="button-text">Comenzar a Escuchar</span>
               </button>
@@ -73,6 +91,8 @@ function Inicio() {
               <div 
                 key={i} 
                 className={`indicator ${i === index ? 'active' : ''}`}
+                onClick={() => setIndex(i)}
+                style={{ cursor: 'pointer' }}
               />
             ))}
           </div>
@@ -118,6 +138,8 @@ function Inicio() {
                   className={`playlist-card ${hoveredCard === playlist._id ? 'hovered' : ''}`}
                   onMouseEnter={() => setHoveredCard(playlist._id)}
                   onMouseLeave={() => setHoveredCard(null)}
+                  onClick={() => handlePlaylistClick(playlist._id)}
+                  style={{ cursor: 'pointer' }}
                 >
                   <div className="playlist-image-wrapper">
                     <img 
@@ -126,7 +148,10 @@ function Inicio() {
                       className="playlist-image"
                     />
                     {hoveredCard === playlist._id && (
-                      <div className="play-button">
+                      <div 
+                        className="play-button"
+                        onClick={(e) => handlePlayPlaylist(e, playlist._id)}
+                      >
                         <span className="play-icon-large">▶</span>
                       </div>
                     )}
@@ -145,7 +170,12 @@ function Inicio() {
         <div className="cta-section">
           <h2 className="cta-title">¿Listo para empezar?</h2>
           <p className="cta-text">Únete a millones de usuarios que ya disfrutan de la mejor música</p>
-          <button className="cta-button">Explorar Ahora</button>
+          <button 
+            className="cta-button"
+            onClick={handleStartListening}
+          >
+            Explorar Ahora
+          </button>
         </div>
 
       </div>
