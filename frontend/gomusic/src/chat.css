@@ -1,101 +1,89 @@
-/* ================================
-   RESET LOCAL (sin tocar body)
-================================ */
-.chat-container * {
-  box-sizing: border-box;
-}
-
-/* ================================
-   CONTENEDOR GENERAL
-================================ */
+/* ============================================
+   CONTENEDOR PRINCIPAL
+============================================ */
 .chat-container {
   display: flex;
   height: 100vh;
-  background: #121212;
+  background-color: #121212;
   color: white;
   overflow: hidden;
-  width: 100%;
+  font-family: "Segoe UI", Arial, sans-serif;
 }
 
-/* ================================
-   SIDEBAR (lista de chats)
-================================ */
+/* ============================================
+   SIDEBAR (LISTA DE USUARIOS)
+============================================ */
 .sidebar {
-  width: 300px;
-  flex-shrink: 0;
-  background: #1f1f1f;
-  border-right: 1px solid #333;
-  overflow-y: auto;
+  width: 320px;
+  background: #181818;
+  border-right: 1px solid #222;
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s ease;
   z-index: 20;
-}
-
-.sidebar.mobile-open {
-  transform: translateX(0);
+  transition: transform 0.3s ease;
 }
 
 .sidebar-header {
-  padding: 16px;
-  border-bottom: 1px solid #333;
+  padding: 18px;
+  border-bottom: 1px solid #222;
+  background: #1f1f1f;
+}
+
+.sidebar-header h3 {
+  margin-bottom: 12px;
 }
 
 .search-user-input {
   width: 100%;
   padding: 10px;
-  margin-top: 12px;
-  border-radius: 8px;
+  border-radius: 12px;
   border: none;
-  background: #2a2a2a;
+  background: #262626;
   color: white;
 }
 
-.list-title {
-  padding: 12px;
-  font-size: 14px;
-  opacity: 0.7;
-}
-
 .users-list {
-  flex-grow: 1;
+  flex: 1;
+  overflow-y: auto;
 }
 
-/* Usuario en la lista */
 .user-item {
   display: flex;
   align-items: center;
-  padding: 12px;
-  gap: 10px;
+  gap: 14px;
+  padding: 14px 18px;
   cursor: pointer;
-  transition: background 0.15s;
+  border-bottom: 1px solid #222;
+  transition: background 0.2s;
 }
 
 .user-item:hover {
-  background: #292929;
+  background: #202020;
 }
 
 .user-item.selected {
-  background: #333;
+  background: #1db95422;
 }
 
 .avatar-placeholder {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
+  background: #333;
   border-radius: 50%;
-  background: #555;
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   font-weight: bold;
 }
 
 .avatar-placeholder.online {
-  border: 2px solid #1db954;
+  box-shadow: 0 0 0 3px #1db954;
 }
 
 .user-details {
-  flex-grow: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .username {
@@ -104,70 +92,64 @@
 
 .status-text {
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .unread-count {
   background: #1db954;
   color: black;
-  padding: 4px 8px;
+  padding: 4px 9px;
   border-radius: 12px;
   font-size: 12px;
-  font-weight: bold;
 }
 
-/* ================================
-   OVERLAY PARA MÓVIL
-================================ */
+/* Overlay cuando sidebar está abierto en móvil */
 .sidebar-overlay {
   display: none;
-}
-
-.sidebar-overlay.active {
-  display: block;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.55);
   z-index: 15;
 }
 
-/* ================================
+/* ============================================
    ÁREA DEL CHAT
-================================ */
+============================================ */
 .chat-area {
-  flex-grow: 1;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  background: #121212;
-  height: 100%;
+  background: #101010;
 }
 
-/* HEADER DEL CHAT */
+/* ============================================
+   HEADER DEL CHAT
+============================================ */
 .chat-header {
-  padding: 16px;
-  background: #1a1a1a;
-  border-bottom: 1px solid #333;
+  padding: 14px 18px;
+  background: #181818;
+  border-bottom: 1px solid #222;
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
+.chat-header h2 {
+  font-size: 20px;
+}
+
 .back-btn {
   display: none;
-  font-size: 20px;
+  font-size: 22px;
   background: none;
   border: none;
   color: white;
-}
-
-.header-info h2 {
-  font-size: 18px;
+  cursor: pointer;
 }
 
 .status-indicator {
-  font-size: 13px;
-  margin-left: 4px;
-  opacity: 0.7;
+  font-size: 12px;
+  opacity: 0.8;
 }
 
 .status-indicator.on {
@@ -175,281 +157,189 @@
   opacity: 1;
 }
 
-/* ================================
+/* ============================================
    MENSAJES
-================================ */
+============================================ */
 .messages-container {
-  flex-grow: 1;
-  padding: 16px;
+  flex: 1;
+  padding: 15px;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  background: #0f0f0f;
 }
 
-/* Burbuja */
 .message-wrapper {
-  width: 100%;
   display: flex;
+  margin-bottom: 12px;
 }
 
+/* Mensajes enviados */
 .message-wrapper.sent {
   justify-content: flex-end;
 }
 
+.message-wrapper.sent .message-bubble {
+  background: #DCF8C6;
+  color: black;
+  border-radius: 16px 16px 0 16px;
+}
+
+/* Mensajes recibidos */
 .message-wrapper.received {
   justify-content: flex-start;
 }
 
-.message-bubble {
-  max-width: 70%;
-  padding: 12px;
-  border-radius: 14px;
-  background: #2a2a2a;
-  position: relative;
-  word-break: break-word;
-}
-
-.message-wrapper.sent .message-bubble {
-  background: #1db954;
+.message-wrapper.received .message-bubble {
+  background: #ffffff;
   color: black;
+  border-radius: 16px 16px 16px 0;
 }
 
-.message-sender {
-  font-size: 12px;
-  opacity: 0.8;
-  margin-bottom: 4px;
+.message-bubble {
+  max-width: 68%;
+  padding: 10px 14px;
+  font-size: 15px;
+  word-break: break-word;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
 
 .message-time {
   font-size: 11px;
-  opacity: 0.6;
-  margin-top: 4px;
-  text-align: right;
+  opacity: 0.7;
+  margin-left: 8px;
 }
 
-/* ================================
-   ARCHIVOS/IMÁGENES
-================================ */
+/* Imagen dentro de mensajes */
 .message-image {
   width: 100%;
   border-radius: 12px;
   margin-bottom: 6px;
 }
 
-.file-attachment {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-.file-icon-large {
-  font-size: 38px;
-}
-
+/* ============================================
+   PREVIEW DE ARCHIVO
+============================================ */
 .file-preview {
+  background: #1c1c1c;
   padding: 10px;
-  background: #1a1a1a;
   border-top: 1px solid #333;
-  display: flex;
-  justify-content: center;
 }
 
 .preview-image {
-  max-width: 60%;
-  border-radius: 10px;
+  width: 100px;
+  border-radius: 12px;
 }
 
 .remove-file-btn {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background: #e63939;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 6px;
-  cursor: pointer;
+  background: #ff4646;
   color: white;
+  border-radius: 50%;
+  border: none;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
 }
 
-/* ================================
+/* ============================================
    EMOJIS
-================================ */
+============================================ */
 .emoji-picker {
-  padding: 8px;
-  background: #1f1f1f;
-  border-top: 1px solid #333;
+  position: absolute;
+  bottom: 70px;
+  left: 10px;
+  width: 240px;
+  background: white;
+  padding: 10px;
+  border-radius: 14px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  z-index: 50;
 }
 
 .emoji-btn {
   font-size: 22px;
-  background: none;
   border: none;
+  background: none;
   cursor: pointer;
 }
 
-/* ================================
-   INPUT (barrita inferior)
-================================ */
+/* ============================================
+   INPUT DE MENSAJE (WHATSAPP)
+============================================ */
 .input-area {
   display: flex;
-  padding: 12px;
-  gap: 10px;
-  background: #1a1a1a;
-  border-top: 1px solid #333;
-  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: #f0f0f0;
+  position: fixed;
+  bottom: 0;
+  left: 320px;
+  right: 0;
+  border-top: 1px solid #ccc;
+  z-index: 10;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 22px;
+  border: 1px solid #ccc;
+  background: white;
+  color: black;
 }
 
 .icon-btn {
   background: none;
   border: none;
-  font-size: 24px;
+  font-size: 22px;
   cursor: pointer;
-  color: white;
-}
-
-.chat-input {
-  flex-grow: 1;
-  padding: 10px;
-  background: #2a2a2a;
-  border: none;
-  border-radius: 8px;
-  color: white;
+  color: #000;
 }
 
 .send-btn {
   background: #1db954;
+  color: white;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
   border: none;
-  padding: 10px 14px;
-  border-radius: 8px;
   cursor: pointer;
 }
 
-/* ================================
-   RESPONSIVE MÓVIL (ESTILO WHATSAPP)
-================================ */
+/* ============================================
+   RESPONSIVE MÓVIL (WHATSAPP REAL)
+============================================ */
 @media (max-width: 768px) {
 
-  /* Sidebar oculto por defecto y deslizable */
+  /* Sidebar fuera de pantalla */
   .sidebar {
     position: fixed;
     top: 0;
-    left: 0;
     bottom: 0;
-    width: 260px;
+    left: 0;
     transform: translateX(-100%);
-    z-index: 20;
-    transition: transform 0.3s ease;
+    width: 260px;
   }
 
   .sidebar.mobile-open {
     transform: translateX(0);
   }
 
-  /* Overlay cuando sidebar abierto */
-  .sidebar-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 15;
-  }
-
   .sidebar-overlay.active {
     display: block;
   }
 
-  /* Botón para volver a la lista de chats */
   .back-btn {
     display: block;
-    background: none;
-    border: none;
-    font-size: 20px;
-    color: white;
-    cursor: pointer;
   }
 
   /* Chat ocupa toda la pantalla */
-  .chat-area {
-    flex: 1;
-    width: 100%;
-  }
-
-  /* Cabecera más compacta */
-  .chat-header h2 {
-    font-size: 18px;
-  }
-
-  /* Burbujas tipo WhatsApp */
-  .message-wrapper.sent .message-bubble {
-    background: #DCF8C6; /* verde WhatsApp */
-    color: black;
-    border-radius: 16px 16px 0 16px;
-  }
-
-  .message-wrapper.received .message-bubble {
-    background: #ffffff; /* blanco WhatsApp */
-    color: black;
-    border-radius: 16px 16px 16px 0;
-  }
-
-  /* Max ancho de burbujas */
-  .message-bubble {
-    max-width: 80%;
-    word-break: break-word;
-    padding: 10px 14px;
-    font-size: 15px;
-  }
-
-  /* Input fijo abajo estilo WhatsApp */
   .input-area {
-    position: fixed;
-    bottom: 0;
     left: 0;
-    right: 0;
-    padding: 10px;
-    background: #f0f0f0;
-    border-top: 1px solid #ccc;
-    display: flex;
-    gap: 8px;
-    z-index: 10;
   }
 
-  .chat-input {
-    flex: 1;
-    padding: 10px;
-    border-radius: 20px;
-    border: 1px solid #ccc;
-    background: white;
-    color: black;
-  }
-
-  .send-btn {
-    background: #1db954;
-    color: white;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    font-size: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  /* Ajuste de emojis */
-  .emoji-picker {
-    bottom: 60px; /* encima del input */
-    left: 10px;
-    width: 220px;
-    padding: 8px;
-    border-radius: 12px;
-    background: #fff;
-    flex-wrap: wrap;
-    gap: 6px;
+  .message-bubble {
+    max-width: 82%;
   }
 }
