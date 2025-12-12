@@ -13,6 +13,7 @@ function Inicio() {
   const [index, setIndex] = useState(0);
   const [hoveredCard, setHoveredCard] = useState(null);
   const [playlists, setPlaylists] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -28,13 +29,20 @@ function Inicio() {
 
   const fetchPublicPlaylists = async () => {
     try {
-      const response = await fetch("/api/playlists/public");
+      setLoading(true);
+      // Cambiado de /api/playlists/public a /playlists
+      const response = await fetch("/playlists");
       if (response.ok) {
         const data = await response.json();
+        console.log("Playlists públicas:", data); // Para debugging
         setPlaylists(data);
+      } else {
+        console.error("Error al obtener playlists:", response.status);
       }
     } catch (error) {
       console.error("Error obteniendo playlists públicas:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -93,33 +101,45 @@ function Inicio() {
             <span className="title-icon">📈</span>
             Playlists Destacadas
           </h2>
-          <div className="playlist-grid">
-            {playlists.map((playlist) => (
-              <div 
-                key={playlist.id}
-                className={`playlist-card ${hoveredCard === playlist.id ? 'hovered' : ''}`}
-                onMouseEnter={() => setHoveredCard(playlist.id)}
-                onMouseLeave={() => setHoveredCard(null)}
-              >
-                <div className="playlist-image-wrapper">
-                  <img 
-                    src={playlist.image} 
-                    alt={playlist.title}
-                    className="playlist-image"
-                  />
-                  {hoveredCard === playlist.id && (
-                    <div className="play-button">
-                      <span className="play-icon-large">▶</span>
-                    </div>
-                  )}
+          
+          {loading ? (
+            <p style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
+              Cargando playlists...
+            </p>
+          ) : playlists.length === 0 ? (
+            <p style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
+              No hay playlists públicas disponibles aún
+            </p>
+          ) : (
+            <div className="playlist-grid">
+              {playlists.map((playlist) => (
+                <div 
+                  key={playlist._id}
+                  className={`playlist-card ${hoveredCard === playlist._id ? 'hovered' : ''}`}
+                  onMouseEnter={() => setHoveredCard(playlist._id)}
+                  onMouseLeave={() => setHoveredCard(null)}
+                >
+                  <div className="playlist-image-wrapper">
+                    <img 
+                      src={playlist.image || 'https://via.placeholder.com/300x300?text=Playlist'} 
+                      alt={playlist.name}
+                      className="playlist-image"
+                    />
+                    {hoveredCard === playlist._id && (
+                      <div className="play-button">
+                        <span className="play-icon-large">▶</span>
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="playlist-title">{playlist.name}</h3>
+                  <p className="playlist-info">
+                    {playlist.songs?.length || 0} canciones • {playlist.owner}
+                  </p>
                 </div>
-                <h3 className="playlist-title">{playlist.title}</h3>
-                <p className="playlist-info">{playlist.songs} canciones</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
-
 
         {/* CTA Final */}
         <div className="cta-section">
