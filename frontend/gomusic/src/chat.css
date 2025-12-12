@@ -330,34 +330,126 @@
 }
 
 /* ================================
-   RESPONSIVE (MÓVIL)
+   RESPONSIVE MÓVIL (ESTILO WHATSAPP)
 ================================ */
 @media (max-width: 768px) {
+
+  /* Sidebar oculto por defecto y deslizable */
   .sidebar {
     position: fixed;
     top: 0;
+    left: 0;
     bottom: 0;
-    transform: translateX(-100%);
     width: 260px;
+    transform: translateX(-100%);
+    z-index: 20;
+    transition: transform 0.3s ease;
   }
 
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  /* Overlay cuando sidebar abierto */
   .sidebar-overlay {
     display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 15;
   }
 
   .sidebar-overlay.active {
     display: block;
   }
 
+  /* Botón para volver a la lista de chats */
   .back-btn {
     display: block;
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: white;
+    cursor: pointer;
   }
 
+  /* Chat ocupa toda la pantalla */
+  .chat-area {
+    flex: 1;
+    width: 100%;
+  }
+
+  /* Cabecera más compacta */
   .chat-header h2 {
-    font-size: 16px;
+    font-size: 18px;
   }
 
+  /* Burbujas tipo WhatsApp */
+  .message-wrapper.sent .message-bubble {
+    background: #DCF8C6; /* verde WhatsApp */
+    color: black;
+    border-radius: 16px 16px 0 16px;
+  }
+
+  .message-wrapper.received .message-bubble {
+    background: #ffffff; /* blanco WhatsApp */
+    color: black;
+    border-radius: 16px 16px 16px 0;
+  }
+
+  /* Max ancho de burbujas */
   .message-bubble {
-    max-width: 85%;
+    max-width: 80%;
+    word-break: break-word;
+    padding: 10px 14px;
+    font-size: 15px;
+  }
+
+  /* Input fijo abajo estilo WhatsApp */
+  .input-area {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px;
+    background: #f0f0f0;
+    border-top: 1px solid #ccc;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+  }
+
+  .chat-input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+    background: white;
+    color: black;
+  }
+
+  .send-btn {
+    background: #1db954;
+    color: white;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Ajuste de emojis */
+  .emoji-picker {
+    bottom: 60px; /* encima del input */
+    left: 10px;
+    width: 220px;
+    padding: 8px;
+    border-radius: 12px;
+    background: #fff;
+    flex-wrap: wrap;
+    gap: 6px;
   }
 }
