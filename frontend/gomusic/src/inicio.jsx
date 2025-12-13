@@ -50,7 +50,7 @@ function Inicio() {
 
   // Navegar a la página de búsqueda de canciones
   const handleStartListening = () => {
-    navigate("/buscar-canciones");
+    navigate("/calculadora");
   };
 
   // Navegar a los detalles de una playlist específica
