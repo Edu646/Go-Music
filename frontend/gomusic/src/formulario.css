@@ -1,244 +1,635 @@
-/* formulario.css */
+/* ==========================================================================================
+   VARIABLES Y RESET
+========================================================================================== */
+:root {
+  --primary: #1db954;
+  --primary-dark: #1aa34a;
+  --bg-dark: #121212;
+  --bg-card: #181818;
+  --bg-hover: #282828;
+  --text: #ffffff;
+  --text-secondary: #b3b3b3;
+  --border: #282828;
+  --error: #e22134;
+  --success: #1db954;
+  --private: #ff6b35;
+}
 
-/* Contenedor general */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* ==========================================================================================
+   CONTENEDOR PRINCIPAL
+========================================================================================== */
 .auth-container {
-  width: 90%;
-  max-width: 600px;
-  margin: 120px auto 50px; /* más abajo para no tapar navbar */
-  padding: 30px 25px;
-  background: rgba(24, 24, 24, 0.95);
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  color: #fff;
-  backdrop-filter: blur(5px);
-  text-align: center;
-  font-family: 'Segoe UI', Arial, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: var(--bg-dark);
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
-/* Títulos */
 .auth-container h2,
-.user-info-box h3,
-.formulario h3,
-.playlist-creator h3 {
-  color: #1db954;
-  margin-bottom: 15px;
-  letter-spacing: 1px;
+.auth-container h3 {
+  color: var(--primary);
+  margin-bottom: 20px;
+  text-align: center;
 }
 
-/* Formulario input */
+/* ==========================================================================================
+   FORMULARIO DE AUTENTICACIÓN
+========================================================================================== */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
 .auth-form input,
-.formulario input,
-.song-list input,
-.playlist-creator input {
-  width: 100%;
-  padding: 10px 12px;
-  margin-bottom: 12px;
+.auth-container input[type="text"],
+.auth-container input[type="email"],
+.auth-container input[type="password"],
+.auth-container input[type="file"] {
+  padding: 12px 16px;
+  border: 2px solid var(--border);
   border-radius: 8px;
-  border: none;
-  outline: none;
-  font-size: 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  transition: background 0.2s;
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 14px;
+  transition: all 0.3s ease;
 }
 
 .auth-form input:focus,
-.formulario input:focus,
-.song-list input:focus,
-.playlist-creator input:focus {
-  background: rgba(255, 255, 255, 0.2);
+.auth-container input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--bg-hover);
 }
 
-/* Botones */
 button {
-  padding: 10px 20px;
-  border-radius: 10px;
+  padding: 12px 24px;
   border: none;
-  font-size: 1rem;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  margin-top: 8px;
-  transition: all 0.2s;
-  background: #1db954;
-  color: #fff;
+  transition: all 0.3s ease;
 }
 
 button:hover {
-  background: #17a74a;
-  transform: scale(1.05);
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.4);
 }
 
-/* Botón de Google */
+button:active {
+  transform: translateY(0);
+}
+
 .google-btn {
-  background: #4285F4;
-  margin-top: 12px;
+  background: #4285f4;
+  margin-top: 10px;
 }
 
 .google-btn:hover {
-  background: #357ae8;
-  transform: scale(1.05);
+  background: #3367d6;
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
 }
 
-/* Toggle login/registro */
 .auth-toggle {
   background: transparent;
-  border: 1px solid #1db954;
-  color: #1db954;
-  margin-top: 12px;
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  margin-top: 10px;
 }
 
 .auth-toggle:hover {
-  background: #1db954;
-  color: #fff;
+  background: var(--primary);
+  color: var(--text);
 }
 
-/* Mensajes */
 .message {
-  margin-top: 12px;
-  color: #ffcc00;
-  font-weight: 500;
+  text-align: center;
+  padding: 12px;
+  margin-top: 15px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
 }
 
-/* Área de usuario logueado */
+/* ==========================================================================================
+   INFORMACIÓN DEL USUARIO
+========================================================================================== */
 .user-info-box {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 10px;
+  padding: 30px;
+  background: var(--bg-card);
+  border-radius: 12px;
+  margin-bottom: 30px;
+  border: 2px solid var(--border);
 }
 
 .avatar-img {
-  width: 70px;
-  height: 70px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #1db954;
+  border: 4px solid var(--primary);
+  box-shadow: 0 4px 16px rgba(29, 185, 84, 0.3);
 }
 
-.logout-btn {
-  background: #ff4c4c;
+.user-info-box h3 {
+  margin: 0;
+  color: var(--text);
 }
 
-.logout-btn:hover {
-  background: #e04343;
+.user-info-box p {
+  color: var(--text-secondary);
+  margin: 0;
 }
 
-/* Formulario subida de canciones */
+/* ==========================================================================================
+   FORMULARIO DE SUBIDA DE CANCIONES
+========================================================================================== */
 .formulario {
-  margin-top: 20px;
-  padding: 20px;
-  background: rgba(30, 30, 30, 0.9);
-  border-radius: 15px;
+  background: var(--bg-card);
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  border: 2px solid var(--border);
 }
 
-/* Formulario playlist */
+.formulario h3 {
+  margin-top: 0;
+  text-align: left;
+}
+
+.formulario input {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.formulario button {
+  width: 100%;
+}
+
+/* ==========================================================================================
+   CREADOR DE PLAYLISTS
+========================================================================================== */
+.btn-playlist-toggle {
+  width: 100%;
+  margin-bottom: 20px;
+  background: var(--bg-card);
+  border: 2px solid var(--primary);
+  color: var(--primary);
+}
+
+.btn-playlist-toggle:hover {
+  background: var(--primary);
+  color: var(--text);
+}
+
 .playlist-creator {
-  margin-top: 20px;
-  padding: 20px;
-  background: rgba(30, 30, 30, 0.9);
-  border-radius: 15px;
+  background: var(--bg-card);
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  border: 2px solid var(--border);
 }
 
-/* Lista de canciones */
-.song-list {
-  margin-top: 25px;
+.playlist-creator h3 {
+  margin-top: 0;
   text-align: left;
 }
 
-.song-list ul {
-  list-style: none;
-  padding: 0;
+.playlist-creator input {
+  width: 100%;
+  margin-bottom: 12px;
 }
 
-.song-list li {
-  padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.05);
-  margin-bottom: 8px;
-  border-radius: 8px;
+.playlist-creator button {
+  width: 100%;
 }
 
-.song-list a {
-  color: #1db954;
-  text-decoration: none;
-  margin-left: 6px;
+.privacy-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  cursor: pointer;
+  user-select: none;
 }
 
-.song-list a:hover {
-  text-decoration: underline;
+.privacy-toggle input[type="checkbox"] {
+  width: auto;
+  cursor: pointer;
 }
 
-/* Lista de playlists */
-.user-playlists {
-  margin-top: 25px;
+.privacy-toggle span {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.playlist-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.btn-privacy {
+  flex: 1;
+  background: var(--private);
+  font-size: 13px;
+}
+
+.btn-privacy:hover {
+  background: #e55a2b;
+}
+
+.btn-delete {
+  background: var(--error);
+}
+
+.btn-delete:hover {
+  background: #c11c2b;
+}
+
+/* ==========================================================================================
+   COMPARTIR PLAYLISTS
+========================================================================================== */
+.share-acceptor {
+  background: var(--bg-card);
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  border: 2px solid var(--border);
+}
+
+.share-acceptor h3 {
+  margin-top: 0;
   text-align: left;
+}
+
+.share-input-group {
+  display: flex;
+  gap: 10px;
+}
+
+.share-input-group input {
+  flex: 1;
+}
+
+.share-input-group button {
+  flex-shrink: 0;
+}
+
+.playlist-share {
+  margin-top: 15px;
+}
+
+.btn-share {
+  width: 100%;
+  background: var(--bg-hover);
+  border: 2px solid var(--primary);
+  color: var(--primary);
+}
+
+.btn-share:hover {
+  background: var(--primary);
+  color: var(--text);
+}
+
+.share-link-box {
+  margin-top: 15px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.share-link-box input {
+  flex: 1;
+  min-width: 200px;
+  font-size: 12px;
+}
+
+.share-link-box button {
+  font-size: 12px;
+  padding: 10px 16px;
+}
+
+.share-message {
+  margin-top: 10px;
+  color: var(--success);
+  text-align: center;
+  font-size: 13px;
+}
+
+/* ==========================================================================================
+   GRILLA DE PLAYLISTS
+========================================================================================== */
+.user-playlists,
+.shared-playlists {
+  margin-bottom: 30px;
+}
+
+.user-playlists h3,
+.shared-playlists h3 {
+  text-align: left;
+  margin-bottom: 20px;
 }
 
 .playlist-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
 }
 
 .playlist-card {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 10px;
+  background: var(--bg-card);
   border-radius: 12px;
-  text-align: center;
-  cursor: pointer;
-  transition: transform 0.2s, background 0.2s;
+  padding: 20px;
+  border: 2px solid var(--border);
+  transition: all 0.3s ease;
+  position: relative;
 }
 
 .playlist-card:hover {
-  transform: scale(1.05);
-  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--primary);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(29, 185, 84, 0.2);
+}
+
+.playlist-card.shared {
+  border-color: var(--private);
+}
+
+.playlist-card.shared:hover {
+  border-color: var(--private);
+  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.2);
 }
 
 .playlist-card img {
-  width: 80px;
-  height: 80px;
-  border-radius: 12px;
-  object-fit: cover;
-  margin-bottom: 5px;
-}
-
-/* Botón toggle Playlist */
-.btn-playlist-toggle {
-  margin-top: 15px;
   width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 15px;
 }
 
-/* Responsive */
-@media (max-width: 700px) {
+.playlist-card h4 {
+  color: var(--text);
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+.playlist-card p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.playlist-card small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.read-only-badge {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 4px 12px;
+  background: var(--private);
+  color: var(--text);
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ==========================================================================================
+   LISTA DE CANCIONES
+========================================================================================== */
+.song-list {
+  background: var(--bg-card);
+  padding: 25px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+}
+
+.song-list h3 {
+  margin-top: 0;
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.song-list input {
+  width: calc(100% - 120px);
+  margin-right: 10px;
+  margin-bottom: 20px;
+}
+
+.song-list button {
+  width: 110px;
+  margin-bottom: 20px;
+}
+
+.song-list ul {
+  list-style: none;
+}
+
+.song-list li {
+  background: var(--bg-hover);
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.song-list li:hover {
+  border-color: var(--primary);
+  transform: translateX(4px);
+}
+
+.song-details {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.song-details b {
+  color: var(--text);
+}
+
+.song-details a {
+  margin-left: auto;
+  font-size: 18px;
+  text-decoration: none;
+  transition: transform 0.2s ease;
+}
+
+.song-details a:hover {
+  transform: scale(1.2);
+}
+
+/* ==========================================================================================
+   ACCIONES DE CANCIONES
+========================================================================================== */
+.song-actions {
+  margin-top: 10px;
+}
+
+.btn-action {
+  background: var(--bg-dark);
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  font-size: 13px;
+  padding: 8px 16px;
+}
+
+.btn-action:hover {
+  background: var(--primary);
+  color: var(--text);
+}
+
+.playlist-selection {
+  margin-top: 15px;
+  padding: 15px;
+  background: var(--bg-dark);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.playlist-selection h4 {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.playlist-selection button {
+  width: 100%;
+  margin-bottom: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  text-align: left;
+  padding: 10px 15px;
+  font-size: 13px;
+}
+
+.playlist-selection button:hover {
+  background: var(--bg-hover);
+  border-color: var(--primary);
+}
+
+.playlist-selection p {
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: 13px;
+}
+
+.action-message {
+  margin-top: 10px;
+  color: var(--success);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ==========================================================================================
+   RESPONSIVE
+========================================================================================== */
+@media (max-width: 768px) {
   .auth-container {
-    margin: 150px auto 30px;
     padding: 20px;
   }
 
-  .avatar-img {
-    width: 60px;
-    height: 60px;
+  .playlist-grid {
+    grid-template-columns: 1fr;
   }
 
-  .playlist-card img {
-    width: 60px;
-    height: 60px;
-  }
-}
-
-@media (max-width: 420px) {
-  .auth-container {
-    margin: 180px auto 20px;
-    padding: 15px;
+  .song-list input {
+    width: 100%;
+    margin-right: 0;
   }
 
-  button {
+  .song-list button {
     width: 100%;
   }
 
-  .formulario input,
-  .auth-form input,
-  .song-list input,
-  .playlist-creator input {
-    font-size: 0.95rem;
+  .share-input-group {
+    flex-direction: column;
   }
+
+  .share-link-box {
+    flex-direction: column;
+  }
+
+  .share-link-box input,
+  .share-link-box button {
+    width: 100%;
+  }
+
+  .playlist-actions {
+    flex-direction: column;
+  }
+}
+
+/* ==========================================================================================
+   ANIMACIONES
+========================================================================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.playlist-card,
+.song-list li,
+.formulario,
+.playlist-creator,
+.share-acceptor {
+  animation: fadeIn 0.4s ease;
+}
+
+/* ==========================================================================================
+   SCROLLBAR PERSONALIZADO
+========================================================================================== */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-hover);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
