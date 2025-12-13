@@ -27,41 +27,47 @@ function Inicio() {
     fetchPublicPlaylists();
   }, []);
 
+  // Obtener playlists públicas desde el backend
   const fetchPublicPlaylists = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/playlists");
+      const response = await fetch("/playlists"); // Endpoint de playlists públicas
       if (response.ok) {
         const data = await response.json();
-        console.log("Playlists públicas:", data);
+        console.log("Playlists públicas cargadas:", data);
         setPlaylists(data);
       } else {
         console.error("Error al obtener playlists:", response.status);
+        setPlaylists([]);
       }
     } catch (error) {
       console.error("Error obteniendo playlists públicas:", error);
+      setPlaylists([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Función para navegar a buscar canciones
+  // Navegar a la página de búsqueda de canciones
   const handleStartListening = () => {
     navigate("/buscar-canciones");
   };
 
-  // Función para navegar a una playlist específica
+  // Navegar a los detalles de una playlist específica
   const handlePlaylistClick = (playlistId) => {
     navigate(`/playlist/${playlistId}`);
   };
 
-  // Función para reproducir una playlist (si tienes un reproductor)
+  // Reproducir playlist directamente (previene propagación del evento)
   const handlePlayPlaylist = (e, playlistId) => {
-    e.stopPropagation(); // Evita que se active el click del card
-    // Aquí puedes agregar la lógica para reproducir la playlist
-    console.log("Reproduciendo playlist:", playlistId);
-    // Ejemplo: navigate(`/reproductor/${playlistId}`);
+    e.stopPropagation();
+    // Navegar a la página de la playlist para reproducirla
     navigate(`/playlist/${playlistId}`);
+  };
+
+  // Cambiar imagen del carrusel manualmente
+  const handleIndicatorClick = (i) => {
+    setIndex(i);
   };
 
   return (
@@ -91,7 +97,7 @@ function Inicio() {
               <div 
                 key={i} 
                 className={`indicator ${i === index ? 'active' : ''}`}
-                onClick={() => setIndex(i)}
+                onClick={() => handleIndicatorClick(i)}
                 style={{ cursor: 'pointer' }}
               />
             ))}
@@ -123,13 +129,27 @@ function Inicio() {
           </h2>
           
           {loading ? (
-            <p style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
-              Cargando playlists...
-            </p>
+            <div style={{ textAlign: 'center', padding: '3rem' }}>
+              <div className="loading-spinner"></div>
+              <p style={{ color: '#1db954', marginTop: '1rem', fontSize: '1.1rem' }}>
+                Cargando playlists...
+              </p>
+            </div>
           ) : playlists.length === 0 ? (
-            <p style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
-              No hay playlists públicas disponibles aún
-            </p>
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '3rem', 
+              background: 'rgba(0,0,0,0.3)', 
+              borderRadius: '12px',
+              border: '2px dashed rgba(255,255,255,0.2)'
+            }}>
+              <p style={{ color: '#888', fontSize: '1.2rem', marginBottom: '1rem' }}>
+                📭 No hay playlists públicas disponibles aún
+              </p>
+              <p style={{ color: '#666', fontSize: '1rem' }}>
+                ¡Sé el primero en crear una playlist pública!
+              </p>
+            </div>
           ) : (
             <div className="playlist-grid">
               {playlists.map((playlist) => (
@@ -140,17 +160,22 @@ function Inicio() {
                   onMouseLeave={() => setHoveredCard(null)}
                   onClick={() => handlePlaylistClick(playlist._id)}
                   style={{ cursor: 'pointer' }}
+                  title={`Ver playlist: ${playlist.name}`}
                 >
                   <div className="playlist-image-wrapper">
                     <img 
-                      src={playlist.image || 'https://via.placeholder.com/300x300?text=Playlist'} 
+                      src={playlist.image || 'https://via.placeholder.com/300x300/1db954/ffffff?text=Playlist'} 
                       alt={playlist.name}
                       className="playlist-image"
+                      onError={(e) => {
+                        e.target.src = 'https://via.placeholder.com/300x300/1db954/ffffff?text=Playlist';
+                      }}
                     />
                     {hoveredCard === playlist._id && (
                       <div 
                         className="play-button"
                         onClick={(e) => handlePlayPlaylist(e, playlist._id)}
+                        title="Reproducir ahora"
                       >
                         <span className="play-icon-large">▶</span>
                       </div>
@@ -158,7 +183,7 @@ function Inicio() {
                   </div>
                   <h3 className="playlist-title">{playlist.name}</h3>
                   <p className="playlist-info">
-                    {playlist.songs?.length || 0} canciones • {playlist.owner}
+                    {playlist.songs?.length || 0} {playlist.songs?.length === 1 ? 'canción' : 'canciones'} • {playlist.owner}
                   </p>
                 </div>
               ))}
