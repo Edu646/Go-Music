@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
 import "./Nav_Admin.css";
-
+import Usuarios from "./usuarios.jsx";
+import CancionesUsuarios from "./cancionesUsuarios.jsx";
 export default function Nav_Admin() {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -21,9 +22,8 @@ export default function Nav_Admin() {
 
       <ul className="nav-admin-links">
         <li><NavLink to="/admin" end><span className="icon">🏠</span><span className="text">Dashboard</span></NavLink></li>
-        <li><NavLink to="/admin/songs"><span className="icon">🎵</span><span className="text">Canciones</span></NavLink></li>
-        <li><NavLink to="/admin/users"><span className="icon">👥</span><span className="text">Usuarios</span></NavLink></li>
-        <li><NavLink to="/admin/settings"><span className="icon">⚙️</span><span className="text">Ajustes</span></NavLink></li>
+        <li><CancionesUsuarios to="/admin/songs"><span className="icon">🎵</span><span className="text">Canciones</span></CancionesUsuarios></li>
+        <li><Usuarios to="/admin/users"><span className="icon">👥</span><span className="text">Usuarios</span></Usuarios></li>
         <li><button className="nav-admin-logout"><span className="icon">🚪</span><span className="text">Cerrar sesión</span></button></li>
       </ul>
     </nav>
