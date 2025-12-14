@@ -2,11 +2,11 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { PlayerProvider } from "./PlayerContext";
 
-import Layout from "./layout";         // 🧭 Layout general con el navbar principal
+import Layout from "./layout";
 import Inicio from "./inicio";
 import Calculadora from "./calculadora";
 import Formulario from "./formulario";
-import Layout_Admin from "./Layout_Admin"; // 🧭 Layout exclusivo del admin
+import Layout_Admin from "./Layout_Admin";
 import Admin_Panel from "./Admin_Panel";
 import Nav_Admin from "./Nav_Admin";
 import Ejemplo from "./ejemplo";
@@ -14,6 +14,7 @@ import Chat from "./chat";
 import Playlist_User from "./playlist_usuario";
 import CancionesUsuarios from "./cancionesUsuarios";
 import Usuarios from "./usuarios";
+
 function App() {
   return (
     <PlayerProvider>
@@ -30,17 +31,11 @@ function App() {
           </Route>
 
           {/* 🛠️ Layout exclusivo para el panel admin */}
-          <Route
-            path="/admin/*"
-            element={
-              <Layout_Admin>
-                <Nav_Admin /> {/* 👈 Navbar diferente para el admin */}
-                 <Route path="/admin/songs" element={<CancionesUsuarios />} />
-                <Route path="/admin/users" element={<Usuarios />} />
-                <Admin_Panel />
-              </Layout_Admin>
-            }
-          />
+          <Route element={<Layout_Admin />}>
+            <Route path="/admin" element={<Admin_Panel />} />
+            <Route path="/admin/songs" element={<CancionesUsuarios />} />
+            <Route path="/admin/users" element={<Usuarios />} />
+          </Route>
         </Routes>
       </Router>
     </PlayerProvider>
