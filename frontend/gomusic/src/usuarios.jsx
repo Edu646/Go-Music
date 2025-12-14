@@ -5,7 +5,7 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("https://TU_BACKEND_URL/users")
+    fetch("https://go-music-3mgo.onrender.com//users")
       .then(res => res.json())
       .then(data => {
         setUsers(data);
@@ -21,7 +21,7 @@ const AdminUsers = () => {
     if (!window.confirm(`¿Eliminar al usuario ${username}?`)) return;
 
     try {
-      const res = await fetch(`https://TU_BACKEND_URL/users/${username}`, {
+      const res = await fetch(`https://go-music-3mgo.onrender.com//users/${username}`, {
         method: "DELETE"
       });
 

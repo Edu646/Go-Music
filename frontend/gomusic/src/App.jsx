@@ -12,7 +12,8 @@ import Nav_Admin from "./Nav_Admin";
 import Ejemplo from "./ejemplo";
 import Chat from "./chat";
 import Playlist_User from "./playlist_usuario";
-
+import CancionesUsuarios from "./cancionesUsuarios";
+import Usuarios from "./usuarios";
 function App() {
   return (
     <PlayerProvider>
@@ -34,6 +35,8 @@ function App() {
             element={
               <Layout_Admin>
                 <Nav_Admin /> {/* 👈 Navbar diferente para el admin */}
+                 <Route path="songs" element={<CancionesUsuarios />} />
+                <Route path="users" element={<Usuarios />} />
                 <Admin_Panel />
               </Layout_Admin>
             }

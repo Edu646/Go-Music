@@ -1,90 +1,62 @@
 import React, { useEffect, useState } from "react";
 
-const AdminUsers = () => {
-  const [users, setUsers] = useState([]);
+export default function CancionesUsuarios() {
+  const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("https://TU_BACKEND_URL/users")
+    fetch("https://go-music-3mgo.onrender.com//songs")
       .then(res => res.json())
       .then(data => {
-        setUsers(data);
+        setSongs(data);
         setLoading(false);
       })
       .catch(err => {
-        console.error("Error cargando usuarios:", err);
+        console.error(err);
         setLoading(false);
       });
   }, []);
 
-  const deleteUser = async (username) => {
-    if (!window.confirm(`¿Eliminar al usuario ${username}?`)) return;
+  const deleteSong = async (id) => {
+    if (!window.confirm("¿Eliminar canción?")) return;
 
-    try {
-      const res = await fetch(`https://TU_BACKEND_URL/users/${username}`, {
-        method: "DELETE"
-      });
+    await fetch(`https://go-music-3mgo.onrender.com/songs/${id}`, {
+      method: "DELETE"
+    });
 
-      if (!res.ok) throw new Error("Error eliminando usuario");
-
-      setUsers(users.filter(u => u !== username));
-    } catch (err) {
-      alert("❌ No se pudo eliminar el usuario (falta backend)");
-      console.error(err);
-    }
+    setSongs(songs.filter(song => song._id !== id));
   };
 
-  if (loading) return <p>Cargando usuarios...</p>;
+  if (loading) return <p>Cargando canciones...</p>;
 
   return (
-    <div style={styles.container}>
-      <h2>👤 Usuarios registrados</h2>
+    <div>
+      <h2>🎵 Canciones subidas</h2>
 
-      {users.length === 0 ? (
-        <p>No hay usuarios</p>
-      ) : (
-        <ul style={styles.list}>
-          {users.map(user => (
-            <li key={user} style={styles.item}>
-              <span>{user}</span>
-              <button
-                style={styles.delete}
-                onClick={() => deleteUser(user)}
-              >
-                Eliminar
-              </button>
-            </li>
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Artista</th>
+            <th>Subida por</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {songs.map(song => (
+            <tr key={song._id}>
+              <td>{song.name}</td>
+              <td>{song.artist}</td>
+              <td>{song.uploadedBy}</td>
+              <td>
+                <button onClick={() => deleteSong(song._id)}>
+                  Eliminar
+                </button>
+              </td>
+            </tr>
           ))}
-        </ul>
-      )}
+        </tbody>
+      </table>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    maxWidth: 600,
-    margin: "40px auto",
-    color: "#fff"
-  },
-  list: {
-    listStyle: "none",
-    padding: 0
-  },
-  item: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "12px",
-    borderBottom: "1px solid #333"
-  },
-  delete: {
-    background: "#e53935",
-    border: "none",
-    color: "white",
-    padding: "6px 12px",
-    borderRadius: 6,
-    cursor: "pointer"
-  }
-};
-
-export default AdminUsers;
+}
