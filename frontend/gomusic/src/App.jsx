@@ -32,6 +32,7 @@ function App() {
 
           {/* 🛠️ Layout exclusivo para el panel admin */}
           <Route element={<Layout_Admin />}>
+            <Route path="/admin" element={<Admin_Panel />} />
             <Route path="/admin/songs" element={<CancionesUsuarios />} />
             <Route path="/admin/users" element={<Usuarios />} />
           </Route>
