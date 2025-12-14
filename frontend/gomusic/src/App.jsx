@@ -35,8 +35,8 @@ function App() {
             element={
               <Layout_Admin>
                 <Nav_Admin /> {/* 👈 Navbar diferente para el admin */}
-                 <Route path="songs" element={<CancionesUsuarios />} />
-                <Route path="users" element={<Usuarios />} />
+                 <Route path="/admin/songs" element={<CancionesUsuarios />} />
+                <Route path="/admin/users" element={<Usuarios />} />
                 <Admin_Panel />
               </Layout_Admin>
             }
