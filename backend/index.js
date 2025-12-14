@@ -130,16 +130,44 @@ app.get("/songs", async (req, res) => {
   }
 });
 
+
+
 app.delete("/songs/:id", async (req, res) => {
   try {
+    console.log("🗑️ Intentando eliminar canción con ID:", req.params.id);
+    
     const song = await Song.findById(req.params.id);
-    if (!song) return res.status(404).json({ error: "No encontrada" });
+    
+    if (!song) {
+      console.log("❌ Canción no encontrada");
+      return res.status(404).json({ error: "No encontrada" });
+    }
 
-    if (song.public_id) await cloudinary.uploader.destroy(song.public_id, { resource_type: "auto" });
+    console.log("✅ Canción encontrada:", song.name);
+
+    // Eliminar de Cloudinary si tiene public_id
+    if (song.public_id) {
+      console.log("☁️ Eliminando de Cloudinary:", song.public_id);
+      try {
+        await cloudinary.uploader.destroy(song.public_id, { resource_type: "video" });
+        console.log("✅ Eliminado de Cloudinary");
+      } catch (cloudErr) {
+        console.error("⚠️ Error eliminando de Cloudinary (continuando):", cloudErr);
+        // No detenemos el proceso si falla Cloudinary
+      }
+    }
+
+    // Eliminar de MongoDB
     await Song.findByIdAndDelete(req.params.id);
+    console.log("✅ Canción eliminada de MongoDB");
+    
     res.json({ message: "Canción eliminada" });
   } catch (err) {
-    res.status(500).json({ error: "Error eliminando canción" });
+    console.error("❌ ERROR COMPLETO:", err);
+    res.status(500).json({ 
+      error: "Error eliminando canción",
+      details: err.message 
+    });
   }
 });
 
