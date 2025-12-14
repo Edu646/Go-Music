@@ -1,5 +1,7 @@
+/* Canciones_usuarios.css */
+
 /* Contenedor principal */
-div {
+.canciones-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
@@ -7,7 +9,7 @@ div {
 }
 
 /* Título */
-h2 {
+.canciones-container h2 {
   color: #1a1a1a;
   font-size: 2rem;
   margin-bottom: 2rem;
@@ -20,7 +22,7 @@ h2 {
 }
 
 /* Estado de carga */
-p {
+.canciones-container p {
   text-align: center;
   font-size: 1.1rem;
   color: #666;
@@ -28,7 +30,7 @@ p {
 }
 
 /* Contenedor de la tabla */
-table {
+.canciones-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
@@ -40,11 +42,11 @@ table {
 }
 
 /* Encabezado de la tabla */
-thead {
+.canciones-table thead {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-thead tr th {
+.canciones-table thead tr th {
   padding: 1.2rem 1.5rem;
   text-align: left;
   font-weight: 600;
@@ -54,55 +56,55 @@ thead tr th {
   letter-spacing: 0.5px;
 }
 
-thead tr th:last-child {
+.canciones-table thead tr th:last-child {
   text-align: center;
   width: 120px;
 }
 
 /* Filas del cuerpo */
-tbody tr {
+.canciones-table tbody tr {
   border-bottom: 1px solid #f0f0f0;
   transition: all 0.3s ease;
 }
 
-tbody tr:hover {
+.canciones-table tbody tr:hover {
   background: linear-gradient(to right, #f8f9ff 0%, #fff 100%);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
 }
 
-tbody tr:last-child {
+.canciones-table tbody tr:last-child {
   border-bottom: none;
 }
 
 /* Celdas del cuerpo */
-tbody td {
+.canciones-table tbody td {
   padding: 1.2rem 1.5rem;
   color: #333;
   font-size: 0.95rem;
   vertical-align: middle;
 }
 
-tbody td:first-child {
+.canciones-table tbody td:first-child {
   font-weight: 600;
   color: #1a1a1a;
 }
 
-tbody td:nth-child(2) {
+.canciones-table tbody td:nth-child(2) {
   color: #666;
 }
 
-tbody td:nth-child(3) {
+.canciones-table tbody td:nth-child(3) {
   color: #888;
   font-size: 0.9rem;
 }
 
-tbody td:last-child {
+.canciones-table tbody td:last-child {
   text-align: center;
 }
 
 /* Botón de eliminar */
-button {
+.btn-delete-song {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   color: white;
   border: none;
@@ -115,19 +117,19 @@ button {
   box-shadow: 0 2px 8px rgba(245, 87, 108, 0.3);
 }
 
-button:hover {
+.btn-delete-song:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
   background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
 }
 
-button:active {
+.btn-delete-song:active {
   transform: translateY(0);
   box-shadow: 0 2px 6px rgba(245, 87, 108, 0.3);
 }
 
 /* Tabla vacía */
-tbody tr:only-child td {
+.canciones-table tbody tr:only-child td {
   text-align: center;
   padding: 3rem;
   color: #999;
@@ -136,32 +138,32 @@ tbody tr:only-child td {
 
 /* Responsive */
 @media (max-width: 768px) {
-  div {
+  .canciones-container {
     padding: 1rem;
   }
 
-  h2 {
+  .canciones-container h2 {
     font-size: 1.5rem;
     margin-bottom: 1.5rem;
   }
 
-  table {
+  .canciones-table {
     font-size: 0.85rem;
   }
 
-  thead tr th,
-  tbody td {
+  .canciones-table thead tr th,
+  .canciones-table tbody td {
     padding: 0.8rem 0.6rem;
   }
 
-  button {
+  .btn-delete-song {
     padding: 0.5rem 0.8rem;
     font-size: 0.85rem;
   }
 
   /* Ocultar columna "Subida por" en móvil */
-  thead tr th:nth-child(3),
-  tbody tr td:nth-child(3) {
+  .canciones-table thead tr th:nth-child(3),
+  .canciones-table tbody tr td:nth-child(3) {
     display: none;
   }
 }
