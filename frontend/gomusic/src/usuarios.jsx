@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./usuarios.css";
+
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,26 +30,32 @@ const AdminUsers = () => {
 
       setUsers(users.filter(u => u !== username));
     } catch (err) {
-      alert("❌ No se pudo eliminar el usuario (falta backend)");
+      alert("❌ No se pudo eliminar el usuario");
       console.error(err);
     }
   };
 
-  if (loading) return <p>Cargando usuarios...</p>;
+  if (loading) {
+    return (
+      <div className="admin-users-container">
+        <p className="loading-message">Cargando usuarios...</p>
+      </div>
+    );
+  }
 
   return (
-    <div style={styles.container}>
+    <div className="admin-users-container">
       <h2>👤 Usuarios registrados</h2>
 
       {users.length === 0 ? (
-        <p>No hay usuarios</p>
+        <p className="no-users-message">No hay usuarios registrados</p>
       ) : (
-        <ul style={styles.list}>
+        <ul className="users-list">
           {users.map(user => (
-            <li key={user} style={styles.item}>
-              <span>{user}</span>
+            <li key={user} className="user-item">
+              <span className="user-name">{user}</span>
               <button
-                style={styles.delete}
+                className="delete-button"
                 onClick={() => deleteUser(user)}
               >
                 Eliminar
@@ -59,32 +66,6 @@ const AdminUsers = () => {
       )}
     </div>
   );
-};
-
-const styles = {
-  container: {
-    maxWidth: 600,
-    margin: "40px auto",
-    color: "#fff"
-  },
-  list: {
-    listStyle: "none",
-    padding: 0
-  },
-  item: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "12px",
-    borderBottom: "1px solid #333"
-  },
-  delete: {
-    background: "#e53935",
-    border: "none",
-    color: "white",
-    padding: "6px 12px",
-    borderRadius: 6,
-    cursor: "pointer"
-  }
 };
 
 export default AdminUsers;
