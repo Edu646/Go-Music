@@ -349,28 +349,23 @@ body {
 .back-btn {
   display: none;
 }
-
-@media (min-width: 769px) {
-    .global-chat-btn {
-        display: block;
-    }
-    /* Asegura que el botón de menú móvil no se vea en desktop */
-    .back-btn {
-        display: none; 
-    }
-}
-
 @media (max-width: 768px) {
+  body {
+    overflow: hidden;
+  }
+
   .chat-container {
     height: 100vh;
+    height: 100dvh; /* Usa altura dinámica de viewport */
     border-radius: 0;
     max-width: 100%;
     margin: 0;
+    overflow: hidden;
   }
   
   /* Ocultar el botón de Chat Global en móvil */
   .global-chat-btn {
-      display: none;
+    display: none;
   }
   
   /* 1. Sidebar en Móvil (Altura 100% y se superpone) */
@@ -380,9 +375,11 @@ body {
     left: 0;
     z-index: 20; 
     width: 85%;
-    max-width: 300px; 
-    height: 100vh; /* CLAVE: Ocupa toda la altura de la vista */
+    max-width: 320px; 
+    height: 100vh;
+    height: 100dvh;
     transform: translateX(-100%);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
   }
 
   .sidebar.mobile-open {
@@ -395,6 +392,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
+    height: 100dvh;
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 15;
     display: none;
@@ -404,60 +402,249 @@ body {
     display: block;
   }
   
-  /* 2. Chat Area toma el 100% */
+  /* 2. Chat Area toma el 100% y estructura correcta */
   .chat-area {
     width: 100%;
-    z-index: 10; 
-  }
-  
-  /* 3. Input Area Fija al fondo (100% visible) */
-  .input-area {
-    padding: 8px 10px; 
-    align-items: center; 
-    position: fixed; /* CLAVE: Fija al fondo */
-    bottom: 0;
-    width: 100%;
-    box-sizing: border-box; 
+    height: 100vh;
+    height: 100dvh;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
   }
 
-  .chat-input {
-    margin: 0 8px;
-    padding: 8px 12px;
-    min-height: 35px; 
-  }
-  
-  .icon-btn, .send-btn {
-    font-size: 1.4em; 
-    padding: 4px;
-  }
-
-  .send-btn {
-    font-size: 1.7em;
-  }
-
-  /* 4. Emoji Picker en Móvil */
-  .emoji-picker {
-    left: 5px; 
-    right: 5px; 
-    max-width: unset; 
-    grid-template-columns: repeat(8, 1fr); 
-    padding: 8px;
-    bottom: 55px;
-  }
-  
-  /* 5. Botón de Menú/Retroceso en Móvil */
-  .back-btn {
-    display: block;
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.8em;
-    color: var(--primary-color);
-    margin-right: 10px;
-    padding: 0;
+  /* 3. Chat Header fijo arriba */
+  .chat-header {
+    padding: 12px 15px;
+    flex-shrink: 0;
+    min-height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 11;
   }
 
   .chat-header h2 {
+    font-size: 1.1em;
+    margin: 0;
+  }
+
+  .status-indicator {
+    font-size: 0.85em;
+  }
+
+  /* 4. Contenedor de mensajes con altura calculada */
+  .messages-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 15px 10px 80px 10px; /* Padding bottom para el input */
+    -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+  }
+
+  /* 5. Burbujas de mensajes más compactas */
+  .message-bubble {
+    max-width: 80%;
+    font-size: 0.95em;
+    padding: 8px 12px;
+  }
+
+  .message-sender {
+    font-size: 0.85em;
+  }
+
+  .message-time {
+    font-size: 0.65em;
+  }
+
+  /* 6. Preview de archivo más compacto */
+  .file-preview {
+    position: fixed;
+    bottom: 65px;
+    left: 10px;
+    right: 10px;
+    z-index: 13;
+    background: var(--background-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: var(--shadow-medium);
+  }
+
+  .file-preview-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .preview-image {
+    max-width: 60px;
+    max-height: 60px;
+    border-radius: 4px;
+  }
+
+  .file-info {
+    flex: 1;
+    font-size: 0.9em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .remove-file-btn {
+    background: var(--unread-bg);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
     font-size: 1.2em;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  
+  /* 7. Input Area Fija al fondo (100% visible) */
+  .input-area {
+    padding: 10px;
+    align-items: center;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: var(--background-dark);
+    border-top: 1px solid var(--border-color);
+    z-index: 12;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .chat-input {
+    margin: 0 6px;
+    padding: 10px 12px;
+    min-height: 40px;
+    max-height: 100px;
+    font-size: 0.95em;
+    border-radius: 20px;
+  }
+  
+  .icon-btn, .send-btn {
+    font-size: 1.3em;
+    padding: 6px;
+    margin: 0 2px;
+  }
+
+  .send-btn {
+    font-size: 1.6em;
+  }
+
+  /* 8. Emoji Picker optimizado para móvil */
+  .emoji-picker {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: 70px;
+    max-width: unset;
+    grid-template-columns: repeat(8, 1fr);
+    padding: 10px;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 25;
+  }
+
+  .emoji-btn {
+    font-size: 1.5em;
+    padding: 8px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+  }
+
+  .emoji-btn:active {
+    background-color: var(--border-color);
+  }
+  
+  /* 9. Botón de Menú/Retroceso en Móvil */
+  .back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.6em;
+    color: var(--primary-color);
+    margin-right: 10px;
+    padding: 5px;
+    min-width: 40px;
+    height: 40px;
+  }
+
+  /* 10. Ajustes para usuarios en sidebar */
+  .user-item {
+    padding: 12px 15px;
+  }
+
+  .avatar-placeholder {
+    width: 45px;
+    height: 45px;
+    font-size: 1em;
+  }
+
+  .user-details .username {
+    font-size: 0.95em;
+  }
+
+  .status-text {
+    font-size: 0.85em;
+    color: var(--secondary-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 11. Mensaje vacío centrado */
+  .empty-chat-msg {
+    text-align: center;
+    color: var(--secondary-color);
+    padding: 40px 20px;
+    font-size: 0.95em;
+  }
+
+  /* 12. Imágenes en mensajes responsivas */
+  .message-image {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 8px;
+    display: block;
+    margin: 5px 0;
+  }
+
+  .file-container {
+    margin: 5px 0;
+  }
+
+  .file-attachment {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .file-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .file-size {
+    font-size: 0.8em;
+    color: var(--secondary-color);
+    flex-shrink: 0;
   }
 }
