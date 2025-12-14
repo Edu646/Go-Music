@@ -21,12 +21,6 @@ export default function Nav_Admin() {
       </div>
 
       <ul className="nav-admin-links">
-        <li>
-          <NavLink to="/admin/dashboard">
-            <span className="icon">🏠</span>
-            <span className="text">Dashboard</span>
-          </NavLink>
-        </li>
 
         <li>
           <NavLink to="/admin/songs">

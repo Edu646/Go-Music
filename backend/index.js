@@ -384,6 +384,23 @@ app.get("/users", async (req, res) => {
   }
 });
 
+app.delete("/users/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+    
+    // Eliminar todas las referencias del usuario
+    await Song.deleteMany({ uploadedBy: username });
+    await Message.deleteMany({ sender: username });
+    await PrivateMessage.deleteMany({ 
+      $or: [{ sender: username }, { recipient: username }] 
+    });
+    await Playlist.deleteMany({ owner: username });
+    
+    res.json({ success: true, message: "Usuario eliminado" });
+  } catch (err) {
+    res.status(500).json({ error: "Error eliminando usuario" });
+  }
+});
 // -----------------
 // RUTAS CHAT (GLOBAL Y PRIVADO)
 // -----------------
