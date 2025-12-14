@@ -5,7 +5,7 @@ export default function CancionesUsuarios() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("https://go-music-3mgo.onrender.com//songs")
+    fetch("https://go-music-3mgo.onrender.com/songs")
       .then(res => res.json())
       .then(data => {
         setSongs(data);
