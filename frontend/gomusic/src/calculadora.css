@@ -251,91 +251,107 @@
    =================================== */
 @media (max-width: 500px) {
   .search-container {
-    margin: 20px 12px;
-    padding: 16px;
-    border-radius: 16px;
+    margin: 16px 8px;
+    padding: 20px 16px;
+    border-radius: 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+  
+  .search-container:hover {
+    transform: none; /* Desactiva hover en móvil */
   }
 
   .search-container h2 {
-    font-size: 1.5rem;
-    margin-bottom: 16px;
+    font-size: 1.6rem;
+    margin-bottom: 20px;
+    letter-spacing: -0.3px;
   }
 
   .search-box {
     flex-direction: column;
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 12px;
+    margin-bottom: 24px;
   }
 
-  .search-box input,
+  .search-box input {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 1rem;
+    border-radius: 12px;
+    -webkit-appearance: none; /* Elimina estilos iOS */
+  }
+  
   .search-box button {
     width: 100%;
-    padding: 12px 14px;
-    font-size: 0.95rem;
-    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 1rem;
+    border-radius: 12px;
+    min-height: 48px; /* Tamaño táctil óptimo */
+    font-weight: 700;
   }
 
   .song-item {
     flex-direction: column;
     align-items: flex-start;
-    padding: 14px;
-    gap: 12px;
+    padding: 16px;
+    gap: 14px;
+    border-radius: 16px;
   }
 
   .song-item:hover {
-    transform: translateX(0);
+    transform: none; /* Desactiva animación en móvil */
+  }
+  
+  /* Mejora visual del toque */
+  .song-item:active {
+    background: #282828;
+    transform: scale(0.98);
   }
 
   .song-info {
-    font-size: 0.95rem;
+    font-size: 1rem;
     width: 100%;
+    line-height: 1.4;
+  }
+  
+  .song-info .artist {
+    font-size: 0.9rem;
+    margin-top: 4px;
   }
 
   .song-actions {
     width: 100%;
-    justify-content: space-between;
-    gap: 8px;
+    display: flex;
+    gap: 10px;
   }
 
   .song-actions button,
   .btn-download {
     flex: 1;
-    padding: 10px 12px;
-    font-size: 0.9rem;
+    padding: 12px 16px;
+    font-size: 0.95rem;
     text-align: center;
     justify-content: center;
+    border-radius: 12px;
+    min-height: 48px; /* Tamaño táctil óptimo */
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  
+  /* Feedback táctil mejorado */
+  .song-actions button:active {
+    transform: scale(0.95);
+  }
+  
+  .btn-download:active {
+    transform: scale(0.95);
   }
 
-  /* Ajuste para botones muy pequeños en móvil */
-  .song-actions button {
-    min-height: 44px; /* Tamaño mínimo táctil recomendado */
-  }
-
-  .btn-download {
-    min-height: 44px;
-  }
-}
-
-/* ===================================
-   📱 RESPONSIVE - MÓVILES PEQUEÑOS
-   =================================== */
-@media (max-width: 360px) {
-  .search-container {
-    margin: 16px 8px;
-    padding: 12px;
-  }
-
-  .search-container h2 {
-    font-size: 1.3rem;
-  }
-
-  .song-info {
-    font-size: 0.9rem;
-  }
-
-  .song-actions button,
-  .btn-download {
-    font-size: 0.85rem;
-    padding: 10px 8px;
+  /* Mejora el área de scroll */
+  .results-list {
+    gap: 14px;
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
   }
 }
