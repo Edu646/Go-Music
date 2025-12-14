@@ -34,15 +34,27 @@ export default function CancionesUsuarios() {
         }
       });
 
+      // Intentar obtener el mensaje de error del servidor
+      let errorMessage = "Error al eliminar la canción";
+      try {
+        const data = await response.json();
+        errorMessage = data.error || data.message || errorMessage;
+      } catch (e) {
+        // Si no hay JSON, usar mensaje genérico
+      }
+
       if (!response.ok) {
-        throw new Error("Error al eliminar la canción");
+        console.error(`Error ${response.status}:`, errorMessage);
+        alert(`Error del servidor (${response.status}): ${errorMessage}\n\nID: ${id}\n\nRevisa la consola del backend.`);
+        return;
       }
 
       // Solo actualizar el estado si la eliminación fue exitosa
       setSongs(songs.filter(song => song._id !== id));
+      alert("Canción eliminada correctamente");
     } catch (err) {
-      console.error("Error:", err);
-      alert("No se pudo eliminar la canción. Por favor, intenta de nuevo.");
+      console.error("Error de red:", err);
+      alert("No se pudo conectar con el servidor. Verifica tu conexión.");
     }
   };
 
