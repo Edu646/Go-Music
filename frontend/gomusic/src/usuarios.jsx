@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-
+import "./usuarios.css";
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
