@@ -505,7 +505,7 @@
 /* ------------------------------
    RESPONSIVE MÓVIL
 ------------------------------ */
-@media (max-width: 600px) {
+@media (max-width: 100% ) {
   .hero-section {
     height: 450px;
   }
