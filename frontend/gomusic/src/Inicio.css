@@ -505,7 +505,7 @@
 /* ------------------------------
    RESPONSIVE MÓVIL
 ------------------------------ */
-@media (max-width: 100% ) {
+@media (max-width: 600px) {
   .hero-section {
     height: 450px;
   }
@@ -568,6 +568,8 @@
    RESPONSIVE MÓVILES PEQUEÑOS
 ------------------------------ */
 @media (max-width: 420px) {
+
+
   .hero-section {
     height: 380px;
   }
