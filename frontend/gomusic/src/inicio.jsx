@@ -31,7 +31,7 @@ function Inicio() {
   const fetchPublicPlaylists = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/playlists"); // Endpoint de playlists públicas
+      const response = await fetch("/playlists");
       if (response.ok) {
         const data = await response.json();
         console.log("Playlists públicas cargadas:", data);
@@ -61,7 +61,6 @@ function Inicio() {
   // Reproducir playlist directamente (previene propagación del evento)
   const handlePlayPlaylist = (e, playlistId) => {
     e.stopPropagation();
-    // Navegar a la página de la playlist para reproducirla
     navigate(`/playlist/${playlistId}`);
   };
 
@@ -98,7 +97,6 @@ function Inicio() {
                 key={i} 
                 className={`indicator ${i === index ? 'active' : ''}`}
                 onClick={() => handleIndicatorClick(i)}
-                style={{ cursor: 'pointer' }}
               />
             ))}
           </div>
@@ -129,26 +127,14 @@ function Inicio() {
           </h2>
           
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '3rem' }}>
-              <div className="loading-spinner"></div>
-              <p style={{ color: '#1db954', marginTop: '1rem', fontSize: '1.1rem' }}>
-                Cargando playlists...
-              </p>
+            <div className="loading-message">
+              Cargando playlists...
             </div>
           ) : playlists.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '3rem', 
-              background: 'rgba(0,0,0,0.3)', 
-              borderRadius: '12px',
-              border: '2px dashed rgba(255,255,255,0.2)'
-            }}>
-              <p style={{ color: '#888', fontSize: '1.2rem', marginBottom: '1rem' }}>
-                📭 No hay playlists públicas disponibles aún
-              </p>
-              <p style={{ color: '#666', fontSize: '1rem' }}>
-                ¡Sé el primero en crear una playlist pública!
-              </p>
+            <div className="empty-state">
+              <div className="empty-state-icon">📭</div>
+              <p className="empty-state-title">No hay playlists públicas disponibles aún</p>
+              <p className="empty-state-text">¡Sé el primero en crear una playlist pública!</p>
             </div>
           ) : (
             <div className="playlist-grid">
@@ -159,7 +145,6 @@ function Inicio() {
                   onMouseEnter={() => setHoveredCard(playlist._id)}
                   onMouseLeave={() => setHoveredCard(null)}
                   onClick={() => handlePlaylistClick(playlist._id)}
-                  style={{ cursor: 'pointer' }}
                   title={`Ver playlist: ${playlist.name}`}
                 >
                   <div className="playlist-image-wrapper">
@@ -172,13 +157,14 @@ function Inicio() {
                       }}
                     />
                     {hoveredCard === playlist._id && (
-                      <div 
+                      <button 
                         className="play-button"
                         onClick={(e) => handlePlayPlaylist(e, playlist._id)}
                         title="Reproducir ahora"
+                        aria-label="Reproducir playlist"
                       >
-                        <span className="play-icon-large">▶</span>
-                      </div>
+                        ▶
+                      </button>
                     )}
                   </div>
                   <h3 className="playlist-title">{playlist.name}</h3>

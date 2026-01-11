@@ -7,7 +7,23 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
 
+body {
+  overflow-x: hidden;
+}
+
+/* Resetear el padding del main */
+main {
+  padding: 0 !important;
+  margin: 0 !important;
+}
 
 /* ------------------------------
    CONTENEDOR DE PÁGINA
@@ -15,9 +31,6 @@
 .page-wrapper {
   display: flex;
   flex-direction: column;
-  align-items: center;   /* Centra horizontalmente */
-  justify-content: center; /* Centra verticalmente */
-  text-align: center;    /* Centra texto de forma general */
   min-height: 100vh;
   width: 100%;
   background: linear-gradient(135deg, #1db954 0%, #191414 50%, #000000 100%);
@@ -189,9 +202,15 @@
 ------------------------------ */
 .container {
   max-width: 100%;
-  width: 100%;
+  width: 100vw;
   margin: 0;
-  padding: 0 40px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  position: relative;
+  left: 0;
+  right: 0;
 }
 
 /* ------------------------------
@@ -199,13 +218,16 @@
 ------------------------------ */
 .about-section {
   background: linear-gradient(135deg, rgba(29, 185, 84, 0.1), rgba(0, 0, 0, 0.6));
-  padding: 60px 40px;
-  margin: 60px 0;
+  padding: 80px 60px;
+  margin: 0;
+  max-width: 100%;
+  width: 100%;
   backdrop-filter: blur(15px);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-  border-left: 5px solid #1db954;
+  border-radius: 0;
   position: relative;
   overflow: hidden;
+  text-align: center;
 }
 
 .about-section::before {
@@ -233,6 +255,7 @@
 .section-title {
   display: flex;
   align-items: center;
+  justify-content: center;
   font-size: 2.5rem;
   color: #1db954;
   margin-bottom: 30px;
@@ -267,7 +290,10 @@
    SECCIONES GENERALES
 ------------------------------ */
 .section {
-  margin: 60px 0;
+  margin: 0;
+  padding: 80px 60px;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* ------------------------------
@@ -275,14 +301,16 @@
 ------------------------------ */
 .playlist-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 30px;
-  margin-top: 30px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 32px;
+  margin-top: 40px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .playlist-card {
   background: linear-gradient(135deg, rgba(40, 40, 40, 0.8), rgba(20, 20, 20, 0.9));
-  padding: 24px;
+  padding: 20px;
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -352,6 +380,10 @@
   box-shadow: 0 6px 20px rgba(29, 185, 84, 0.6);
   transition: all 0.3s ease;
   animation: fadeInScale 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: none;
+  font-size: 18px;
+  color: white;
 }
 
 @keyframes fadeInScale {
@@ -376,6 +408,9 @@
   margin-bottom: 10px;
   color: #fff;
   transition: color 0.3s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .playlist-card.hovered .playlist-title {
@@ -385,6 +420,9 @@
 .playlist-info {
   font-size: 0.95rem;
   color: #b3b3b3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ------------------------------
@@ -393,10 +431,14 @@
 .cta-section {
   text-align: center;
   background: linear-gradient(135deg, rgba(29, 185, 84, 0.15), rgba(29, 185, 84, 0.05));
-  padding: 80px 40px;
-  border-radius: 20px;
-  border: 2px solid rgba(29, 185, 84, 0.4);
-  margin: 80px 0;
+  padding: 100px 60px;
+  border-radius: 0;
+  border: none;
+  border-top: 2px solid rgba(29, 185, 84, 0.4);
+  border-bottom: 2px solid rgba(29, 185, 84, 0.4);
+  margin: 0;
+  max-width: 100%;
+  width: 100%;
   position: relative;
   overflow: hidden;
 }
@@ -465,9 +507,38 @@
 }
 
 /* ------------------------------
+   RESPONSIVE DESKTOP GRANDE
+------------------------------ */
+@media (min-width: 1600px) {
+  .section {
+    padding: 0 60px;
+  }
+  
+  .playlist-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+}
+
+/* ------------------------------
    RESPONSIVE TABLET
 ------------------------------ */
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
+  .section {
+    padding: 0 32px;
+  }
+
+  .about-section,
+  .cta-section {
+    padding: 60px 32px;
+  }
+
+  .playlist-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 24px;
+  }
+}
+
+@media (max-width: 768px) {
   .hero-section {
     height: 500px;
   }
@@ -480,21 +551,23 @@
     font-size: 1.3rem;
   }
 
-  .container {
-    padding: 0 30px;
+  .section {
+    padding: 0 24px;
   }
 
-  .about-section {
-    padding: 50px 30px;
-  }
-
-  .playlist-grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 20px;
+  .about-section,
+  .cta-section {
+    padding: 50px 24px;
+    margin: 50px 0;
   }
 
   .section-title {
     font-size: 2rem;
+  }
+
+  .playlist-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 20px;
   }
 
   .cta-title {
@@ -507,15 +580,17 @@
 ------------------------------ */
 @media (max-width: 600px) {
   .hero-section {
-    height: 450px;
+    height: 400px;
   }
 
   .hero-title {
     font-size: 2.2rem;
+    letter-spacing: 1px;
   }
 
   .hero-subtitle {
     font-size: 1.1rem;
+    margin-bottom: 30px;
   }
 
   .hero-button {
@@ -523,30 +598,60 @@
     font-size: 1rem;
   }
 
-  .container {
+  .section {
     padding: 0 20px;
   }
 
   .section-title {
     font-size: 1.8rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+
+  .title-icon {
+    margin-right: 0;
+    margin-bottom: 8px;
   }
 
   .about-section {
-    padding: 40px 24px;
+    padding: 40px 20px;
     margin: 40px 0;
   }
 
   .about-text {
     font-size: 1.05rem;
+    line-height: 1.7;
+    text-align: center;
   }
 
   .playlist-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 16px;
   }
 
+  .playlist-card {
+    padding: 16px;
+  }
+
+  .playlist-title {
+    font-size: 1rem;
+  }
+
+  .playlist-info {
+    font-size: 0.85rem;
+  }
+
+  .play-button {
+    width: 48px;
+    height: 48px;
+    bottom: 8px;
+    right: 8px;
+    font-size: 16px;
+  }
+
   .cta-section {
-    padding: 60px 24px;
+    padding: 60px 20px;
     margin: 60px 0;
   }
 
@@ -562,16 +667,28 @@
     padding: 16px 40px;
     font-size: 1rem;
   }
+
+  .carousel-indicators {
+    bottom: 20px;
+    gap: 8px;
+  }
+
+  .indicator {
+    width: 40px;
+    height: 4px;
+  }
+
+  .indicator.active {
+    width: 50px;
+  }
 }
 
 /* ------------------------------
    RESPONSIVE MÓVILES PEQUEÑOS
 ------------------------------ */
 @media (max-width: 420px) {
-
-
   .hero-section {
-    height: 380px;
+    height: 350px;
   }
 
   .hero-title {
@@ -579,10 +696,16 @@
   }
 
   .hero-subtitle {
-    font-size: 1rem;
+    font-size: 0.95rem;
+    margin-bottom: 24px;
   }
 
-  .container {
+  .hero-button {
+    padding: 14px 32px;
+    font-size: 0.95rem;
+  }
+
+  .section {
     padding: 0 16px;
   }
 
@@ -590,20 +713,93 @@
     font-size: 1.5rem;
   }
 
+  .about-section {
+    padding: 32px 16px;
+    margin: 32px 0;
+  }
+
+  .about-text {
+    font-size: 1rem;
+  }
+
   .playlist-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
 
-  .about-section {
-    padding: 30px 20px;
+  .playlist-card {
+    padding: 12px;
+  }
+
+  .playlist-title {
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+  }
+
+  .playlist-info {
+    font-size: 0.8rem;
+  }
+
+  .play-button {
+    width: 44px;
+    height: 44px;
+    font-size: 14px;
   }
 
   .cta-section {
-    padding: 50px 20px;
+    padding: 50px 16px;
+    margin: 50px 0;
   }
 
   .cta-title {
     font-size: 1.7rem;
   }
+
+  .cta-text {
+    font-size: 1rem;
+  }
+
+  .cta-button {
+    padding: 14px 32px;
+    font-size: 0.95rem;
+  }
+}
+
+/* ------------------------------
+   MEJORAS ADICIONALES
+------------------------------ */
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Loading state */
+.loading-message {
+  text-align: center;
+  padding: 60px 20px;
+  color: #b3b3b3;
+  font-size: 1.2rem;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: #b3b3b3;
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+
+.empty-state-title {
+  font-size: 1.5rem;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.empty-state-text {
+  font-size: 1.1rem;
+  color: #b3b3b3;
 }
