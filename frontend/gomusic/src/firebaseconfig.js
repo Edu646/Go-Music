@@ -1,8 +1,6 @@
-// ...existing code...
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { 
-  initializeAuth, 
-  browserSessionPersistence, 
+  getAuth,
   GoogleAuthProvider 
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
@@ -25,13 +23,16 @@ if (!getApps().length) {
   app = getApp();
 }
 
-// ⛔ Antes tenías: export const auth = getAuth(app);
-// ✅ Ahora lo cambiamos a initializeAuth con persistence por pestaña
-export const auth = initializeAuth(app, {
-  persistence: browserSessionPersistence
+// ✅ Usamos getAuth en lugar de initializeAuth
+export const auth = getAuth(app);
+
+// ✅ Configuramos el GoogleProvider correctamente
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
 });
 
-export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
 export const storage = getStorage(app);
-// ...existing code...
+
+export default app;
