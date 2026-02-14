@@ -6,7 +6,7 @@ function Layout() {
   return (
     <div>
       <Navbar />
-      <main style={{ padding: "20px" }}>
+      <main style={{ padding: "40px" }}>
         <Outlet /> {/* Aquí se renderizan las páginas */}
       </main>
     </div>
