@@ -184,7 +184,7 @@ function PlaylistShare({ playlist, user }) {
     }
   };
 
-  if (playlist.isPublic || playlist.owner !== user.username) return null;
+  if (playlist.owner !== user.username) return null;
 
   return (
     <div className="playlist-share">
@@ -201,9 +201,11 @@ function PlaylistShare({ playlist, user }) {
             onClick={(e) => e.target.select()}
           />
           <button onClick={copyLink}>📋 Copiar</button>
-          <button onClick={regenerateToken} title="Invalida el link anterior">
-            🔄 Nuevo Link
-          </button>
+          {!playlist.isPublic && (
+            <button onClick={regenerateToken} title="Invalida el link anterior">
+              🔄 Nuevo Link
+            </button>
+          )}
         </div>
       )}
       {msg && <p className="share-message">{msg}</p>}
@@ -366,18 +368,17 @@ function ProfileEditor({ user, setUser, setMessage }) {
     setMessage("");
 
     try {
-      // Si hay archivo, usamos el preview que ya está en base64
-      let photoURL = photoFile ? photoPreview : user.avatar;
-
+      // Guardamos el displayName en Firebase (sin la imagen, porque base64 es muy largo)
       await updateProfile(fbUser, {
         displayName: displayName?.trim() || user.username,
-        photoURL: photoURL || null,
+        photoURL: null, // No guardamos foto en Firebase para evitar límite de tamaño
       });
 
+      // Guardamos la imagen en localStorage (base64) y en el estado local
       const updated = {
         ...user,
         displayName: displayName?.trim() || user.username,
-        avatar: photoURL,
+        avatar: photoFile ? photoPreview : user.avatar, // Usa preview si hay archivo, si no mantiene avatar anterior
       };
 
       setUser(updated);
