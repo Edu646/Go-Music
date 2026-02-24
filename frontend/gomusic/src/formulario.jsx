@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { auth, googleProvider, storage } from "./firebaseconfig";
+import { auth, googleProvider } from "./firebaseconfig";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -10,7 +10,6 @@ import {
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import "./formulario.css";
 
 /* ==========================================================================================
@@ -408,9 +407,18 @@ function ProfileEditor({ user, setUser, setMessage }) {
       let photoURL = fbUser.photoURL || user.avatar;
 
       if (photoFile) {
-        const refPath = ref(storage, `avatars/${fbUser.uid}`);
-        await uploadBytes(refPath, photoFile);
-        photoURL = await getDownloadURL(refPath);
+        const formData = new FormData();
+        formData.append("file", photoFile);
+        try {
+          const res = await fetch("/upload-avatar", {
+            method: "POST",
+            body: formData
+          });
+          const data = await res.json();
+          if (res.ok) photoURL = data.url;
+        } catch (err) {
+          console.error("Error uploadando avatar:", err);
+        }
       }
 
       await updateProfile(fbUser, {
@@ -591,9 +599,18 @@ export default function Formulario() {
 
         let photoURL = null;
         if (photoFile) {
-          const refPath = ref(storage, `avatars/${cred.user.uid}`);
-          await uploadBytes(refPath, photoFile);
-          photoURL = await getDownloadURL(refPath);
+          const formData = new FormData();
+          formData.append("file", photoFile);
+          try {
+            const res = await fetch("/upload-avatar", {
+              method: "POST",
+              body: formData
+            });
+            const data = await res.json();
+            if (res.ok) photoURL = data.url;
+          } catch (err) {
+            console.error("Error uploadando avatar:", err);
+          }
         }
 
         await updateProfile(cred.user, {
