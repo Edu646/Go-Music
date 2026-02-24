@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { auth, googleProvider, storage } from "./firebaseconfig";
+import { auth, googleProvider } from "./firebaseconfig";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -10,7 +10,6 @@ import {
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import "./formulario.css";
 
 /* ==========================================================================================
@@ -327,6 +326,118 @@ function SongActions({ song, playlists, user, refreshPlaylists }) {
 }
 
 /* ==========================================================================================
+  EDITOR DE PERFIL - CAMBIAR NOMBRE E IMAGEN
+========================================================================================== */
+function ProfileEditor({ user, setUser, setMessage }) {
+  const [editing, setEditing] = useState(false);
+  const [displayName, setDisplayName] = useState(user.displayName || "");
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(user.avatar);
+  const [saving, setSaving] = useState(false);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPhotoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSave = async () => {
+    const fbUser = auth.currentUser;
+    if (!fbUser) return;
+
+    setSaving(true);
+    setMessage("");
+
+    try {
+      let photoURL = user.avatar;
+
+      if (photoFile) {
+        const uploadFormData = new FormData();
+        uploadFormData.append("file", photoFile);
+        try {
+          const res = await fetch("/upload-avatar", {
+            method: "POST",
+            body: uploadFormData
+          });
+          const data = await res.json();
+          if (res.ok && data.url) {
+            photoURL = data.url;
+          } else {
+            console.error("Error en respuesta:", data);
+            setMessage("Error al subir imagen");
+          }
+        } catch (err) {
+          console.error("Error uploadando avatar:", err);
+          setMessage("Error al subir imagen");
+        }
+      }
+
+      await updateProfile(fbUser, {
+        displayName: displayName?.trim() || user.username,
+        photoURL: photoURL || null,
+      });
+
+      const updated = {
+        ...user,
+        displayName: displayName?.trim() || user.username,
+        avatar: photoURL || user.avatar,
+      };
+
+      setUser(updated);
+      localStorage.setItem("gomusic_user", JSON.stringify(updated));
+      setMessage("Perfil actualizado ✔");
+      setEditing(false);
+      setPhotoFile(null);
+      setPhotoPreview(updated.avatar);
+    } catch (err) {
+      console.error("Error actualizando perfil:", err);
+      setMessage(`Error: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="profile-editor">
+      <button className="btn-action" onClick={() => setEditing(!editing)}>
+        {editing ? "Cancelar" : "✏️ Editar perfil"}
+      </button>
+
+      {editing && (
+        <div className="profile-editor-box">
+          <div className="profile-preview">
+            <img src={photoPreview} alt="Preview" className="avatar-preview" />
+          </div>
+
+          <input
+            type="text"
+            placeholder="Nombre de perfil"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+          />
+
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+          />
+
+          <button onClick={handleSave} disabled={saving}>
+            {saving ? "Guardando..." : "Guardar cambios"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ==========================================================================================
   LISTA DE CANCIONES
 ========================================================================================== */
 function SongList({ songs, search, setSearch, refreshSongs, user, playlists, refreshPlaylists }) {
@@ -449,14 +560,26 @@ export default function Formulario() {
 
         let photoURL = null;
         if (photoFile) {
-          const refPath = ref(storage, `avatars/${cred.user.uid}`);
-          await uploadBytes(refPath, photoFile);
-          photoURL = await getDownloadURL(refPath);
+          const uploadFormData = new FormData();
+          uploadFormData.append("file", photoFile);
+          try {
+            const res = await fetch("/upload-avatar", {
+              method: "POST",
+              body: uploadFormData
+            });
+            const data = await res.json();
+            if (res.ok && data.url) {
+              photoURL = data.url;
+            }
+          } catch (err) {
+            console.error("Error uploadando avatar:", err);
+          }
         }
 
         await updateProfile(cred.user, { displayName: formData.username, photoURL });
         setUser({ 
-          username: formData.username, 
+          username: cred.user.email.split("@")[0],
+          displayName: formData.username,
           email: cred.user.email, 
           avatar: photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png" 
         });
@@ -561,10 +684,13 @@ export default function Formulario() {
         <>
           <div className="user-info-box">
             <img src={user.avatar} alt="Avatar" className="avatar-img" />
-            <h3>{user.username}</h3>
+            <h3>{user.displayName || user.username}</h3>
             <p>{user.email}</p>
             <button onClick={handleLogout}>Cerrar sesión</button>
+            <ProfileEditor user={user} setUser={setUser} setMessage={setMessage} />
           </div>
+
+          {message && <p className="message">{message}</p>}
 
           <FormularioSubida user={user} refreshSongs={fetchSongs} />
 
@@ -575,6 +701,13 @@ export default function Formulario() {
             onClick={() => setShowPlaylistCreator(!showPlaylistCreator)}
           >
             {showPlaylistCreator ? "Ocultar Creador" : "Crear Nueva Playlist"}
+          </button>
+
+          <button 
+            className="btn-playlist-toggle"
+            onClick={() => setShowPlaylistCreator(!showPlaylistCreator)}
+          >
+            {showPlaylistCreator ? "Ocultar Creador" : "➕ Crear Nueva Playlist"}
           </button>
 
           {showPlaylistCreator && <PlaylistCreator user={user} refreshPlaylists={fetchPlaylists} />}
@@ -590,7 +723,6 @@ export default function Formulario() {
                     <p>{p.songs?.length || 0} canciones</p>
                     
                     <PlaylistShare playlist={p} user={user} />
-                    <PlaylistCreator user={user} refreshPlaylists={fetchPlaylists} playlist={p} />
                   </div>
                 ))}
               </div>

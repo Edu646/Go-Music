@@ -799,6 +799,99 @@ button:not([class]):hover {
 }
 
 /* ==========================================================================================
+   PROFILE EDITOR
+========================================================================================== */
+.profile-editor {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.profile-editor .btn-action {
+  width: fit-content;
+  background: var(--primary);
+  color: white;
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.3s;
+}
+
+.profile-editor .btn-action:hover {
+  background: var(--primary-light);
+  transform: translateY(-2px);
+}
+
+.profile-editor-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  animation: slideInDown 0.3s var(--transition-base);
+}
+
+.profile-preview {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-2);
+}
+
+.avatar-preview {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--primary);
+  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+}
+
+.profile-editor-box input[type="text"],
+.profile-editor-box input[type="file"] {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  transition: all 0.3s;
+}
+
+.profile-editor-box input[type="text"]:focus,
+.profile-editor-box input[type="file"]:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--primary-alpha-10);
+}
+
+.profile-editor-box button {
+  background: var(--primary);
+  color: white;
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: var(--font-weight-medium);
+  transition: all 0.3s;
+}
+
+.profile-editor-box button:hover:not(:disabled) {
+  background: var(--primary-light);
+  transform: translateY(-2px);
+}
+
+.profile-editor-box button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================================
    RESPONSIVE DESIGN (extra)
 ========================================================================================== */
 @media (max-width: 1024px) {
