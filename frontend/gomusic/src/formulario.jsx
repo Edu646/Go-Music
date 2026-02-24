@@ -415,9 +415,15 @@ function ProfileEditor({ user, setUser, setMessage }) {
             body: formData
           });
           const data = await res.json();
-          if (res.ok) photoURL = data.url;
+          if (res.ok && data.url) {
+            photoURL = data.url;
+          } else {
+            console.error("Error en respuesta:", data);
+            setMessage("Error al subir avatar: " + (data.error || "Error desconocido"));
+          }
         } catch (err) {
           console.error("Error uploadando avatar:", err);
+          setMessage("Error al subir avatar");
         }
       }
 
@@ -599,15 +605,19 @@ export default function Formulario() {
 
         let photoURL = null;
         if (photoFile) {
-          const formData = new FormData();
-          formData.append("file", photoFile);
+          const uploadFormData = new FormData();
+          uploadFormData.append("file", photoFile);
           try {
             const res = await fetch("/upload-avatar", {
               method: "POST",
-              body: formData
+              body: uploadFormData
             });
             const data = await res.json();
-            if (res.ok) photoURL = data.url;
+            if (res.ok && data.url) {
+              photoURL = data.url;
+            } else {
+              console.error("Error en respuesta:", data);
+            }
           } catch (err) {
             console.error("Error uploadando avatar:", err);
           }
