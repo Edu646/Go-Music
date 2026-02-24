@@ -349,7 +349,10 @@ function ProfileEditor({ user, setUser, setMessage }) {
 
   const handleSave = async () => {
     const fbUser = auth.currentUser;
-    if (!fbUser) return;
+    if (!fbUser) {
+      setMessage("No hay usuario autenticado");
+      return;
+    }
 
     setSaving(true);
     setMessage("");
@@ -361,20 +364,37 @@ function ProfileEditor({ user, setUser, setMessage }) {
         const uploadFormData = new FormData();
         uploadFormData.append("file", photoFile);
         try {
+          console.log("Subiendo archivo a /upload-avatar...");
           const res = await fetch("/upload-avatar", {
             method: "POST",
             body: uploadFormData
           });
+          
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error("Error response:", res.status, errorText);
+            setMessage("Error al subir imagen: " + res.status);
+            setSaving(false);
+            return;
+          }
+          
           const data = await res.json();
-          if (res.ok && data.url) {
+          console.log("Respuesta del servidor:", data);
+          
+          if (data.url) {
             photoURL = data.url;
+            console.log("URL nueva:", photoURL);
           } else {
-            console.error("Error en respuesta:", data);
-            setMessage("Error al subir imagen");
+            console.error("No hay URL en respuesta:", data);
+            setMessage("Error: No se recibió URL de imagen");
+            setSaving(false);
+            return;
           }
         } catch (err) {
           console.error("Error uploadando avatar:", err);
-          setMessage("Error al subir imagen");
+          setMessage("Error de conexión al subir imagen");
+          setSaving(false);
+          return;
         }
       }
 
@@ -386,15 +406,15 @@ function ProfileEditor({ user, setUser, setMessage }) {
       const updated = {
         ...user,
         displayName: displayName?.trim() || user.username,
-        avatar: photoURL || user.avatar,
+        avatar: photoURL,
       };
 
       setUser(updated);
       localStorage.setItem("gomusic_user", JSON.stringify(updated));
+      setPhotoPreview(photoURL);
       setMessage("Perfil actualizado ✔");
       setEditing(false);
       setPhotoFile(null);
-      setPhotoPreview(updated.avatar);
     } catch (err) {
       console.error("Error actualizando perfil:", err);
       setMessage(`Error: ${err.message}`);
@@ -695,13 +715,6 @@ export default function Formulario() {
           <FormularioSubida user={user} refreshSongs={fetchSongs} />
 
           <ShareAcceptor user={user} refreshPlaylists={fetchPlaylists} />
-
-          <button 
-            className="btn-playlist-toggle"
-            onClick={() => setShowPlaylistCreator(!showPlaylistCreator)}
-          >
-            {showPlaylistCreator ? "Ocultar Creador" : "Crear Nueva Playlist"}
-          </button>
 
           <button 
             className="btn-playlist-toggle"
