@@ -184,7 +184,8 @@ function PlaylistShare({ playlist, user }) {
     }
   };
 
-  if (playlist.owner !== user.username) return null;
+  // Solo mostrar si es dueño Y si la playlist es PRIVADA
+  if (playlist.owner !== user.username || playlist.isPublic) return null;
 
   return (
     <div className="playlist-share">
@@ -201,11 +202,9 @@ function PlaylistShare({ playlist, user }) {
             onClick={(e) => e.target.select()}
           />
           <button onClick={copyLink}>📋 Copiar</button>
-          {!playlist.isPublic && (
-            <button onClick={regenerateToken} title="Invalida el link anterior">
-              🔄 Nuevo Link
-            </button>
-          )}
+          <button onClick={regenerateToken} title="Invalida el link anterior">
+            🔄 Nuevo Link
+          </button>
         </div>
       )}
       {msg && <p className="share-message">{msg}</p>}
