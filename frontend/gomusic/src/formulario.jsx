@@ -345,6 +345,12 @@ function ProfileEditor({ user, setUser, setMessage }) {
   const [photoPreview, setPhotoPreview] = useState(user.avatar);
   const [saving, setSaving] = useState(false);
 
+  // Actualizar cuando se abre el modal de edición o cuando el usuario cambia
+  useEffect(() => {
+    setDisplayName(user.displayName || "");
+    setPhotoPreview(user.avatar);
+  }, [user, editing]);
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -368,16 +374,19 @@ function ProfileEditor({ user, setUser, setMessage }) {
     setMessage("");
 
     try {
-      // Guardamos el displayName en Firebase (sin la imagen, porque base64 es muy largo)
+      // Si el usuario no escribió nada en el nombre, mantener el anterior
+      const finalDisplayName = displayName?.trim() ? displayName.trim() : (user.displayName || user.username);
+
+      // Guardamos el displayName en Firebase
       await updateProfile(fbUser, {
-        displayName: displayName?.trim() || user.username,
+        displayName: finalDisplayName,
         photoURL: null, // No guardamos foto en Firebase para evitar límite de tamaño
       });
 
       // Guardamos la imagen en localStorage (base64) y en el estado local
       const updated = {
         ...user,
-        displayName: displayName?.trim() || user.username,
+        displayName: finalDisplayName,
         avatar: photoFile ? photoPreview : user.avatar, // Usa preview si hay archivo, si no mantiene avatar anterior
       };
 
@@ -386,6 +395,8 @@ function ProfileEditor({ user, setUser, setMessage }) {
       setMessage("Perfil actualizado ✔");
       setEditing(false);
       setPhotoFile(null);
+      // Resetear displayName al original para ediciones futuras
+      setDisplayName(finalDisplayName);
     } catch (err) {
       console.error("Error actualizando perfil:", err);
       setMessage(`Error: ${err.message}`);
@@ -519,10 +530,15 @@ export default function Formulario() {
     // Listener de cambios de auth
     return onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
+        // Primero intentamos cargar desde localStorage (que tiene la imagen)
+        const savedUser = localStorage.getItem("gomusic_user");
+        const savedData = savedUser ? JSON.parse(savedUser) : null;
+        
         const u = {
           username: firebaseUser.displayName || firebaseUser.email.split("@")[0],
+          displayName: firebaseUser.displayName || firebaseUser.email.split("@")[0],
           email: firebaseUser.email,
-          avatar: firebaseUser.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png",
+          avatar: savedData?.avatar || firebaseUser.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png",
         };
         setUser(u);
         localStorage.setItem("gomusic_user", JSON.stringify(u));
