@@ -13,12 +13,82 @@ import {
 import "./formulario.css";
 
 /* ==========================================================================================
+  ACCIONES DE PLAYLIST (Cambiar privacidad, eliminar, compartir)
+========================================================================================== */
+function PlaylistActions({ playlist, user, refreshPlaylists }) {
+  const [msg, setMsg] = useState("");
+
+  const handleDelete = async () => {
+    if (!window.confirm(`¿Seguro que quieres borrar la playlist "${playlist.name}"?`)) return;
+    setMsg("");
+    try {
+      const res = await fetch(`/playlists/${playlist._id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: user.username }),
+      });
+
+      if (res.ok) {
+        setMsg(`Playlist "${playlist.name}" eliminada ✔️`);
+        refreshPlaylists();
+      } else {
+        const data = await res.json();
+        setMsg(data.error || "Error al borrar playlist");
+      }
+    } catch {
+      setMsg("Error de conexión al borrar");
+    }
+  };
+
+  const togglePrivacy = async () => {
+    try {
+      const res = await fetch(`/playlists/${playlist._id}/privacy`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          username: user.username, 
+          isPublic: !playlist.isPublic 
+        }),
+      });
+
+      if (res.ok) {
+        setMsg(`Privacidad cambiada a ${!playlist.isPublic ? 'pública' : 'privada'} ✔️`);
+        refreshPlaylists();
+      } else {
+        const data = await res.json();
+        setMsg(data.error || "Error cambiando privacidad");
+      }
+    } catch {
+      setMsg("Error de conexión");
+    }
+  };
+
+  if (playlist.owner !== user.username) return null;
+
+  return (
+    <div className="playlist-actions">
+      <button 
+        onClick={togglePrivacy} 
+        className="btn-privacy"
+        title="Cambiar privacidad"
+      >
+        {playlist.isPublic ? '🔒 Hacer Privada' : '🌍 Hacer Pública'}
+      </button>
+      <button onClick={handleDelete} className="btn-delete">
+        🗑️ Eliminar
+      </button>
+      {msg && <p className="action-message">{msg}</p>}
+    </div>
+  );
+}
+
+/* ==========================================================================================
   COMPONENTE PARA CREAR PLAYLISTS CON PRIVACIDAD
 ========================================================================================== */
-function PlaylistCreator({ user, refreshPlaylists, playlist }) {
-  const [name, setName] = useState(playlist ? playlist.name : "");
+function PlaylistCreator({ user, refreshPlaylists }) {
+  const [name, setName] = useState("");
   const [image, setImage] = useState(null);
-  const [isPublic, setIsPublic] = useState(playlist ? playlist.isPublic : true);
+  const [isPublic, setIsPublic] = useState(true);
   const [msg, setMsg] = useState("");
 
   const handleCreate = async (e) => {
@@ -48,95 +118,33 @@ function PlaylistCreator({ user, refreshPlaylists, playlist }) {
     }
   };
 
-  const handleDelete = async (p) => {
-    if (!window.confirm(`¿Seguro que quieres borrar la playlist "${p.name}"?`)) return;
-    setMsg("");
-    try {
-      const res = await fetch(`/playlists/${p._id}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: user.username }),
-      });
-
-      if (res.ok) {
-        setMsg(`Playlist "${p.name}" eliminada ✔️`);
-        refreshPlaylists();
-      } else {
-        const data = await res.json();
-        setMsg(data.error || "Error al borrar playlist");
-      }
-    } catch {
-      setMsg("Error de conexión al borrar");
-    }
-  };
-
-  const togglePrivacy = async (p) => {
-    try {
-      const res = await fetch(`/playlists/${p._id}/privacy`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          username: user.username, 
-          isPublic: !p.isPublic 
-        }),
-      });
-
-      if (res.ok) {
-        setMsg(`Privacidad cambiada a ${!p.isPublic ? 'pública' : 'privada'} ✔️`);
-        refreshPlaylists();
-      } else {
-        const data = await res.json();
-        setMsg(data.error || "Error cambiando privacidad");
-      }
-    } catch {
-      setMsg("Error de conexión");
-    }
-  };
-
   return (
-    <>
-      <div className="playlist-creator">
-        <h3>Crear Playlist</h3>
+    <div className="playlist-creator">
+      <h3>Crear Playlist</h3>
+      <input 
+        type="text" 
+        placeholder="Nombre" 
+        value={name} 
+        onChange={(e) => setName(e.target.value)} 
+      />
+      <input 
+        type="file" 
+        accept="image/*" 
+        onChange={(e) => setImage(e.target.files[0])} 
+      />
+      
+      <label className="privacy-toggle">
         <input 
-          type="text" 
-          placeholder="Nombre" 
-          value={name} 
-          onChange={(e) => setName(e.target.value)} 
+          type="checkbox" 
+          checked={isPublic} 
+          onChange={(e) => setIsPublic(e.target.checked)}
         />
-        <input 
-          type="file" 
-          accept="image/*" 
-          onChange={(e) => setImage(e.target.files[0])} 
-        />
-        
-        <label className="privacy-toggle">
-          <input 
-            type="checkbox" 
-            checked={isPublic} 
-            onChange={(e) => setIsPublic(e.target.checked)}
-          />
-          <span>{isPublic ? '🌍 Pública' : '🔒 Privada'}</span>
-        </label>
+        <span>{isPublic ? '🌍 Pública' : '🔒 Privada'}</span>
+      </label>
 
-        <button onClick={handleCreate}>Crear</button>
-        {msg && <p>{msg}</p>}
-      </div>
-
-      {playlist && (
-        <div className="playlist-actions">
-          <button 
-            onClick={() => togglePrivacy(playlist)} 
-            className="btn-privacy"
-            title="Cambiar privacidad"
-          >
-            {playlist.isPublic ? '🔒 Hacer Privada' : '🌍 Hacer Pública'}
-          </button>
-          <button onClick={() => handleDelete(playlist)} className="btn-delete">
-            🗑️ Eliminar
-          </button>
-        </div>
-      )}
-    </>
+      <button onClick={handleCreate}>Crear</button>
+      {msg && <p>{msg}</p>}
+    </div>
   );
 }
 
@@ -358,45 +366,8 @@ function ProfileEditor({ user, setUser, setMessage }) {
     setMessage("");
 
     try {
-      let photoURL = user.avatar;
-
-      if (photoFile) {
-        const uploadFormData = new FormData();
-        uploadFormData.append("file", photoFile);
-        try {
-          console.log("Subiendo archivo a /upload-avatar...");
-          const res = await fetch("/upload-avatar", {
-            method: "POST",
-            body: uploadFormData
-          });
-          
-          if (!res.ok) {
-            const errorText = await res.text();
-            console.error("Error response:", res.status, errorText);
-            setMessage("Error al subir imagen: " + res.status);
-            setSaving(false);
-            return;
-          }
-          
-          const data = await res.json();
-          console.log("Respuesta del servidor:", data);
-          
-          if (data.url) {
-            photoURL = data.url;
-            console.log("URL nueva:", photoURL);
-          } else {
-            console.error("No hay URL en respuesta:", data);
-            setMessage("Error: No se recibió URL de imagen");
-            setSaving(false);
-            return;
-          }
-        } catch (err) {
-          console.error("Error uploadando avatar:", err);
-          setMessage("Error de conexión al subir imagen");
-          setSaving(false);
-          return;
-        }
-      }
+      // Si hay archivo, usamos el preview que ya está en base64
+      let photoURL = photoFile ? photoPreview : user.avatar;
 
       await updateProfile(fbUser, {
         displayName: displayName?.trim() || user.username,
@@ -411,7 +382,6 @@ function ProfileEditor({ user, setUser, setMessage }) {
 
       setUser(updated);
       localStorage.setItem("gomusic_user", JSON.stringify(updated));
-      setPhotoPreview(photoURL);
       setMessage("Perfil actualizado ✔");
       setEditing(false);
       setPhotoFile(null);
@@ -736,6 +706,7 @@ export default function Formulario() {
                     <p>{p.songs?.length || 0} canciones</p>
                     
                     <PlaylistShare playlist={p} user={user} />
+                    <PlaylistActions playlist={p} user={user} refreshPlaylists={fetchPlaylists} />
                   </div>
                 ))}
               </div>
