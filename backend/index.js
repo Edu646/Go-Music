@@ -68,9 +68,9 @@ const PlaylistSchema = new mongoose.Schema({
   owner: String,
   image: String,
   songs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Song" }],
-  isPublic: { type: Boolean, default: true }, // Nueva propiedad
-  shareToken: { type: String, unique: true, sparse: true }, // Token para compartir privadas
-  sharedWith: [String], // Array de usernames que tienen acceso
+  isPublic: { type: Boolean, default: true },
+  shareToken: { type: String, unique: true, sparse: true },
+  sharedWith: [String],
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -87,7 +87,7 @@ cloudinary.config({
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-// --- SUBIR AUDIO A CLOUDINARY ---
+// --- SUBIR A CLOUDINARY ---
 const uploadToCloudinary = (buffer, folder = "gomusic_uploads", resource_type = "auto") => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream({ folder, resource_type }, (err, result) =>
@@ -143,7 +143,6 @@ app.delete("/songs/:id", async (req, res) => {
 
     console.log("✅ Canción encontrada:", song.name);
 
-    // Eliminar de Cloudinary si tiene public_id
     if (song.public_id) {
       console.log("☁️ Eliminando de Cloudinary:", song.public_id);
       try {
@@ -154,7 +153,6 @@ app.delete("/songs/:id", async (req, res) => {
       }
     }
 
-    // Eliminar de MongoDB
     await Song.findByIdAndDelete(req.params.id);
     console.log("✅ Canción eliminada de MongoDB");
 
@@ -169,10 +167,10 @@ app.delete("/songs/:id", async (req, res) => {
 });
 
 // -----------------
-// RUTAS PLAYLIST (MODIFICADAS PARA SEGURIDAD)
+// RUTAS PLAYLIST
 // -----------------
 
-// 1. Crear playlist (con opción de privacidad)
+// 1. Crear playlist
 app.post("/playlists", upload.single("image"), async (req, res) => {
   try {
     const { name, owner, isPublic } = req.body;
@@ -184,7 +182,6 @@ app.post("/playlists", upload.single("image"), async (req, res) => {
       imageUrl = result.secure_url;
     }
 
-    // Generar token único para compartir si es privada
     const shareToken = isPublic === "false" ? crypto.randomBytes(16).toString("hex") : null;
 
     const playlist = await Playlist.create({
@@ -192,7 +189,7 @@ app.post("/playlists", upload.single("image"), async (req, res) => {
       owner,
       image: imageUrl,
       songs: [],
-      isPublic: isPublic !== "false", // Por defecto true
+      isPublic: isPublic !== "false",
       shareToken,
       sharedWith: [],
     });
@@ -203,7 +200,7 @@ app.post("/playlists", upload.single("image"), async (req, res) => {
   }
 });
 
-// 2. Obtener playlists PÚBLICAS (para explorar)
+// 2. Obtener playlists públicas
 app.get("/playlists", async (req, res) => {
   try {
     const playlists = await Playlist.find({ isPublic: true }).populate("songs").sort({ createdAt: -1 });
@@ -218,13 +215,11 @@ app.get("/playlists/:username", async (req, res) => {
   try {
     const { username } = req.params;
 
-    // Playlists propias (públicas y privadas)
     const ownPlaylists = await Playlist.find({ owner: username }).populate("songs");
 
-    // Playlists compartidas con el usuario
     const sharedPlaylists = await Playlist.find({
       sharedWith: username,
-      owner: { $ne: username }, // No incluir las propias
+      owner: { $ne: username },
     }).populate("songs");
 
     res.json({
@@ -237,7 +232,7 @@ app.get("/playlists/:username", async (req, res) => {
   }
 });
 
-// 4. 🆕 Aceptar playlist compartida por token
+// 4. Aceptar playlist compartida por token
 app.post("/playlists/accept-share", async (req, res) => {
   try {
     const { token, username } = req.body;
@@ -252,17 +247,14 @@ app.post("/playlists/accept-share", async (req, res) => {
       return res.status(404).json({ error: "Link inválido o expirado" });
     }
 
-    // Verificar que no sea el dueño
     if (playlist.owner === username) {
       return res.status(400).json({ error: "Ya eres el dueño de esta playlist" });
     }
 
-    // Verificar si ya está compartida
     if (playlist.sharedWith.includes(username)) {
       return res.status(400).json({ error: "Ya tienes acceso a esta playlist" });
     }
 
-    // Agregar usuario a la lista de compartidos
     playlist.sharedWith.push(username);
     await playlist.save();
 
@@ -274,7 +266,7 @@ app.post("/playlists/accept-share", async (req, res) => {
   }
 });
 
-// 5. 🆕 Generar/regenerar token de compartir
+// 5. Regenerar token
 app.post("/playlists/:id/regenerate-token", async (req, res) => {
   try {
     const { id } = req.params;
@@ -283,12 +275,10 @@ app.post("/playlists/:id/regenerate-token", async (req, res) => {
     const playlist = await Playlist.findById(id);
     if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
 
-    // Solo el dueño puede regenerar el token
     if (playlist.owner !== username) {
       return res.status(403).json({ error: "Solo el dueño puede hacer esto" });
     }
 
-    // Generar nuevo token
     playlist.shareToken = crypto.randomBytes(16).toString("hex");
     await playlist.save();
 
@@ -298,7 +288,7 @@ app.post("/playlists/:id/regenerate-token", async (req, res) => {
   }
 });
 
-// 6. 🆕 Cambiar privacidad de playlist
+// 6. Cambiar privacidad
 app.patch("/playlists/:id/privacy", async (req, res) => {
   try {
     const { id } = req.params;
@@ -313,7 +303,6 @@ app.patch("/playlists/:id/privacy", async (req, res) => {
 
     playlist.isPublic = isPublic;
 
-    // Si se hace privada y no tiene token, generar uno
     if (!isPublic && !playlist.shareToken) {
       playlist.shareToken = crypto.randomBytes(16).toString("hex");
     }
@@ -325,7 +314,7 @@ app.patch("/playlists/:id/privacy", async (req, res) => {
   }
 });
 
-// 7. Modificar ruta de agregar canción (validar permisos)
+// 7. Agregar canción (solo dueño)
 app.post("/playlists/:id/add", async (req, res) => {
   try {
     const { id } = req.params;
@@ -336,7 +325,6 @@ app.post("/playlists/:id/add", async (req, res) => {
     const playlist = await Playlist.findById(id);
     if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
 
-    // Solo el DUEÑO puede editar (usuarios con acceso compartido NO pueden)
     if (playlist.owner !== username) {
       return res.status(403).json({ error: "Solo el dueño puede editar esta playlist" });
     }
@@ -355,7 +343,38 @@ app.post("/playlists/:id/add", async (req, res) => {
   }
 });
 
-// 8. Modificar ruta de eliminar playlist
+/* ==========================================================================================
+   ✅ 7b. ACTUALIZAR PLAYLIST (esto es lo que faltaba para que "Quitar" funcione)
+   Tu frontend hace PUT /playlists/:id con { songs: [...], username }
+========================================================================================== */
+app.put("/playlists/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { songs, username } = req.body;
+
+    if (!username) return res.status(400).json({ error: "Falta username" });
+    if (!Array.isArray(songs)) return res.status(400).json({ error: "songs debe ser un array" });
+
+    const playlist = await Playlist.findById(id);
+    if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
+
+    if (playlist.owner !== username) {
+      return res.status(403).json({ error: "Solo el dueño puede editar esta playlist" });
+    }
+
+    // Guardamos solo IDs (por si llegan objetos)
+    playlist.songs = songs.map((s) => s?._id || s);
+    await playlist.save();
+
+    const updated = await Playlist.findById(id).populate("songs");
+    res.json(updated);
+  } catch (err) {
+    console.error("Error actualizando playlist:", err);
+    res.status(500).json({ error: "Error actualizando playlist" });
+  }
+});
+
+// 8. Eliminar playlist (solo dueño)
 app.delete("/playlists/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -375,7 +394,7 @@ app.delete("/playlists/:id", async (req, res) => {
   }
 });
 
-// 9. 🆕 Quitar playlist compartida de la biblioteca del usuario (NO borra la playlist)
+// 9. Quitar playlist compartida de la biblioteca
 app.delete("/playlists/:id/remove-from-library", async (req, res) => {
   try {
     const { id } = req.params;
@@ -386,7 +405,6 @@ app.delete("/playlists/:id/remove-from-library", async (req, res) => {
     const playlist = await Playlist.findById(id);
     if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
 
-    // El dueño no debe quitar su propia playlist con esta acción
     if (playlist.owner === username) {
       return res.status(400).json({ error: "No puedes quitar tu propia playlist de tu biblioteca" });
     }
@@ -447,7 +465,6 @@ app.delete("/users/:username", async (req, res) => {
   try {
     const { username } = req.params;
 
-    // Eliminar todas las referencias del usuario
     await Song.deleteMany({ uploadedBy: username });
     await Message.deleteMany({ sender: username });
     await PrivateMessage.deleteMany({ $or: [{ sender: username }, { recipient: username }] });
@@ -460,7 +477,7 @@ app.delete("/users/:username", async (req, res) => {
 });
 
 // -----------------
-// RUTAS CHAT (GLOBAL Y PRIVADO)
+// RUTAS CHAT
 // -----------------
 app.get("/messages", async (req, res) => {
   try {
