@@ -24,9 +24,10 @@ if (!process.env.MONGO_URI || !process.env.CLOUDINARY_CLOUD_NAME) {
 }
 
 // --- CONEXIÓN MONGODB ---
-mongoose.connect(process.env.MONGO_URI)
+mongoose
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Conectado a MongoDB Atlas"))
-  .catch(err => {
+  .catch((err) => {
     console.error("❌ Error conectando a MongoDB:", err);
     process.exit(1);
   });
@@ -41,14 +42,14 @@ const SongSchema = new mongoose.Schema({
   uploadedBy: String,
   audio: String,
   public_id: String,
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
 });
 const Song = mongoose.model("Song", SongSchema);
 
 const MessageSchema = new mongoose.Schema({
   sender: String,
   text: String,
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
 });
 const Message = mongoose.model("Message", MessageSchema);
 
@@ -57,7 +58,7 @@ const PrivateMessageSchema = new mongoose.Schema({
   recipient: String,
   text: String,
   read: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
 });
 const PrivateMessage = mongoose.model("PrivateMessage", PrivateMessageSchema);
 
@@ -70,7 +71,7 @@ const PlaylistSchema = new mongoose.Schema({
   isPublic: { type: Boolean, default: true }, // Nueva propiedad
   shareToken: { type: String, unique: true, sparse: true }, // Token para compartir privadas
   sharedWith: [String], // Array de usernames que tienen acceso
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
 });
 
 const Playlist = mongoose.model("Playlist", PlaylistSchema);
@@ -79,7 +80,7 @@ const Playlist = mongoose.model("Playlist", PlaylistSchema);
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 // --- MULTER ---
@@ -89,9 +90,8 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 // --- SUBIR AUDIO A CLOUDINARY ---
 const uploadToCloudinary = (buffer, folder = "gomusic_uploads", resource_type = "auto") => {
   return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      { folder, resource_type },
-      (err, result) => (err ? reject(err) : resolve(result))
+    const uploadStream = cloudinary.uploader.upload_stream({ folder, resource_type }, (err, result) =>
+      err ? reject(err) : resolve(result)
     );
     streamifier.createReadStream(buffer).pipe(uploadStream);
   });
@@ -112,7 +112,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
       artist: artist || "Desconocido",
       uploadedBy: username || "Anónimo",
       audio: result.secure_url,
-      public_id: result.public_id
+      public_id: result.public_id,
     });
 
     res.json(newSong);
@@ -130,14 +130,12 @@ app.get("/songs", async (req, res) => {
   }
 });
 
-
-
 app.delete("/songs/:id", async (req, res) => {
   try {
     console.log("🗑️ Intentando eliminar canción con ID:", req.params.id);
-    
+
     const song = await Song.findById(req.params.id);
-    
+
     if (!song) {
       console.log("❌ Canción no encontrada");
       return res.status(404).json({ error: "No encontrada" });
@@ -153,20 +151,19 @@ app.delete("/songs/:id", async (req, res) => {
         console.log("✅ Eliminado de Cloudinary");
       } catch (cloudErr) {
         console.error("⚠️ Error eliminando de Cloudinary (continuando):", cloudErr);
-        // No detenemos el proceso si falla Cloudinary
       }
     }
 
     // Eliminar de MongoDB
     await Song.findByIdAndDelete(req.params.id);
     console.log("✅ Canción eliminada de MongoDB");
-    
+
     res.json({ message: "Canción eliminada" });
   } catch (err) {
     console.error("❌ ERROR COMPLETO:", err);
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Error eliminando canción",
-      details: err.message 
+      details: err.message,
     });
   }
 });
@@ -174,6 +171,7 @@ app.delete("/songs/:id", async (req, res) => {
 // -----------------
 // RUTAS PLAYLIST (MODIFICADAS PARA SEGURIDAD)
 // -----------------
+
 // 1. Crear playlist (con opción de privacidad)
 app.post("/playlists", upload.single("image"), async (req, res) => {
   try {
@@ -189,14 +187,14 @@ app.post("/playlists", upload.single("image"), async (req, res) => {
     // Generar token único para compartir si es privada
     const shareToken = isPublic === "false" ? crypto.randomBytes(16).toString("hex") : null;
 
-    const playlist = await Playlist.create({ 
-      name, 
-      owner, 
-      image: imageUrl, 
+    const playlist = await Playlist.create({
+      name,
+      owner,
+      image: imageUrl,
       songs: [],
       isPublic: isPublic !== "false", // Por defecto true
       shareToken,
-      sharedWith: []
+      sharedWith: [],
     });
     res.json(playlist);
   } catch (err) {
@@ -208,9 +206,7 @@ app.post("/playlists", upload.single("image"), async (req, res) => {
 // 2. Obtener playlists PÚBLICAS (para explorar)
 app.get("/playlists", async (req, res) => {
   try {
-    const playlists = await Playlist.find({ isPublic: true })
-      .populate("songs")
-      .sort({ createdAt: -1 });
+    const playlists = await Playlist.find({ isPublic: true }).populate("songs").sort({ createdAt: -1 });
     res.json(playlists);
   } catch (err) {
     res.status(500).json({ error: "Error obteniendo playlists públicas" });
@@ -221,19 +217,19 @@ app.get("/playlists", async (req, res) => {
 app.get("/playlists/:username", async (req, res) => {
   try {
     const { username } = req.params;
-    
+
     // Playlists propias (públicas y privadas)
     const ownPlaylists = await Playlist.find({ owner: username }).populate("songs");
-    
+
     // Playlists compartidas con el usuario
-    const sharedPlaylists = await Playlist.find({ 
+    const sharedPlaylists = await Playlist.find({
       sharedWith: username,
-      owner: { $ne: username } // No incluir las propias
+      owner: { $ne: username }, // No incluir las propias
     }).populate("songs");
-    
+
     res.json({
       own: ownPlaylists,
-      shared: sharedPlaylists
+      shared: sharedPlaylists,
     });
   } catch (err) {
     console.error("Error obteniendo playlists:", err);
@@ -245,13 +241,13 @@ app.get("/playlists/:username", async (req, res) => {
 app.post("/playlists/accept-share", async (req, res) => {
   try {
     const { token, username } = req.body;
-    
+
     if (!token || !username) {
       return res.status(400).json({ error: "Faltan datos" });
     }
 
     const playlist = await Playlist.findOne({ shareToken: token });
-    
+
     if (!playlist) {
       return res.status(404).json({ error: "Link inválido o expirado" });
     }
@@ -316,7 +312,7 @@ app.patch("/playlists/:id/privacy", async (req, res) => {
     }
 
     playlist.isPublic = isPublic;
-    
+
     // Si se hace privada y no tiene token, generar uno
     if (!isPublic && !playlist.shareToken) {
       playlist.shareToken = crypto.randomBytes(16).toString("hex");
@@ -351,7 +347,7 @@ app.post("/playlists/:id/add", async (req, res) => {
 
     playlist.songs.push(song._id || song.id);
     await playlist.save();
-    
+
     const updated = await Playlist.findById(id).populate("songs");
     res.json(updated);
   } catch (err) {
@@ -379,6 +375,39 @@ app.delete("/playlists/:id", async (req, res) => {
   }
 });
 
+// 9. 🆕 Quitar playlist compartida de la biblioteca del usuario (NO borra la playlist)
+app.delete("/playlists/:id/remove-from-library", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username } = req.body;
+
+    if (!username) return res.status(400).json({ error: "Falta username" });
+
+    const playlist = await Playlist.findById(id);
+    if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
+
+    // El dueño no debe quitar su propia playlist con esta acción
+    if (playlist.owner === username) {
+      return res.status(400).json({ error: "No puedes quitar tu propia playlist de tu biblioteca" });
+    }
+
+    if (!Array.isArray(playlist.sharedWith)) playlist.sharedWith = [];
+
+    const before = playlist.sharedWith.length;
+    playlist.sharedWith = playlist.sharedWith.filter((u) => u !== username);
+
+    const removed = playlist.sharedWith.length !== before;
+
+    if (removed) {
+      await playlist.save();
+    }
+
+    res.json({ ok: true, removed });
+  } catch (err) {
+    console.error("Error remove-from-library:", err);
+    res.status(500).json({ error: "Error quitando playlist compartida" });
+  }
+});
 
 // -----------------
 // RUTAS SEARCH Y USUARIOS
@@ -404,7 +433,9 @@ app.get("/users", async (req, res) => {
     const songUploaders = await Song.distinct("uploadedBy");
 
     let allUsers = [...privateSenders, ...privateRecipients, ...globalSenders, ...songUploaders];
-    allUsers = Array.from(new Set(allUsers)).filter(u => u && u.trim() && u !== "Anónimo" && u !== "Desconocido");
+    allUsers = Array.from(new Set(allUsers)).filter(
+      (u) => u && u.trim() && u !== "Anónimo" && u !== "Desconocido"
+    );
     res.json(allUsers);
   } catch (err) {
     console.error("Error obteniendo lista de usuarios:", err);
@@ -415,35 +446,42 @@ app.get("/users", async (req, res) => {
 app.delete("/users/:username", async (req, res) => {
   try {
     const { username } = req.params;
-    
+
     // Eliminar todas las referencias del usuario
     await Song.deleteMany({ uploadedBy: username });
     await Message.deleteMany({ sender: username });
-    await PrivateMessage.deleteMany({ 
-      $or: [{ sender: username }, { recipient: username }] 
-    });
+    await PrivateMessage.deleteMany({ $or: [{ sender: username }, { recipient: username }] });
     await Playlist.deleteMany({ owner: username });
-    
+
     res.json({ success: true, message: "Usuario eliminado" });
   } catch (err) {
     res.status(500).json({ error: "Error eliminando usuario" });
   }
 });
+
 // -----------------
 // RUTAS CHAT (GLOBAL Y PRIVADO)
 // -----------------
 app.get("/messages", async (req, res) => {
-  try { const msgs = await Message.find().sort({ createdAt: 1 }); res.json(msgs); }
-  catch (err) { res.status(500).json({ error: "Error obteniendo mensajes" }); }
+  try {
+    const msgs = await Message.find().sort({ createdAt: 1 });
+    res.json(msgs);
+  } catch (err) {
+    res.status(500).json({ error: "Error obteniendo mensajes" });
+  }
 });
 
 app.get("/private-messages", async (req, res) => {
   try {
     const { username } = req.query;
     if (!username) return res.status(400).json({ error: "Falta parámetro username" });
-    const msgs = await PrivateMessage.find({ $or: [{ sender: username }, { recipient: username }] }).sort({ createdAt: 1 });
+    const msgs = await PrivateMessage.find({
+      $or: [{ sender: username }, { recipient: username }],
+    }).sort({ createdAt: 1 });
     res.json(msgs);
-  } catch (err) { res.status(500).json({ error: "Error obteniendo mensajes privados" }); }
+  } catch (err) {
+    res.status(500).json({ error: "Error obteniendo mensajes privados" });
+  }
 });
 
 app.post("/private-messages/mark-read", async (req, res) => {
@@ -451,7 +489,9 @@ app.post("/private-messages/mark-read", async (req, res) => {
     const { username, sender } = req.body;
     await PrivateMessage.updateMany({ sender, recipient: username, read: false }, { read: true });
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: "Error marcando mensajes como leídos" }); }
+  } catch (err) {
+    res.status(500).json({ error: "Error marcando mensajes como leídos" });
+  }
 });
 
 // -----------------
@@ -461,24 +501,34 @@ let onlineUsers = {};
 io.on("connection", (socket) => {
   console.log("🟢 Usuario conectado:", socket.id);
 
-  socket.on("userOnline", username => {
+  socket.on("userOnline", (username) => {
     onlineUsers[username] = socket.id;
     socket.username = username;
     io.emit("onlineUsers", Object.keys(onlineUsers));
   });
 
   socket.on("sendMessage", async (data) => {
-    try { const message = await Message.create({ sender: data.sender, text: data.text }); io.emit("newMessage", message); }
-    catch (err) { console.error("Error guardando mensaje global:", err); }
+    try {
+      const message = await Message.create({ sender: data.sender, text: data.text });
+      io.emit("newMessage", message);
+    } catch (err) {
+      console.error("Error guardando mensaje global:", err);
+    }
   });
 
   socket.on("sendPrivateMessage", async (data) => {
     try {
-      const message = await PrivateMessage.create({ sender: data.sender, recipient: data.recipient, text: data.text });
+      const message = await PrivateMessage.create({
+        sender: data.sender,
+        recipient: data.recipient,
+        text: data.text,
+      });
       socket.emit("privateMessage", message);
       const recipientSocketId = onlineUsers[data.recipient];
       if (recipientSocketId) io.to(recipientSocketId).emit("privateMessage", message);
-    } catch (err) { console.error("Error guardando mensaje privado:", err); }
+    } catch (err) {
+      console.error("Error guardando mensaje privado:", err);
+    }
   });
 
   socket.on("disconnect", () => {
