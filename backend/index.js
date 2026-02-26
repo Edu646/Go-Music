@@ -511,6 +511,41 @@ app.post("/private-messages/mark-read", async (req, res) => {
   }
 });
 
+// 9b. Añadir playlist compartida a la biblioteca (desde playlists públicas)
+app.post("/playlists/:id/add-to-library", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username } = req.body;
+
+    if (!username) return res.status(400).json({ error: "Falta username" });
+
+    const playlist = await Playlist.findById(id);
+    if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
+
+    // No permitir que el dueño se la añada
+    if (playlist.owner === username) {
+      return res.status(200).json({ ok: true, already: true, reason: "owner" });
+    }
+
+    if (!Array.isArray(playlist.sharedWith)) playlist.sharedWith = [];
+
+    // Ya la tiene
+    if (playlist.sharedWith.includes(username)) {
+      return res.status(200).json({ ok: true, already: true });
+    }
+
+    playlist.sharedWith.push(username);
+    await playlist.save();
+
+    // Devolver también la playlist actualizada (opcional)
+    const updated = await Playlist.findById(id).populate("songs");
+    return res.json({ ok: true, added: true, playlist: updated });
+  } catch (err) {
+    console.error("Error add-to-library:", err);
+    res.status(500).json({ error: "Error añadiendo playlist a la biblioteca" });
+  }
+});
+
 // -----------------
 // CHAT EN TIEMPO REAL
 // -----------------
