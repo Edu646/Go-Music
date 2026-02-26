@@ -137,8 +137,8 @@ export default function UserPlaylists() {
       const updatedSongs = currentSongs.filter((s) => String(s._id) !== String(songId));
 
       const payload = {
-        username: user.username,                  // ✅ requerido por backend
-        songs: updatedSongs.map((s) => s._id),    // ✅ array de IDs
+        username: user.username,
+        songs: updatedSongs.map((s) => s._id),
       };
 
       const res = await fetch(`/playlists/${playlistId}`, {
@@ -301,7 +301,8 @@ export default function UserPlaylists() {
                   <button
                     onClick={() => {
                       setCurrentIndex(i);
-                      play(s);
+                      // ✅ AQUÍ LA CORRECCIÓN: pasar la cola + índice al player
+                      play(s, popupPlaylist.songs, i);
                     }}
                   >
                     Play
