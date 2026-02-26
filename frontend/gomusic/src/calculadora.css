@@ -1,18 +1,51 @@
 /* ===================================
+   VARIABLES GLOBALES
+   =================================== */
+:root {
+  --bg-gradient: linear-gradient(145deg, #1a1a1a 0%, #121212 100%);
+  --bg-card: #1e1e1e;
+  --bg-card-hover: #242424;
+  --bg-btn-dark: #2a2a2a;
+  --bg-btn-dark-hover: #3a3a3a;
+  
+  --primary-color: #1db954;
+  --primary-gradient: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+  
+  --text-main: #ffffff;
+  --text-muted: #b3b3b3;
+  --text-placeholder: #888888;
+  
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Reset básico para evitar desbordes */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* ===================================
    CONTENEDOR GENERAL
    =================================== */
 .search-container {
   max-width: 600px;
   margin: 80px auto;
   padding: 24px;
-  background: linear-gradient(145deg, #1a1a1a 0%, #121212 100%);
-  border-radius: 20px;
+  background: var(--bg-gradient);
+  border-radius: var(--radius-xl);
   box-shadow: 
     0 8px 32px rgba(0, 0, 0, 0.5),
-    0 2px 8px rgba(29, 185, 84, 0.1);
-  color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  transition: transform 0.3s ease;
+    0 2px 8px rgba(29, 185, 84, 0.05); /* Sombra verde más sutil */
+  color: var(--text-main);
+  font-family: var(--font-family);
+  transition: transform var(--transition-normal);
 }
 
 .search-container:hover {
@@ -27,7 +60,7 @@
   font-size: 1.8rem;
   font-weight: 700;
   margin-bottom: 24px;
-  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+  background: var(--primary-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -47,40 +80,41 @@
   flex: 1;
   padding: 12px 16px;
   font-size: 1rem;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border: 2px solid transparent;
   outline: none;
-  background: #1e1e1e;
-  color: #fff;
-  transition: all 0.3s ease;
+  background: var(--bg-card);
+  color: var(--text-main);
+  transition: border-color var(--transition-normal), background-color var(--transition-normal), box-shadow var(--transition-normal);
 }
 
-.search-box input:focus {
-  border-color: #1db954;
+.search-box input:focus,
+.search-box input:focus-visible {
+  border-color: var(--primary-color);
   background: #252525;
-  box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.1);
+  box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.15);
 }
 
 .search-box input::placeholder {
-  color: #888;
+  color: var(--text-placeholder);
 }
 
 .search-box button {
-  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
-  color: #fff;
+  background: var(--primary-gradient);
+  color: var(--text-main);
   border: none;
   padding: 12px 24px;
   font-size: 1rem;
   font-weight: 600;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.2);
 }
 
 .search-box button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(29, 185, 84, 0.4);
+  box-shadow: 0 6px 16px rgba(29, 185, 84, 0.4);
 }
 
 .search-box button:active {
@@ -100,19 +134,19 @@
    ITEM DE CANCIÓN
    =================================== */
 .song-item {
-  background: #1e1e1e;
+  background: var(--bg-card);
   padding: 16px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: all 0.3s ease;
   border: 1px solid transparent;
+  transition: transform var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .song-item:hover {
-  background: #242424;
-  border-color: #2a2a2a;
+  background: var(--bg-card-hover);
+  border-color: rgba(255, 255, 255, 0.05); /* Toque de cristal */
   transform: translateX(4px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
@@ -124,13 +158,13 @@
   font-size: 1rem;
   font-weight: 500;
   line-height: 1.5;
-  color: #fff;
+  color: var(--text-main);
 }
 
 .song-info .artist {
   display: block;
   font-size: 0.875rem;
-  color: #b3b3b3;
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -144,15 +178,15 @@
 }
 
 .song-actions button {
-  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+  background: var(--primary-gradient);
   border: none;
   padding: 8px 16px;
-  border-radius: 10px;
-  color: #fff;
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(29, 185, 84, 0.3);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(29, 185, 84, 0.2);
 }
 
 .song-actions button:hover {
@@ -169,23 +203,27 @@
    =================================== */
 .btn-download {
   padding: 8px 16px;
-  border-radius: 10px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  color: #fff !important;
+  border-radius: var(--radius-sm);
+  background: var(--bg-btn-dark);
+  border: 1px solid var(--bg-btn-dark-hover);
+  color: var(--text-main) !important;
   text-decoration: none !important;
   font-weight: 600;
-  transition: all 0.3s ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  transition: transform var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .btn-download:hover {
-  background: #3a3a3a;
-  border-color: #1db954;
-  box-shadow: 0 2px 8px rgba(29, 185, 84, 0.2);
+  background: var(--bg-btn-dark-hover);
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(29, 185, 84, 0.15);
   transform: translateY(-2px);
+}
+
+.btn-download:active {
+  transform: translateY(0);
 }
 
 /* ===================================
@@ -195,7 +233,7 @@
 .empty-state {
   text-align: center;
   padding: 40px 20px;
-  color: #888;
+  color: var(--text-placeholder);
   font-size: 0.95rem;
 }
 
@@ -219,16 +257,16 @@
 
 .results-list::-webkit-scrollbar-track {
   background: #1a1a1a;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
 }
 
 .results-list::-webkit-scrollbar-thumb {
-  background: #2a2a2a;
-  border-radius: 10px;
+  background: var(--bg-btn-dark);
+  border-radius: var(--radius-sm);
 }
 
 .results-list::-webkit-scrollbar-thumb:hover {
-  background: #3a3a3a;
+  background: var(--bg-btn-dark-hover);
 }
 
 /* ===================================
@@ -245,6 +283,7 @@
     margin-bottom: 20px;
   }
 }
+
 /* ===================================
    📱 RESPONSIVE - MÓVILES
    =================================== */
@@ -252,16 +291,16 @@
   .search-container {
     margin: 16px 8px;
     padding: 20px 16px;
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   }
   
   .search-container:hover {
-    transform: none; /* Desactiva hover en móvil */
+    transform: none;
   }
 
   .search-container h2 {
-    font-size: 1.6rem;
+    font-size: 1.5rem; /* Ligeramente más pequeño para móviles muy estrechos */
     margin-bottom: 20px;
     letter-spacing: -0.3px;
   }
@@ -275,18 +314,13 @@
   .search-box input {
     width: 100%;
     padding: 14px 16px;
-    font-size: 1rem;
-    border-radius: 12px;
-    -webkit-appearance: none; /* Elimina estilos iOS */
+    -webkit-appearance: none;
   }
   
   .search-box button {
     width: 100%;
     padding: 14px 16px;
-    font-size: 1rem;
-    border-radius: 12px;
-    min-height: 48px; /* Tamaño táctil óptimo */
-    font-weight: 700;
+    min-height: 48px;
   }
 
   .song-item {
@@ -294,23 +328,20 @@
     align-items: flex-start;
     padding: 16px;
     gap: 14px;
-    border-radius: 16px;
+    border-radius: var(--radius-lg);
   }
 
   .song-item:hover {
-    transform: none; /* Desactiva animación en móvil */
+    transform: none;
   }
   
-  /* Mejora visual del toque */
   .song-item:active {
     background: #282828;
     transform: scale(0.98);
   }
 
   .song-info {
-    font-size: 1rem;
     width: 100%;
-    line-height: 1.4;
   }
   
   .song-info .artist {
@@ -320,8 +351,6 @@
 
   .song-actions {
     width: 100%;
-    display: flex;
-    gap: 10px;
   }
 
   .song-actions button,
@@ -331,26 +360,19 @@
     font-size: 0.95rem;
     text-align: center;
     justify-content: center;
-    border-radius: 12px;
-    min-height: 48px; /* Tamaño táctil óptimo */
-    font-weight: 600;
-    white-space: nowrap;
+    min-height: 48px;
   }
   
-  /* Feedback táctil mejorado */
-  .song-actions button:active {
-    transform: scale(0.95);
-  }
-  
+  .song-actions button:active,
   .btn-download:active {
     transform: scale(0.95);
   }
 
-  /* Mejora el área de scroll */
   .results-list {
     gap: 14px;
     max-height: calc(100vh - 280px);
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+    overscroll-behavior-y: contain; /* Evita que el scroll de la lista mueva el body en móvil */
+    -webkit-overflow-scrolling: touch;
   }
 }
