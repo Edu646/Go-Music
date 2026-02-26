@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import './chat.css';
 import io from 'socket.io-client';
 
@@ -24,6 +24,8 @@ export default function Chat() {
   const [privateChats, setPrivateChats] = useState({});
   const [isChatDataLoaded, setIsChatDataLoaded] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
+
+  // ✅ ahora guardamos users como objetos normalizados: { username, avatar }
   const [allPotentialUsers, setAllPotentialUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [search, setSearch] = useState("");
@@ -37,13 +39,73 @@ export default function Chat() {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  // ✅ helper: normaliza lo que venga de /users a { username, avatar }
+  const normalizeUsers = (data) => {
+    if (!Array.isArray(data)) return [];
+
+    const normalized = data
+      .map((u) => {
+        if (!u) return null;
+
+        // caso: string -> "pepe"
+        if (typeof u === "string") {
+          return { username: u, avatar: null };
+        }
+
+        // caso: objeto -> { username, avatar } o variantes
+        if (typeof u === "object") {
+          const uname = u.username || u.user || u.name || u.email || "";
+          if (!uname || typeof uname !== "string") return null;
+
+          const avatar =
+            u.avatar ||
+            u.photo ||
+            u.image ||
+            u.profileImage ||
+            u.profile_picture ||
+            null;
+
+          return { username: uname, avatar: avatar || null };
+        }
+
+        return null;
+      })
+      .filter((u) => u && u.username && u.username !== "Anónimo");
+
+    // ✅ eliminar duplicados por username (prefiere el que tenga avatar)
+    const map = new Map();
+    for (const u of normalized) {
+      const key = u.username;
+      if (!map.has(key)) map.set(key, u);
+      else {
+        const prev = map.get(key);
+        if (!prev.avatar && u.avatar) map.set(key, u);
+      }
+    }
+    return Array.from(map.values());
+  };
+
+  // ✅ mapa para resolver avatar rápido por username
+  const userAvatarMap = useMemo(() => {
+    const map = new Map();
+    for (const u of allPotentialUsers) {
+      map.set(u.username, u.avatar || null);
+    }
+    return map;
+  }, [allPotentialUsers]);
+
+  const getAvatarForUser = (u) => {
+    if (!u) return null;
+    return userAvatarMap.get(u) || null;
+  };
+
   const loadChatData = useCallback(async () => {
     if (isChatDataLoaded) return;
 
     try {
       const globalRes = await fetch("/messages");
       const globalData = await globalRes.json();
-      setGlobalMessages(globalData);
+      setGlobalMessages(Array.isArray(globalData) ? globalData : []);
     } catch (err) {
       console.error("Error cargando mensajes globales:", err);
     }
@@ -53,7 +115,7 @@ export default function Chat() {
       const privateData = await privateRes.json();
 
       const organizedChats = {};
-      privateData.forEach(msg => {
+      (Array.isArray(privateData) ? privateData : []).forEach(msg => {
         const otherUser = msg.sender === username ? msg.recipient : msg.sender;
         if (!organizedChats[otherUser]) organizedChats[otherUser] = [];
         organizedChats[otherUser].push(msg);
@@ -66,9 +128,13 @@ export default function Chat() {
     try {
       const userRes = await fetch("/users");
       const userData = await userRes.json();
-      setAllPotentialUsers(userData.filter(u => u && typeof u === 'string' && u !== "Anónimo"));
+      const normalized = normalizeUsers(userData);
+
+      // si por lo que sea viene también tu propio usuario, lo quitamos
+      setAllPotentialUsers(normalized.filter(u => u.username !== username));
     } catch (err) {
       console.error("Error cargando usuarios potenciales:", err);
+      setAllPotentialUsers([]);
     }
 
     setIsChatDataLoaded(true);
@@ -145,7 +211,7 @@ export default function Chat() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [globalMessages, privateChats, selectedUser]);
+  }, [globalMessages, privateChats, selectedUser, view]);
 
   const handleFileSelect = e => {
     const file = e.target.files[0];
@@ -224,7 +290,13 @@ export default function Chat() {
     </div>
   );
 
-  const combinedUsers = Array.from(new Set([...onlineUsers, ...allPotentialUsers, ...Object.keys(privateChats)]));
+  // ✅ combinar usuarios (online + /users + privados) manteniendo strings de username
+  const combinedUsers = Array.from(new Set([
+    ...onlineUsers,
+    ...allPotentialUsers.map(u => u.username),
+    ...Object.keys(privateChats)
+  ]));
+
   const filteredUsers = combinedUsers.filter(u => u && u !== username);
   const chatPartners = filteredUsers.filter(u => u.toLowerCase().includes(search.toLowerCase()));
 
@@ -233,7 +305,13 @@ export default function Chat() {
     const msgs = privateChats[user] || [];
     const lastMsg = msgs[msgs.length - 1];
     const unreadCount = msgs.filter(msg => msg.recipient === username && !msg.read).length;
-    return { isOnline, lastMsgText: lastMsg ? (lastMsg.sender === username ? 'Tú: ' : '') + (lastMsg.text || '📎 Archivo') : 'Iniciar chat...', unreadCount };
+    return {
+      isOnline,
+      lastMsgText: lastMsg
+        ? (lastMsg.sender === username ? 'Tú: ' : '') + (lastMsg.text || '📎 Archivo')
+        : 'Iniciar chat...',
+      unreadCount
+    };
   };
 
   const currentMessages = view === "global" ? globalMessages : privateChats[selectedUser] || [];
@@ -257,6 +335,26 @@ export default function Chat() {
     </div>
   );
 
+  // ✅ componente avatar: foto si existe, si no inicial
+  const UserAvatar = ({ user, isOnline }) => {
+    const avatar = getAvatarForUser(user);
+    if (avatar) {
+      return (
+        <img
+          src={avatar}
+          alt={user}
+          className={`user-avatar-img ${isOnline ? 'online' : ''}`}
+          onError={(e) => { e.currentTarget.style.display = "none"; }}
+        />
+      );
+    }
+    return (
+      <div className={`avatar-placeholder ${isOnline ? 'online' : ''}`}>
+        {String(user || "?")[0].toUpperCase()}
+      </div>
+    );
+  };
+
   return (
     <div className="chat-container">
       <div className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
@@ -277,12 +375,19 @@ export default function Chat() {
           {chatPartners.length ? chatPartners.map(user => {
             const details = getUserChatDetails(user);
             return (
-              <div key={user} className={`user-item ${selectedUser === user ? 'selected' : ''}`} onClick={() => handleUserSelect(user)}>
-                <div className={`avatar-placeholder ${details.isOnline ? 'online' : ''}`}>{user[0].toUpperCase()}</div>
+              <div
+                key={user}
+                className={`user-item ${selectedUser === user ? 'selected' : ''}`}
+                onClick={() => handleUserSelect(user)}
+              >
+                {/* ✅ Avatar */}
+                <UserAvatar user={user} isOnline={details.isOnline} />
+
                 <div className="user-details">
                   <span className="username">{user}</span>
                   <span className="status-text">{details.lastMsgText}</span>
                 </div>
+
                 {details.unreadCount > 0 && <div className="unread-count">{details.unreadCount}</div>}
               </div>
             );
@@ -291,26 +396,34 @@ export default function Chat() {
       </div>
 
       <div className="chat-area">
-        <div className="chat-header">
-          {/* Botón de menú en móvil (se muestra con CSS) */}
-          <button className="back-btn" onClick={() => setSidebarOpen(true)}>←</button>
+        <div className="chat-header">
+          <button className="back-btn" onClick={() => setSidebarOpen(true)}>←</button>
 
-          <div className="header-info">
-            {view === 'global' ? <h2>Chat Global</h2> : <>
-              <h2>{selectedUser}</h2>
-              <span className={`status-indicator ${getUserChatDetails(selectedUser).isOnline ? 'on' : ''}`}>
-                {getUserChatDetails(selectedUser).isOnline ? 'En línea' : 'Desconectado'}
-              </span>
-            </>}
-          </div>
+          <div className="header-info">
+            {view === 'global' ? (
+              <h2>Chat Global</h2>
+            ) : (
+              <>
+                {/* ✅ Avatar en header privado */}
+                <div className="header-user">
+                  <UserAvatar user={selectedUser} isOnline={getUserChatDetails(selectedUser).isOnline} />
+                  <div className="header-user-text">
+                    <h2>{selectedUser}</h2>
+                    <span className={`status-indicator ${getUserChatDetails(selectedUser).isOnline ? 'on' : ''}`}>
+                      {getUserChatDetails(selectedUser).isOnline ? 'En línea' : 'Desconectado'}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
-          {/* NUEVO: Botón de Chat Global para Escritorio (se muestra con CSS) */}
-          {(view === 'private' && selectedUser) && (
-            <button className="global-chat-btn" onClick={() => { setView('global'); setSelectedUser(null); }}>
-              Chat Global
-            </button>
-          )}
-        </div>
+          {(view === 'private' && selectedUser) && (
+            <button className="global-chat-btn" onClick={() => { setView('global'); setSelectedUser(null); }}>
+              Chat Global
+            </button>
+          )}
+        </div>
 
         <div className="messages-container">
           {currentMessages.length ? currentMessages.map((msg, i) => (
@@ -318,11 +431,15 @@ export default function Chat() {
               <div className="message-bubble">
                 {msg.sender !== username && <div className="message-sender">{msg.sender}</div>}
                 {renderMessage(msg)}
-                <span className="message-time">{new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <span className="message-time">
+                  {new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
               </div>
             </div>
           )) : (
-            <p className="empty-chat-msg">{view === 'global' ? 'Sé el primero en saludar!' : `Inicio del chat con ${selectedUser}.`}</p>
+            <p className="empty-chat-msg">
+              {view === 'global' ? 'Sé el primero en saludar!' : `Inicio del chat con ${selectedUser}.`}
+            </p>
           )}
           <div ref={messagesEndRef} />
         </div>
@@ -330,7 +447,14 @@ export default function Chat() {
         {selectedFile && (
           <div className="file-preview">
             <div className="file-preview-content">
-              {previewUrl ? <img src={previewUrl} alt="Preview" className="preview-image" /> : <div className="file-info"><span className="file-icon-large">📎</span><span>{selectedFile.name}</span></div>}
+              {previewUrl ? (
+                <img src={previewUrl} alt="Preview" className="preview-image" />
+              ) : (
+                <div className="file-info">
+                  <span className="file-icon-large">📎</span>
+                  <span>{selectedFile.name}</span>
+                </div>
+              )}
               <button onClick={removeFile} className="remove-file-btn">✕</button>
             </div>
           </div>
@@ -338,15 +462,31 @@ export default function Chat() {
 
         {showEmojiPicker && (
           <div className="emoji-picker">
-            {EMOJI_LIST.map(emoji => <button key={emoji} onClick={() => addEmoji(emoji)} className="emoji-btn">{emoji}</button>)}
+            {EMOJI_LIST.map(emoji => (
+              <button key={emoji} onClick={() => addEmoji(emoji)} className="emoji-btn">{emoji}</button>
+            ))}
           </div>
         )}
 
         <div className="input-area">
-          <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="file-input" accept="image/*,.pdf,.doc,.docx,.txt" />
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            className="file-input"
+            accept="image/*,.pdf,.doc,.docx,.txt"
+          />
           <button onClick={() => fileInputRef.current?.click()} className="icon-btn" title="Adjuntar archivo" disabled={view === 'private' && !selectedUser}>📎</button>
           <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="icon-btn" title="Emojis" disabled={view === 'private' && !selectedUser}>😊</button>
-          <input type="text" placeholder={view === 'global' ? "Escribe un mensaje..." : `Mensaje a ${selectedUser}...`} className="chat-input" value={text} onChange={e => setText(e.target.value)} onKeyPress={handleKeyPress} disabled={view === 'private' && !selectedUser} />
+          <input
+            type="text"
+            placeholder={view === 'global' ? "Escribe un mensaje..." : `Mensaje a ${selectedUser}...`}
+            className="chat-input"
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={view === 'private' && !selectedUser}
+          />
           <button onClick={send} className="send-btn" disabled={view === 'private' && !selectedUser}>➡️</button>
         </div>
       </div>
