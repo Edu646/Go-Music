@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { auth } from "./firebaseconfig";
+import { onAuthStateChanged } from "firebase/auth";
 import "./Inicio.css";
 
 function Inicio() {
@@ -7,13 +9,19 @@ function Inicio() {
   const images = [
     "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&q=80",
     "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80",
-    "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800&q=80"
+    "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800&q=80",
   ];
 
   const [index, setIndex] = useState(0);
   const [hoveredCard, setHoveredCard] = useState(null);
   const [playlists, setPlaylists] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // ✅ Sesión
+  const [isLogged, setIsLogged] = useState(false);
+
+  // ✅ Popup login requerido
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -25,6 +33,14 @@ function Inicio() {
 
   useEffect(() => {
     fetchPublicPlaylists();
+  }, []);
+
+  // ✅ Escuchar cambios de sesión (Firebase)
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setIsLogged(!!u);
+    });
+    return () => unsub();
   }, []);
 
   // Obtener playlists públicas desde el backend
@@ -53,14 +69,20 @@ function Inicio() {
     navigate("/calculadora");
   };
 
-  // Navegar a los detalles de una playlist específica
+  const requireLogin = () => {
+    setShowLoginPopup(true);
+  };
+
+  // Navegar a los detalles de una playlist específica (solo si logueado)
   const handlePlaylistClick = (playlistId) => {
+    if (!isLogged) return requireLogin();
     navigate(`/playlist/${playlistId}`);
   };
 
   // Reproducir playlist directamente (previene propagación del evento)
   const handlePlayPlaylist = (e, playlistId) => {
     e.stopPropagation();
+    if (!isLogged) return requireLogin();
     navigate(`/playlist/${playlistId}`);
   };
 
@@ -69,16 +91,44 @@ function Inicio() {
     setIndex(i);
   };
 
+  // Cerrar popup
+  const closePopup = () => setShowLoginPopup(false);
+
+  // Ir a login (ajusta ruta si tu login está en otro sitio)
+  const goToLogin = () => {
+    setShowLoginPopup(false);
+    navigate("/SESION");
+  };
+
   return (
     <div className="page-wrapper">
+      {/* ✅ POPUP: Login requerido */}
+      {showLoginPopup && (
+        <div
+          className="login-popup-overlay"
+          onClick={closePopup}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="login-popup" onClick={(e) => e.stopPropagation()}>
+            <h3>Inicia sesión</h3>
+            <p>Para ver o usar esta playlist tienes que iniciar sesión.</p>
+            <div className="login-popup-actions">
+              <button className="login-popup-btn cancel" onClick={closePopup}>
+                Cerrar
+              </button>
+              <button className="login-popup-btn ok" onClick={goToLogin}>
+                Ir a iniciar sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section con Carrusel */}
       <div className="hero-section">
         <div className="carousel-container">
-          <img 
-            src={images[index]} 
-            alt="Carrusel musical" 
-            className="carousel-image"
-          />
+          <img src={images[index]} alt="Carrusel musical" className="carousel-image" />
           <div className="hero-overlay">
             <div className="hero-content">
               <h1 className="hero-title">Descubre Tu Música</h1>
@@ -89,13 +139,13 @@ function Inicio() {
               </button>
             </div>
           </div>
-          
+
           {/* Indicadores del carrusel */}
           <div className="carousel-indicators">
             {images.map((_, i) => (
-              <div 
-                key={i} 
-                className={`indicator ${i === index ? 'active' : ''}`}
+              <div
+                key={i}
+                className={`indicator ${i === index ? "active" : ""}`}
                 onClick={() => handleIndicatorClick(i)}
               />
             ))}
@@ -105,7 +155,6 @@ function Inicio() {
 
       {/* Contenedor principal */}
       <div className="container">
-        
         {/* Sección: Lo que trata */}
         <div className="about-section">
           <h2 className="section-title">
@@ -113,9 +162,9 @@ function Inicio() {
             Lo Que Trata
           </h2>
           <p className="about-text">
-            Es un proyecto basado en aplicaciones como Spotify, diseñado para ofrecerte 
-            la mejor experiencia musical. Explora millones de canciones, crea tus propias 
-            playlists y descubre nuevos artistas cada día.
+            Es un proyecto basado en aplicaciones como Spotify, diseñado para ofrecerte la mejor
+            experiencia musical. Explora millones de canciones, crea tus propias playlists y descubre
+            nuevos artistas cada día.
           </p>
         </div>
 
@@ -125,11 +174,9 @@ function Inicio() {
             <span className="title-icon">📈</span>
             Playlists Destacadas
           </h2>
-          
+
           {loading ? (
-            <div className="loading-message">
-              Cargando playlists...
-            </div>
+            <div className="loading-message">Cargando playlists...</div>
           ) : playlists.length === 0 ? (
             <div className="empty-state">
               <div className="empty-state-icon">📭</div>
@@ -139,28 +186,32 @@ function Inicio() {
           ) : (
             <div className="playlist-grid">
               {playlists.map((playlist) => (
-                <div 
+                <div
                   key={playlist._id}
-                  className={`playlist-card ${hoveredCard === playlist._id ? 'hovered' : ''}`}
+                  className={`playlist-card ${hoveredCard === playlist._id ? "hovered" : ""}`}
                   onMouseEnter={() => setHoveredCard(playlist._id)}
                   onMouseLeave={() => setHoveredCard(null)}
                   onClick={() => handlePlaylistClick(playlist._id)}
-                  title={`Ver playlist: ${playlist.name}`}
+                  title={
+                    isLogged
+                      ? `Ver playlist: ${playlist.name}`
+                      : "Inicia sesión para acceder a esta playlist"
+                  }
                 >
                   <div className="playlist-image-wrapper">
-                    <img 
-                      src={playlist.image || 'https://via.placeholder.com/300x300/1db954/ffffff?text=Playlist'} 
+                    <img
+                      src={playlist.image || "https://via.placeholder.com/300x300/1db954/ffffff?text=Playlist"}
                       alt={playlist.name}
                       className="playlist-image"
                       onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/300x300/1db954/ffffff?text=Playlist';
+                        e.target.src = "https://via.placeholder.com/300x300/1db954/ffffff?text=Playlist";
                       }}
                     />
                     {hoveredCard === playlist._id && (
-                      <button 
+                      <button
                         className="play-button"
                         onClick={(e) => handlePlayPlaylist(e, playlist._id)}
-                        title="Reproducir ahora"
+                        title={isLogged ? "Reproducir ahora" : "Inicia sesión para reproducir"}
                         aria-label="Reproducir playlist"
                       >
                         ▶
@@ -169,8 +220,15 @@ function Inicio() {
                   </div>
                   <h3 className="playlist-title">{playlist.name}</h3>
                   <p className="playlist-info">
-                    {playlist.songs?.length || 0} {playlist.songs?.length === 1 ? 'canción' : 'canciones'} • {playlist.owner}
+                    {playlist.songs?.length || 0}{" "}
+                    {playlist.songs?.length === 1 ? "canción" : "canciones"} • {playlist.owner}
                   </p>
+
+                  {!isLogged && (
+                    <p className="playlist-login-hint">
+                      🔒 Inicia sesión para abrir esta playlist
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
@@ -181,14 +239,10 @@ function Inicio() {
         <div className="cta-section">
           <h2 className="cta-title">¿Listo para empezar?</h2>
           <p className="cta-text">Únete a millones de usuarios que ya disfrutan de la mejor música</p>
-          <button 
-            className="cta-button"
-            onClick={handleStartListening}
-          >
+          <button className="cta-button" onClick={handleStartListening}>
             Explorar Ahora
           </button>
         </div>
-
       </div>
     </div>
   );
