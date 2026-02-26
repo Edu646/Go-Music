@@ -6,6 +6,7 @@ import "./Inicio.css";
 
 function Inicio() {
   const navigate = useNavigate();
+
   const images = [
     "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&q=80",
     "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80",
@@ -20,23 +21,22 @@ function Inicio() {
   // ✅ Sesión
   const [isLogged, setIsLogged] = useState(false);
 
-  // ✅ Username (para comparar dueño y para añadir a biblioteca)
+  // ✅ Username (tu app usa localStorage gomusic_user)
   const [username, setUsername] = useState("Anónimo");
 
   // ✅ Popup login requerido
   const [showLoginPopup, setShowLoginPopup] = useState(false);
 
-  // ✅ Feedback (toast simple)
+  // ✅ Toast simple
   const [toast, setToast] = useState({ show: false, text: "" });
 
-  // ✅ Biblioteca del usuario: ids de playlists compartidas que ya tiene
+  // ✅ IDs de playlists que YA tienes (own + shared)
   const [libraryIds, setLibraryIds] = useState(new Set());
 
   useEffect(() => {
     const interval = setInterval(() => {
       setIndex((prev) => (prev + 1) % images.length);
     }, 4000);
-
     return () => clearInterval(interval);
   }, [images.length]);
 
@@ -49,7 +49,7 @@ function Inicio() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setIsLogged(!!u);
 
-      // leer username de localStorage (tu app ya lo usa en otras pantallas)
+      // Leer username desde localStorage (igual que en otras pantallas tuyas)
       try {
         const stored = JSON.parse(localStorage.getItem("gomusic_user"));
         setUsername(stored?.username || "Anónimo");
@@ -57,10 +57,19 @@ function Inicio() {
         setUsername("Anónimo");
       }
     });
+
+    // también lo intentamos al montar aunque firebase tarde
+    try {
+      const stored = JSON.parse(localStorage.getItem("gomusic_user"));
+      setUsername(stored?.username || "Anónimo");
+    } catch {
+      setUsername("Anónimo");
+    }
+
     return () => unsub();
   }, []);
 
-  // ✅ Cargar biblioteca (playlists compartidas del usuario) para saber si ya la tiene
+  // ✅ Cada vez que haya login + username, recargamos biblioteca
   useEffect(() => {
     if (!isLogged || !username || username === "Anónimo") {
       setLibraryIds(new Set());
@@ -70,18 +79,31 @@ function Inicio() {
     // eslint-disable-next-line
   }, [isLogged, username]);
 
-  // Obtener playlists públicas desde el backend
+  const showToast = (text) => {
+    setToast({ show: true, text });
+    setTimeout(() => setToast({ show: false, text: "" }), 2500);
+  };
+
+  const requireLogin = () => setShowLoginPopup(true);
+  const closePopup = () => setShowLoginPopup(false);
+
+  const goToLogin = () => {
+    setShowLoginPopup(false);
+    navigate("/SESION");
+  };
+
+  // Obtener playlists públicas
   const fetchPublicPlaylists = async () => {
     try {
       setLoading(true);
       const response = await fetch("/playlists");
-      if (response.ok) {
-        const data = await response.json();
-        setPlaylists(Array.isArray(data) ? data : []);
-      } else {
+      if (!response.ok) {
         console.error("Error al obtener playlists:", response.status);
         setPlaylists([]);
+        return;
       }
+      const data = await response.json();
+      setPlaylists(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error obteniendo playlists públicas:", error);
       setPlaylists([]);
@@ -90,17 +112,16 @@ function Inicio() {
     }
   };
 
-  // ✅ Obtener biblioteca del usuario (own + shared) y guardar ids (solo compartidas o todas)
+  // ✅ Obtener biblioteca del usuario (own + shared) -> IDs
   const fetchUserLibrary = async () => {
     try {
-      const res = await fetch(`/playlists/${username}`);
+      const res = await fetch(`/playlists/${encodeURIComponent(username)}`);
       const data = await res.json();
 
       const merged = [];
       if (Array.isArray(data?.own)) merged.push(...data.own);
       if (Array.isArray(data?.shared)) merged.push(...data.shared);
 
-      // guardamos IDs de TODO lo que ya tiene (own + shared)
       const ids = new Set(merged.map((p) => String(p._id)));
       setLibraryIds(ids);
     } catch (err) {
@@ -114,81 +135,86 @@ function Inicio() {
     navigate("/calculadora");
   };
 
-  const requireLogin = () => {
-    setShowLoginPopup(true);
+  // ✅ VER: quieres que vaya a /playlist (sin id en ruta)
+  // Le pasamos el id por state y también por query ?id=
+  const viewPlaylist = (e, playlistId) => {
+    e?.stopPropagation?.();
+    if (!isLogged) return requireLogin();
+
+    navigate(`/playlist?id=${encodeURIComponent(playlistId)}`, {
+      state: { playlistId },
+    });
   };
 
-  // Cerrar popup
-  const closePopup = () => setShowLoginPopup(false);
-
-  // Ir a login (ajusta ruta si tu login está en otro sitio)
-  const goToLogin = () => {
-    setShowLoginPopup(false);
-    navigate("/SESION");
-  };
-
-  // ✅ Toast helper
-  const showToast = (text) => {
-    setToast({ show: true, text });
-    setTimeout(() => setToast({ show: false, text: "" }), 2500);
-  };
-
-  // ✅ Añadir playlist pública a biblioteca compartida
+  // ✅ AÑADIR a biblioteca (shared)
   const addToLibrary = async (e, playlist) => {
     e.stopPropagation();
 
     if (!isLogged) return requireLogin();
+    if (!username || username === "Anónimo") return requireLogin();
 
-    // si eres dueño -> ya la tienes
+    // Si eres dueño, ya la tienes
     if (playlist.owner === username) {
       return showToast("✅ Esta playlist es tuya (ya la tienes).");
     }
 
-    // si ya está en biblioteca -> no hacer nada
+    // Si ya está en tu biblioteca
     if (libraryIds.has(String(playlist._id))) {
       return showToast("✅ Ya tienes esta playlist en tu biblioteca.");
     }
 
+    const payload = {
+      username,
+      user: username, // ✅ por si tu backend usa "user"
+      playlistId: playlist._id, // ✅ por si tu backend lo pide
+    };
+
+    // ✅ Intento 1: POST
     try {
-      const res = await fetch(`/playlists/${playlist._id}/add-to-library`, {
+      let res = await fetch(`/playlists/${playlist._id}/add-to-library`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username }),
+        body: JSON.stringify(payload),
       });
 
-      if (res.ok) {
-        // actualizar biblioteca local
-        setLibraryIds((prev) => new Set(prev).add(String(playlist._id)));
-        showToast("📌 Playlist añadida a tu biblioteca.");
-      } else {
+      // ✅ Si el backend no admite POST (405/404), intentamos PUT
+      if (!res.ok && (res.status === 404 || res.status === 405)) {
+        res = await fetch(`/playlists/${playlist._id}/add-to-library`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (!res.ok) {
         const t = await res.text().catch(() => "");
         console.error("Error add-to-library:", res.status, t);
-        showToast("❌ No se pudo añadir. Inténtalo de nuevo.");
+        return showToast("❌ No se pudo añadir. Revisa el backend/endpoint.");
       }
+
+      // ✅ Actualizamos biblioteca en frontend y volvemos a pedir al backend
+      setLibraryIds((prev) => {
+        const next = new Set(prev);
+        next.add(String(playlist._id));
+        return next;
+      });
+
+      await fetchUserLibrary(); // 🔥 esto es lo que hará que aparezca en SESION si el backend lo guarda
+      showToast("📌 Playlist añadida a tu biblioteca.");
     } catch (err) {
       console.error("Error añadiendo a biblioteca:", err);
       showToast("❌ Error de conexión.");
     }
   };
 
-  // ✅ Ver playlist (opcional) con botón aparte
-  const viewPlaylist = (e, playlistId) => {
-    e.stopPropagation();
-    if (!isLogged) return requireLogin();
-    navigate(`/playlist/${playlistId}`);
-  };
-
-  // Cambiar imagen del carrusel manualmente
-  const handleIndicatorClick = (i) => {
-    setIndex(i);
-  };
+  // Carrusel manual
+  const handleIndicatorClick = (i) => setIndex(i);
 
   return (
     <div className="page-wrapper">
-      {/* ✅ Toast */}
       {toast.show && <div className="toast">{toast.text}</div>}
 
-      {/* ✅ POPUP: Login requerido */}
+      {/* ✅ POPUP login */}
       {showLoginPopup && (
         <div
           className="login-popup-overlay"
@@ -211,20 +237,14 @@ function Inicio() {
         </div>
       )}
 
-      {/* Hero Section con Carrusel */}
+      {/* Hero */}
       <div className="hero-section">
         <div className="carousel-container">
-          <img
-            src={images[index]}
-            alt="Carrusel musical"
-            className="carousel-image"
-          />
+          <img src={images[index]} alt="Carrusel musical" className="carousel-image" />
           <div className="hero-overlay">
             <div className="hero-content">
               <h1 className="hero-title">Descubre Tu Música</h1>
-              <p className="hero-subtitle">
-                Miles de canciones, artistas y playlists esperándote
-              </p>
+              <p className="hero-subtitle">Miles de canciones, artistas y playlists esperándote</p>
               <button className="hero-button" onClick={handleStartListening}>
                 <span className="play-icon">▶</span>
                 <span className="button-text">Comenzar a Escuchar</span>
@@ -232,7 +252,6 @@ function Inicio() {
             </div>
           </div>
 
-          {/* Indicadores del carrusel */}
           <div className="carousel-indicators">
             {images.map((_, i) => (
               <div
@@ -245,9 +264,8 @@ function Inicio() {
         </div>
       </div>
 
-      {/* Contenedor principal */}
+      {/* Contenido */}
       <div className="container">
-        {/* Sección: Lo que trata */}
         <div className="about-section">
           <h2 className="section-title">
             <span className="title-icon">🎵</span>
@@ -260,7 +278,6 @@ function Inicio() {
           </p>
         </div>
 
-        {/* Playlists destacadas */}
         <div className="section">
           <h2 className="section-title">
             <span className="title-icon">📈</span>
@@ -288,25 +305,19 @@ function Inicio() {
                     className={`playlist-card ${hoveredCard === playlist._id ? "hovered" : ""}`}
                     onMouseEnter={() => setHoveredCard(playlist._id)}
                     onMouseLeave={() => setHoveredCard(null)}
-                    // ✅ ya NO se entra por click a la card
-                    title="Usa los botones para añadir o ver"
                     style={{ cursor: "default" }}
                   >
                     <div className="playlist-image-wrapper">
                       <img
-                        src={
-                          playlist.image ||
-                          "https://via.placeholder.com/300x300/1db954/ffffff?text=Playlist"
-                        }
+                        src={playlist.image || "https://via.placeholder.com/300x300/1db954/ffffff?text=Playlist"}
                         alt={playlist.name}
                         className="playlist-image"
                         onError={(e) => {
-                          e.target.src =
-                            "https://via.placeholder.com/300x300/1db954/ffffff?text=Playlist";
+                          e.target.src = "https://via.placeholder.com/300x300/1db954/ffffff?text=Playlist";
                         }}
                       />
 
-                      {/* Botón play/Ver solo en hover (opcional) */}
+                      {/* Botón rápido VER en hover */}
                       {hoveredCard === playlist._id && (
                         <button
                           className="play-button"
@@ -322,11 +333,9 @@ function Inicio() {
                     <h3 className="playlist-title">{playlist.name}</h3>
                     <p className="playlist-info">
                       {playlist.songs?.length || 0}{" "}
-                      {playlist.songs?.length === 1 ? "canción" : "canciones"} •{" "}
-                      {playlist.owner}
+                      {playlist.songs?.length === 1 ? "canción" : "canciones"} • {playlist.owner}
                     </p>
 
-                    {/* ✅ Botonera */}
                     <div className="playlist-actions">
                       <button
                         className="playlist-add-btn"
@@ -342,11 +351,7 @@ function Inicio() {
                             : "Añadir a mi biblioteca"
                         }
                       >
-                        {isOwner
-                          ? "Ya es tuya"
-                          : alreadyInLibrary
-                          ? "Ya la tienes"
-                          : "Añadir"}
+                        {isOwner ? "Ya es tuya" : alreadyInLibrary ? "Ya la tienes" : "Añadir"}
                       </button>
 
                       <button
@@ -359,9 +364,7 @@ function Inicio() {
                     </div>
 
                     {!isLogged && (
-                      <p className="playlist-login-hint">
-                        🔒 Inicia sesión para añadir o ver
-                      </p>
+                      <p className="playlist-login-hint">🔒 Inicia sesión para añadir o ver</p>
                     )}
                   </div>
                 );
@@ -370,12 +373,9 @@ function Inicio() {
           )}
         </div>
 
-        {/* CTA Final */}
         <div className="cta-section">
           <h2 className="cta-title">¿Listo para empezar?</h2>
-          <p className="cta-text">
-            Únete a millones de usuarios que ya disfrutan de la mejor música
-          </p>
+          <p className="cta-text">Únete a millones de usuarios que ya disfrutan de la mejor música</p>
           <button className="cta-button" onClick={handleStartListening}>
             Explorar Ahora
           </button>
