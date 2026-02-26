@@ -38,21 +38,28 @@ export default function UserPlaylists() {
           if (!updated) {
             setSelected(null);
           } else if (updated.owner !== user.username) {
-            // Si por cualquier motivo estaba seleccionada una compartida, cerramos editor
             setSelected(null);
           } else {
             setSelected(updated);
           }
         }
+
+        // refrescar popup (por si cambió la playlist)
+        if (popupPlaylist) {
+          const updatedPopup = allPlaylists.find((p) => p._id === popupPlaylist._id);
+          setPopupPlaylist(updatedPopup || null);
+        }
       } else {
         console.warn("La API no devolvió el formato esperado {own: [], shared: []}:", data);
         setPlaylists([]);
         setSelected(null);
+        setPopupPlaylist(null);
       }
     } catch (err) {
       console.error("Error cargando playlists:", err);
       setPlaylists([]);
       setSelected(null);
+      setPopupPlaylist(null);
     }
   };
 
@@ -77,8 +84,8 @@ export default function UserPlaylists() {
   }, [user, search]);
 
   const addSong = async (playlistId, song) => {
-    if (!user || !user.username) {
-      console.error("Usuario o username no disponible.");
+    if (!user?.username) {
+      alert("No hay usuario");
       return;
     }
 
@@ -92,44 +99,69 @@ export default function UserPlaylists() {
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
+
       if (res.ok) {
         fetchPlaylists();
       } else {
-        const errorText = await res.text();
-        try {
-          const errorData = JSON.parse(errorText);
-          console.error("Error del Servidor al añadir canción:", errorData.error || errorData.message);
-          alert("Error: " + (errorData.error || "No se pudo añadir la canción."));
-        } catch {
-          console.error("Error del Servidor (no JSON):", errorText);
-          alert("Error desconocido al añadir la canción.");
-        }
+        console.error("Error añadiendo canción:", res.status, data);
+        alert(data.error || `Error ${res.status}`);
       }
     } catch (err) {
       console.error("Error de red agregando canción:", err);
+      alert("Error de conexión");
     }
   };
 
+  // ✅ CORREGIDO: quitar canción (manda username + songs array)
   const removeSong = async (playlistId, songId) => {
     try {
-      const playlist = playlists.find((p) => p._id === playlistId);
-      if (!playlist) return;
+      if (!user?.username) {
+        alert("No hay usuario");
+        return;
+      }
 
-      const updatedSongs = playlist.songs.filter((s) => s._id.toString() !== songId.toString());
+      const playlist = playlists.find((p) => p._id === playlistId);
+      if (!playlist) {
+        alert("Playlist no encontrada");
+        return;
+      }
+
+      // Seguridad: si no eres owner, no permitimos editar (y evitamos 403)
+      if (playlist.owner !== user.username) {
+        alert("No puedes editar una playlist compartida");
+        return;
+      }
+
+      const currentSongs = Array.isArray(playlist.songs) ? playlist.songs : [];
+      const updatedSongs = currentSongs.filter((s) => String(s._id) !== String(songId));
+
+      const payload = {
+        username: user.username,                  // ✅ requerido por backend
+        songs: updatedSongs.map((s) => s._id),    // ✅ array de IDs
+      };
 
       const res = await fetch(`/playlists/${playlistId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ songs: updatedSongs.map((s) => s._id) }),
+        body: JSON.stringify(payload),
       });
 
-      if (res.ok) fetchPlaylists();
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        fetchPlaylists();
+      } else {
+        console.error("Error quitando canción:", res.status, data);
+        alert(data.error || `Error ${res.status}`);
+      }
     } catch (err) {
       console.error("Error quitando canción:", err);
+      alert("Error de conexión quitando la canción");
     }
   };
 
-  // ✅ NUEVO: quitar playlist compartida (sin borrar la del creador)
+  // ✅ Quitar playlist compartida (sin borrar la del creador)
   const removeSharedPlaylist = async (playlistId, playlistName) => {
     if (!user?.username) return;
 
@@ -145,11 +177,8 @@ export default function UserPlaylists() {
       const data = await res.json().catch(() => ({}));
 
       if (res.ok && data?.removed === true) {
-        // si estaba abierta en popup y la quito, cerramos
         if (popupPlaylist?._id === playlistId) setPopupPlaylist(null);
-        // si estaba seleccionada, cerramos editor
         if (selected?._id === playlistId) setSelected(null);
-
         fetchPlaylists();
       } else if (res.ok && data?.removed === false) {
         alert("Esa playlist ya no estaba en tu biblioteca.");
@@ -200,11 +229,7 @@ export default function UserPlaylists() {
                       🔒 Playlist compartida (solo lectura)
                     </div>
 
-                    {/* ✅ BOTÓN QUITAR (solo compartidas) */}
-                    <button
-                      style={{ marginTop: 8 }}
-                      onClick={() => removeSharedPlaylist(p._id, p.name)}
-                    >
+                    <button style={{ marginTop: 8 }} onClick={() => removeSharedPlaylist(p._id, p.name)}>
                       Quitar
                     </button>
                   </>
@@ -235,7 +260,7 @@ export default function UserPlaylists() {
             {allSongs?.map((s) => (
               <li key={s._id}>
                 {s.name} - {s.artist}
-                {!selected.songs?.some((song) => song._id.toString() === s._id.toString()) && (
+                {!selected.songs?.some((song) => String(song._id) === String(s._id)) && (
                   <button onClick={() => addSong(selected._id, s)}>Agregar</button>
                 )}
               </li>
