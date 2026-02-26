@@ -19,52 +19,43 @@ export default function UserPlaylists() {
     if (storedUser) setUser(storedUser);
   }, []);
 
-  // --- CORRECCIÓN PRINCIPAL AQUÍ ---
   // Fetch playlists del usuario con validación de Array
- const fetchPlaylists = async () => {
-  if (!user) return;
-  const url = `/playlists/${user.username}`; 
+  const fetchPlaylists = async () => {
+    if (!user) return;
+    const url = `/playlists/${user.username}`;
 
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
 
-    // --- CORRECCIÓN AQUÍ ---
-    // 1. Verificamos que 'data' sea un objeto y contenga las claves esperadas
-    if (data && typeof data === 'object' && Array.isArray(data.own) && Array.isArray(data.shared)) {
-      
-      // 2. Combinamos las playlists propias y compartidas en un solo array
-      const allPlaylists = [...data.own, ...data.shared];
-      
-      setPlaylists(allPlaylists);
+      if (data && typeof data === "object" && Array.isArray(data.own) && Array.isArray(data.shared)) {
+        const allPlaylists = [...data.own, ...data.shared];
 
-      // Lógica de actualización de 'selected' (la dejamos simple y segura)
-      if (selected) {
-        const updated = allPlaylists.find(p => p._id === selected._id);
-        setSelected(updated || null);
+        setPlaylists(allPlaylists);
+
+        // Si tengo algo seleccionado, refrescarlo
+        if (selected) {
+          const updated = allPlaylists.find((p) => p._id === selected._id);
+          setSelected(updated || null);
+        }
+      } else {
+        console.warn("La API no devolvió el formato esperado {own: [], shared: []}:", data);
+        setPlaylists([]);
       }
-      
-    } else {
-      console.warn("La API no devolvió el formato esperado {own: [], shared: []}:", data);
+    } catch (err) {
+      console.error("Error cargando playlists:", err);
       setPlaylists([]);
     }
-  } catch (err) {
-    console.error("Error cargando playlists:", err);
-    setPlaylists([]); 
-  }
-};
+  };
+
   // Fetch de canciones
   const fetchSongs = async () => {
     try {
       const query = search ? `/search?q=${search}` : "/songs";
       const res = await fetch(query);
       const data = await res.json();
-      // Validación básica también para canciones
-      if (Array.isArray(data)) {
-        setAllSongs(data);
-      } else {
-        setAllSongs([]);
-      }
+      if (Array.isArray(data)) setAllSongs(data);
+      else setAllSongs([]);
     } catch (err) {
       console.error("Error cargando canciones:", err);
       setAllSongs([]);
@@ -77,50 +68,46 @@ export default function UserPlaylists() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, search]);
 
- const addSong = async (playlistId, song) => {
-    // Asegúrate de que 'user' esté accesible y no sea null
+  const addSong = async (playlistId, song) => {
     if (!user || !user.username) {
-        console.error("Usuario o username no disponible.");
-        return;
+      console.error("Usuario o username no disponible.");
+      return;
     }
 
     try {
       const res = await fetch(`/playlists/${playlistId}/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // --- ¡CAMBIO CRUCIAL AQUÍ! ---
-        body: JSON.stringify({ 
-            song, 
-            username: user.username // <-- AGREGAMOS EL USERNAME
+        body: JSON.stringify({
+          song,
+          username: user.username,
         }),
       });
 
       if (res.ok) {
         fetchPlaylists();
       } else {
-        // Mejoramos la lectura del error 400
         const errorText = await res.text();
         try {
-            const errorData = JSON.parse(errorText);
-            console.error("Error del Servidor al añadir canción:", errorData.error || errorData.message);
-            alert("Error: " + (errorData.error || "No se pudo añadir la canción."));
+          const errorData = JSON.parse(errorText);
+          console.error("Error del Servidor al añadir canción:", errorData.error || errorData.message);
+          alert("Error: " + (errorData.error || "No se pudo añadir la canción."));
         } catch {
-            console.error("Error del Servidor (no JSON):", errorText);
-            alert("Error desconocido al añadir la canción.");
+          console.error("Error del Servidor (no JSON):", errorText);
+          alert("Error desconocido al añadir la canción.");
         }
       }
     } catch (err) {
       console.error("Error de red agregando canción:", err);
     }
   };
+
   const removeSong = async (playlistId, songId) => {
     try {
       const playlist = playlists.find((p) => p._id === playlistId);
       if (!playlist) return;
 
-      const updatedSongs = playlist.songs.filter(
-        (s) => s._id.toString() !== songId.toString()
-      );
+      const updatedSongs = playlist.songs.filter((s) => s._id.toString() !== songId.toString());
 
       const res = await fetch(`/playlists/${playlistId}`, {
         method: "PUT",
@@ -149,28 +136,38 @@ export default function UserPlaylists() {
       <h2>Mis Playlists</h2>
 
       <div className="playlist-grid">
-        {/* Validación: Solo hacemos map si playlists es un array y tiene elementos */}
         {Array.isArray(playlists) && playlists.length > 0 ? (
-          playlists.map((p) => (
-            <div key={p._id} className="playlist-card">
-              <img
-                src={p.image || "https://i.ibb.co/4pDNDk1/avatar-default.png"}
-                alt={p.name}
-                onClick={() => openPopup(p)}
-              />
-              <h4>{p.name}</h4>
-              {/* Uso de ?. para evitar error si songs es undefined */}
-              <p>{p.songs?.length || 0} canciones</p>
-              <button onClick={() => setSelected(p)}>Editar</button>
-            </div>
-          ))
+          playlists.map((p) => {
+            const isOwner = p.owner === user.username; // ✅ clave
+
+            return (
+              <div key={p._id} className="playlist-card">
+                <img
+                  src={p.image || "https://i.ibb.co/4pDNDk1/avatar-default.png"}
+                  alt={p.name}
+                  onClick={() => openPopup(p)}
+                />
+                <h4>{p.name}</h4>
+                <p>{p.songs?.length || 0} canciones</p>
+
+                {/* ✅ SOLO el dueño ve editar */}
+                {isOwner ? (
+                  <button onClick={() => setSelected(p)}>Editar</button>
+                ) : (
+                  <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>
+                    🔒 Playlist compartida (solo lectura)
+                  </div>
+                )}
+              </div>
+            );
+          })
         ) : (
           <p>No se encontraron playlists o están cargando...</p>
         )}
       </div>
 
-      {/* Editor */}
-      {selected && (
+      {/* Editor: solo si seleccionada y soy owner */}
+      {selected && selected.owner === user.username && (
         <div className="playlist-editor">
           <h3>Editando: {selected.name}</h3>
           <button onClick={() => setSelected(null)}>Cerrar Editor</button>
@@ -184,17 +181,11 @@ export default function UserPlaylists() {
 
           <h4>Agregar canciones:</h4>
           <ul>
-            {/* Validación con ?. */}
             {allSongs?.map((s) => (
               <li key={s._id}>
                 {s.name} - {s.artist}
-                {/* Validación extra dentro del find */}
-                {!selected.songs?.some(
-                  (song) => song._id.toString() === s._id.toString()
-                ) && (
-                  <button onClick={() => addSong(selected._id, s)}>
-                    Agregar
-                  </button>
+                {!selected.songs?.some((song) => song._id.toString() === s._id.toString()) && (
+                  <button onClick={() => addSong(selected._id, s)}>Agregar</button>
                 )}
               </li>
             ))}
@@ -202,13 +193,10 @@ export default function UserPlaylists() {
 
           <h4>Canciones actuales:</h4>
           <ul>
-            {/* Validación con ?. */}
             {selected.songs?.map((s) => (
               <li key={s._id}>
                 {s.name} - {s.artist}
-                <button onClick={() => removeSong(selected._id, s._id)}>
-                  Quitar
-                </button>
+                <button onClick={() => removeSong(selected._id, s._id)}>Quitar</button>
               </li>
             ))}
           </ul>
@@ -224,17 +212,13 @@ export default function UserPlaylists() {
             </button>
 
             <img
-              src={
-                popupPlaylist.image ||
-                "https://i.ibb.co/4pDNDk1/avatar-default.png"
-              }
+              src={popupPlaylist.image || "https://i.ibb.co/4pDNDk1/avatar-default.png"}
               alt={popupPlaylist.name}
             />
 
             <h3>{popupPlaylist.name}</h3>
 
             <ul className="popup-song-list">
-              {/* Validación con ?. */}
               {popupPlaylist.songs?.map((s, i) => (
                 <li key={s._id}>
                   {s.name} - {s.artist}
