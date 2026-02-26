@@ -13,6 +13,30 @@ import {
 import "./formulario.css";
 
 /* ==========================================================================================
+  PERFIL PERSISTENTE POR USUARIO (NO se borra al cerrar sesión)
+========================================================================================== */
+const PROFILE_STORE_KEY = "gomusic_profiles_v1";
+
+function loadProfile(uid) {
+  try {
+    const raw = localStorage.getItem(PROFILE_STORE_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    return map?.[uid] || null;
+  } catch {
+    return null;
+  }
+}
+
+function saveProfile(uid, data) {
+  try {
+    const raw = localStorage.getItem(PROFILE_STORE_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    map[uid] = { ...(map[uid] || {}), ...data };
+    localStorage.setItem(PROFILE_STORE_KEY, JSON.stringify(map));
+  } catch {}
+}
+
+/* ==========================================================================================
   ACCIONES DE PLAYLIST (Cambiar privacidad, eliminar, compartir)
 ========================================================================================== */
 function PlaylistActions({ playlist, user, refreshPlaylists }) {
@@ -45,14 +69,14 @@ function PlaylistActions({ playlist, user, refreshPlaylists }) {
       const res = await fetch(`/playlists/${playlist._id}/privacy`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          username: user.username, 
-          isPublic: !playlist.isPublic 
+        body: JSON.stringify({
+          username: user.username,
+          isPublic: !playlist.isPublic,
         }),
       });
 
       if (res.ok) {
-        setMsg(`Privacidad cambiada a ${!playlist.isPublic ? 'pública' : 'privada'} ✔️`);
+        setMsg(`Privacidad cambiada a ${!playlist.isPublic ? "pública" : "privada"} ✔️`);
         refreshPlaylists();
       } else {
         const data = await res.json();
@@ -67,15 +91,54 @@ function PlaylistActions({ playlist, user, refreshPlaylists }) {
 
   return (
     <div className="playlist-actions">
-      <button 
-        onClick={togglePrivacy} 
-        className="btn-privacy"
-        title="Cambiar privacidad"
-      >
-        {playlist.isPublic ? '🔒 Hacer Privada' : '🌍 Hacer Pública'}
+      <button onClick={togglePrivacy} className="btn-privacy" title="Cambiar privacidad">
+        {playlist.isPublic ? "🔒 Hacer Privada" : "🌍 Hacer Pública"}
       </button>
       <button onClick={handleDelete} className="btn-delete">
         🗑️ Eliminar
+      </button>
+      {msg && <p className="action-message">{msg}</p>}
+    </div>
+  );
+}
+
+/* ==========================================================================================
+  QUITAR PLAYLIST DE MI BIBLIOTECA (SIN BORRAR AL CREADOR)
+========================================================================================== */
+function RemoveFromLibrary({ playlist, user, refreshPlaylists }) {
+  const [msg, setMsg] = useState("");
+
+  // Solo si NO soy el owner
+  if (!user || playlist.owner === user.username) return null;
+
+  const handleRemove = async () => {
+    if (!window.confirm(`¿Quitar "${playlist.name}" de tu biblioteca? (No se borra del creador)`)) return;
+
+    setMsg("");
+    try {
+      // IMPORTANTE: este endpoint debe existir en tu backend
+      const res = await fetch(`/playlists/${playlist._id}/remove-from-library`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: user.username }),
+      });
+
+      if (res.ok) {
+        setMsg("Playlist quitada de tu biblioteca ✔️");
+        refreshPlaylists();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setMsg(data.error || "No se pudo quitar (revisa el endpoint del backend)");
+      }
+    } catch {
+      setMsg("Error de conexión");
+    }
+  };
+
+  return (
+    <div className="playlist-actions">
+      <button onClick={handleRemove} className="btn-delete" title="Quitar de mi biblioteca">
+        ➖ Quitar de mis playlists
       </button>
       {msg && <p className="action-message">{msg}</p>}
     </div>
@@ -98,7 +161,7 @@ function PlaylistCreator({ user, refreshPlaylists }) {
     const formData = new FormData();
     formData.append("name", name);
     formData.append("owner", user.username);
-    formData.append("isPublic", isPublic);
+    formData.append("isPublic", String(isPublic));
     if (image) formData.append("image", image);
 
     try {
@@ -106,13 +169,12 @@ function PlaylistCreator({ user, refreshPlaylists }) {
       const data = await res.json();
 
       if (res.ok) {
-        setMsg(`Playlist creada ✔️ ${!isPublic ? '(Privada - se generó link)' : ''}`);
-        setName(""); 
+        setMsg(`Playlist creada ✔️ ${!isPublic ? "(Privada - se generó link)" : ""}`);
+        setName("");
         setImage(null);
         setIsPublic(true);
         refreshPlaylists();
       } else setMsg(data.error || "Error creando playlist");
-
     } catch {
       setMsg("Error creando playlist");
     }
@@ -121,25 +183,12 @@ function PlaylistCreator({ user, refreshPlaylists }) {
   return (
     <div className="playlist-creator">
       <h3>Crear Playlist</h3>
-      <input 
-        type="text" 
-        placeholder="Nombre" 
-        value={name} 
-        onChange={(e) => setName(e.target.value)} 
-      />
-      <input 
-        type="file" 
-        accept="image/*" 
-        onChange={(e) => setImage(e.target.files[0])} 
-      />
-      
+      <input type="text" placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} />
+      <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} />
+
       <label className="privacy-toggle">
-        <input 
-          type="checkbox" 
-          checked={isPublic} 
-          onChange={(e) => setIsPublic(e.target.checked)}
-        />
-        <span>{isPublic ? '🌍 Pública' : '🔒 Privada'}</span>
+        <input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} />
+        <span>{isPublic ? "🌍 Pública" : "🔒 Privada"}</span>
       </label>
 
       <button onClick={handleCreate}>Crear</button>
@@ -155,9 +204,7 @@ function PlaylistShare({ playlist, user }) {
   const [showLink, setShowLink] = useState(false);
   const [msg, setMsg] = useState("");
 
-  const shareLink = playlist.shareToken 
-    ? `${window.location.origin}/share/${playlist.shareToken}`
-    : "";
+  const shareLink = playlist.shareToken ? `${window.location.origin}/share/${playlist.shareToken}` : "";
 
   const copyLink = () => {
     navigator.clipboard.writeText(shareLink);
@@ -184,7 +231,6 @@ function PlaylistShare({ playlist, user }) {
     }
   };
 
-  // Solo mostrar si es dueño Y si la playlist es PRIVADA
   if (playlist.owner !== user.username || playlist.isPublic) return null;
 
   return (
@@ -192,15 +238,10 @@ function PlaylistShare({ playlist, user }) {
       <button onClick={() => setShowLink(!showLink)} className="btn-share">
         🔗 Compartir Playlist
       </button>
-      
+
       {showLink && (
         <div className="share-link-box">
-          <input 
-            type="text" 
-            value={shareLink} 
-            readOnly 
-            onClick={(e) => e.target.select()}
-          />
+          <input type="text" value={shareLink} readOnly onClick={(e) => e.target.select()} />
           <button onClick={copyLink}>📋 Copiar</button>
           <button onClick={regenerateToken} title="Invalida el link anterior">
             🔄 Nuevo Link
@@ -222,14 +263,12 @@ function ShareAcceptor({ user, refreshPlaylists }) {
   useEffect(() => {
     const path = window.location.pathname;
     const match = path.match(/\/share\/([a-f0-9]+)/);
-    if (match) {
-      setToken(match[1]);
-    }
+    if (match) setToken(match[1]);
   }, []);
 
   const handleAccept = async () => {
     if (!token.trim()) return setMsg("Ingresa un código válido");
-    
+
     try {
       const res = await fetch("/playlists/accept-share", {
         method: "POST",
@@ -256,9 +295,9 @@ function ShareAcceptor({ user, refreshPlaylists }) {
     <div className="share-acceptor">
       <h3>📥 Agregar Playlist Compartida</h3>
       <div className="share-input-group">
-        <input 
-          type="text" 
-          placeholder="Pega el código o link aquí" 
+        <input
+          type="text"
+          placeholder="Pega el código o link aquí"
           value={token}
           onChange={(e) => {
             const value = e.target.value;
@@ -277,61 +316,58 @@ function ShareAcceptor({ user, refreshPlaylists }) {
   ACCIONES DE CANCIÓN
 ========================================================================================== */
 function SongActions({ song, playlists, user, refreshPlaylists }) {
-    const [msg, setMsg] = useState("");
-    const [isAdding, setIsAdding] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
 
-    const handleAddSong = async (playlistId, playlistName) => {
-        setMsg("Añadiendo...");
-        try {
-            const res = await fetch(`/playlists/${playlistId}/add`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    song: song, 
-                    username: user.username 
-                }), 
-            });
+  const handleAddSong = async (playlistId, playlistName) => {
+    setMsg("Añadiendo...");
+    try {
+      const res = await fetch(`/playlists/${playlistId}/add`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          song: song,
+          username: user.username,
+        }),
+      });
 
-            if (res.ok) {
-                setMsg(`✔️ Agregada a "${playlistName}"`);
-                refreshPlaylists();
-                setIsAdding(false);
-            } else {
-                const data = await res.json();
-                setMsg(data.error || "Error al añadir"); 
-            }
-        } catch {
-            setMsg("Error de conexión");
-        }
-    };
+      if (res.ok) {
+        setMsg(`✔️ Agregada a "${playlistName}"`);
+        refreshPlaylists();
+        setIsAdding(false);
+      } else {
+        const data = await res.json();
+        setMsg(data.error || "Error al añadir");
+      }
+    } catch {
+      setMsg("Error de conexión");
+    }
+  };
 
-    const editablePlaylists = playlists.filter(p => p.owner === user.username);
+  const editablePlaylists = playlists.filter((p) => p.owner === user.username);
 
-    return (
-        <div className="song-actions">
-            <button onClick={() => setIsAdding(!isAdding)} className="btn-action">
-                {isAdding ? "Cerrar" : "➕ Agregar a Playlist"}
-            </button>
-            {isAdding && (
-                <div className="playlist-selection">
-                    <h4>Selecciona una playlist:</h4>
-                    {editablePlaylists.length > 0 ? (
-                        editablePlaylists.map(p => (
-                            <button 
-                                key={p._id} 
-                                onClick={() => handleAddSong(p._id, p.name)}
-                            >
-                                {p.name} {!p.isPublic && '🔒'}
-                            </button>
-                        ))
-                    ) : (
-                        <p>No tienes playlists propias.</p>
-                    )}
-                </div>
-            )}
-            {msg && <p className="action-message">{msg}</p>}
+  return (
+    <div className="song-actions">
+      <button onClick={() => setIsAdding(!isAdding)} className="btn-action">
+        {isAdding ? "Cerrar" : "➕ Agregar a Playlist"}
+      </button>
+      {isAdding && (
+        <div className="playlist-selection">
+          <h4>Selecciona una playlist:</h4>
+          {editablePlaylists.length > 0 ? (
+            editablePlaylists.map((p) => (
+              <button key={p._id} onClick={() => handleAddSong(p._id, p.name)}>
+                {p.name} {!p.isPublic && "🔒"}
+              </button>
+            ))
+          ) : (
+            <p>No tienes playlists propias.</p>
+          )}
         </div>
-    );
+      )}
+      {msg && <p className="action-message">{msg}</p>}
+    </div>
+  );
 }
 
 /* ==========================================================================================
@@ -344,7 +380,6 @@ function ProfileEditor({ user, setUser, setMessage }) {
   const [photoPreview, setPhotoPreview] = useState(user.avatar);
   const [saving, setSaving] = useState(false);
 
-  // Actualizar cuando se abre el modal de edición o cuando el usuario cambia
   useEffect(() => {
     setDisplayName(user.displayName || "");
     setPhotoPreview(user.avatar);
@@ -355,9 +390,7 @@ function ProfileEditor({ user, setUser, setMessage }) {
     if (file) {
       setPhotoFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result);
-      };
+      reader.onloadend = () => setPhotoPreview(reader.result);
       reader.readAsDataURL(file);
     }
   };
@@ -373,28 +406,32 @@ function ProfileEditor({ user, setUser, setMessage }) {
     setMessage("");
 
     try {
-      // Si el usuario no escribió nada en el nombre, mantener el anterior
-      const finalDisplayName = displayName?.trim() ? displayName.trim() : (user.displayName || user.username);
+      const finalDisplayName = displayName?.trim()
+        ? displayName.trim()
+        : user.displayName || user.username;
 
-      // Guardamos el displayName en Firebase
       await updateProfile(fbUser, {
         displayName: finalDisplayName,
-        photoURL: null, // No guardamos foto en Firebase para evitar límite de tamaño
+        photoURL: null,
       });
 
-      // Guardamos la imagen en localStorage (base64) y en el estado local
       const updated = {
         ...user,
         displayName: finalDisplayName,
-        avatar: photoFile ? photoPreview : user.avatar, // Usa preview si hay archivo, si no mantiene avatar anterior
+        avatar: photoFile ? photoPreview : user.avatar,
       };
 
       setUser(updated);
       localStorage.setItem("gomusic_user", JSON.stringify(updated));
+
+      // Persistir por UID (no se borra al logout)
+      if (fbUser?.uid) {
+        saveProfile(fbUser.uid, { displayName: updated.displayName, avatar: updated.avatar });
+      }
+
       setMessage("Perfil actualizado ✔");
       setEditing(false);
       setPhotoFile(null);
-      // Resetear displayName al original para ediciones futuras
       setDisplayName(finalDisplayName);
     } catch (err) {
       console.error("Error actualizando perfil:", err);
@@ -423,11 +460,7 @@ function ProfileEditor({ user, setUser, setMessage }) {
             onChange={(e) => setDisplayName(e.target.value)}
           />
 
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-          />
+          <input type="file" accept="image/*" onChange={handleFileChange} />
 
           <button onClick={handleSave} disabled={saving}>
             {saving ? "Guardando..." : "Guardar cambios"}
@@ -449,22 +482,27 @@ function SongList({ songs, search, setSearch, refreshSongs, user, playlists, ref
       <button onClick={refreshSongs}>Recargar</button>
 
       <ul>
-        {songs.length ? songs.map((s, i) => (
-          <li key={s._id || i}>
-            <div className="song-details">
-                <b>{s.name}</b> - {s.artist} ({s.uploadedBy})
-                <a href={s.audio} target="_blank" rel="noopener noreferrer"> 🎧 </a>
-            </div>
-            {user && (
-                <SongActions 
-                    song={s} 
-                    playlists={playlists} 
-                    user={user} 
-                    refreshPlaylists={refreshPlaylists} 
-                />
-            )}
-          </li>
-        )) : "Sin canciones"}
+        {songs.length
+          ? songs.map((s, i) => (
+              <li key={s._id || i}>
+                <div className="song-details">
+                  <b>{s.name}</b> - {s.artist} ({s.uploadedBy})
+                  <a href={s.audio} target="_blank" rel="noopener noreferrer">
+                    {" "}
+                    🎧{" "}
+                  </a>
+                </div>
+                {user && (
+                  <SongActions
+                    song={s}
+                    playlists={playlists}
+                    user={user}
+                    refreshPlaylists={refreshPlaylists}
+                  />
+                )}
+              </li>
+            ))
+          : "Sin canciones"}
       </ul>
     </div>
   );
@@ -490,7 +528,9 @@ export default function Formulario() {
     try {
       const res = await fetch(search ? `/search?q=${search}` : "/songs");
       setSongs(await res.json());
-    } catch (e) { console.error("Error fetching songs:", e); }
+    } catch (e) {
+      console.error("Error fetching songs:", e);
+    }
   }, [search]);
 
   const fetchPlaylists = useCallback(async () => {
@@ -500,24 +540,41 @@ export default function Formulario() {
       const data = await res.json();
       setOwnPlaylists(data.own || []);
       setSharedPlaylists(data.shared || []);
-    } catch (e) { console.error("Error fetching playlists:", e); }
+    } catch (e) {
+      console.error("Error fetching playlists:", e);
+    }
   }, [user]);
 
-  useEffect(() => { fetchSongs(); fetchPlaylists(); }, [fetchSongs, fetchPlaylists]);
-
-  // Manejo de autenticación de Firebase
   useEffect(() => {
-    // Manejo del redirect de Google
+    fetchSongs();
+    fetchPlaylists();
+  }, [fetchSongs, fetchPlaylists]);
+
+  useEffect(() => {
     getRedirectResult(auth)
       .then((result) => {
         if (result) {
+          const uid = result.user.uid;
+          const storedProfile = loadProfile(uid);
+
+          const username = result.user.displayName || result.user.email.split("@")[0];
+          const displayName = storedProfile?.displayName || result.user.displayName || username;
+          const avatar =
+            storedProfile?.avatar ||
+            result.user.photoURL ||
+            "https://i.ibb.co/4pDNDk1/avatar-default.png";
+
           const u = {
-            username: result.user.displayName || result.user.email.split("@")[0],
+            uid,
+            username,
+            displayName,
             email: result.user.email,
-            avatar: result.user.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png",
+            avatar,
           };
+
           setUser(u);
           localStorage.setItem("gomusic_user", JSON.stringify(u));
+          saveProfile(uid, { displayName, avatar });
           setMessage("Inicio con Google ✔");
         }
       })
@@ -526,21 +583,30 @@ export default function Formulario() {
         setMessage(`Error Google: ${error.code} - ${error.message}`);
       });
 
-    // Listener de cambios de auth
     return onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        // Primero intentamos cargar desde localStorage (que tiene la imagen)
-        const savedUser = localStorage.getItem("gomusic_user");
-        const savedData = savedUser ? JSON.parse(savedUser) : null;
-        
+        const uid = firebaseUser.uid;
+        const storedProfile = loadProfile(uid);
+
+        const username = firebaseUser.displayName || firebaseUser.email.split("@")[0];
+        const displayName = storedProfile?.displayName || firebaseUser.displayName || username;
+
+        const avatar =
+          storedProfile?.avatar ||
+          firebaseUser.photoURL ||
+          "https://i.ibb.co/4pDNDk1/avatar-default.png";
+
         const u = {
-          username: firebaseUser.displayName || firebaseUser.email.split("@")[0],
-          displayName: firebaseUser.displayName || firebaseUser.email.split("@")[0],
+          uid,
+          username,
+          displayName,
           email: firebaseUser.email,
-          avatar: savedData?.avatar || firebaseUser.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png",
+          avatar,
         };
+
         setUser(u);
         localStorage.setItem("gomusic_user", JSON.stringify(u));
+        saveProfile(uid, { displayName, avatar });
       } else {
         setUser(null);
         localStorage.removeItem("gomusic_user");
@@ -555,11 +621,23 @@ export default function Formulario() {
     try {
       if (isLogin) {
         const cred = await signInWithEmailAndPassword(auth, formData.email, formData.password);
-        setUser({
-          username: cred.user.displayName || cred.user.email.split("@")[0],
-          email: cred.user.email,
-          avatar: cred.user.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png",
-        });
+
+        const uid = cred.user.uid;
+        const storedProfile = loadProfile(uid);
+
+        const username = cred.user.displayName || cred.user.email.split("@")[0];
+        const displayName = storedProfile?.displayName || cred.user.displayName || username;
+        const avatar =
+          storedProfile?.avatar ||
+          cred.user.photoURL ||
+          "https://i.ibb.co/4pDNDk1/avatar-default.png";
+
+        const u = { uid, username, displayName, email: cred.user.email, avatar };
+
+        setUser(u);
+        localStorage.setItem("gomusic_user", JSON.stringify(u));
+        saveProfile(uid, { displayName, avatar });
+
         setMessage("Sesión iniciada ✔");
       } else {
         const cred = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
@@ -571,7 +649,7 @@ export default function Formulario() {
           try {
             const res = await fetch("/upload-avatar", {
               method: "POST",
-              body: uploadFormData
+              body: uploadFormData,
             });
             const data = await res.json();
             if (res.ok && data.url) {
@@ -583,33 +661,37 @@ export default function Formulario() {
         }
 
         await updateProfile(cred.user, { displayName: formData.username, photoURL });
-        setUser({ 
+
+        const u = {
+          uid: cred.user.uid,
           username: cred.user.email.split("@")[0],
           displayName: formData.username,
-          email: cred.user.email, 
-          avatar: photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png" 
-        });
+          email: cred.user.email,
+          avatar: photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png",
+        };
+
+        setUser(u);
+        localStorage.setItem("gomusic_user", JSON.stringify(u));
+        saveProfile(u.uid, { displayName: u.displayName, avatar: u.avatar });
+
         setMessage("Cuenta creada ✔");
       }
 
       setFormData({ username: "", email: "", password: "" });
       setPhotoFile(null);
-
-    } catch (err) { 
+    } catch (err) {
       console.error("Error en autenticación:", err);
-      setMessage(`Error: ${err.message}`); 
+      setMessage(`Error: ${err.message}`);
     }
   };
 
   const handleGoogle = async () => {
     setMessage("Redirigiendo a Google...");
     try {
-      // Intenta popup primero
       await signInWithPopup(auth, googleProvider);
     } catch (error) {
       console.error("Error en popup, intentando redirect:", error);
-      // Si falla el popup (ej: bloqueado), usa redirect
-      if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
+      if (error.code === "auth/popup-blocked" || error.code === "auth/cancelled-popup-request") {
         try {
           await signInWithRedirect(auth, googleProvider);
         } catch (redirectError) {
@@ -628,9 +710,9 @@ export default function Formulario() {
     setMessage("");
   };
 
-  const toggleForm = () => { 
-    setIsLogin(!isLogin); 
-    setMessage(""); 
+  const toggleForm = () => {
+    setIsLogin(!isLogin);
+    setMessage("");
   };
 
   const allPlaylists = [...ownPlaylists, ...sharedPlaylists];
@@ -644,32 +726,28 @@ export default function Formulario() {
           <div className="auth-form">
             {!isLogin && (
               <>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="Nombre de usuario"
-                  value={formData.username} 
-                  onChange={(e) => setFormData({...formData, username: e.target.value})} 
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 />
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={(e) => setPhotoFile(e.target.files[0])} 
-                />
+                <input type="file" accept="image/*" onChange={(e) => setPhotoFile(e.target.files[0])} />
               </>
             )}
 
-            <input 
-              type="email" 
+            <input
+              type="email"
               placeholder="Correo"
-              value={formData.email} 
-              onChange={(e) => setFormData({...formData, email: e.target.value})} 
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
 
-            <input 
-              type="password" 
+            <input
+              type="password"
               placeholder="Contraseña"
-              value={formData.password} 
-              onChange={(e) => setFormData({...formData, password: e.target.value})} 
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
 
             <button onClick={handleAuth}>{isLogin ? "Entrar" : "Registrar"}</button>
@@ -702,10 +780,7 @@ export default function Formulario() {
 
           <ShareAcceptor user={user} refreshPlaylists={fetchPlaylists} />
 
-          <button 
-            className="btn-playlist-toggle"
-            onClick={() => setShowPlaylistCreator(!showPlaylistCreator)}
-          >
+          <button className="btn-playlist-toggle" onClick={() => setShowPlaylistCreator(!showPlaylistCreator)}>
             {showPlaylistCreator ? "Ocultar Creador" : "➕ Crear Nueva Playlist"}
           </button>
 
@@ -715,12 +790,14 @@ export default function Formulario() {
             <div className="user-playlists">
               <h3>Mis Playlists</h3>
               <div className="playlist-grid">
-                {ownPlaylists.map(p => (
+                {ownPlaylists.map((p) => (
                   <div key={p._id} className="playlist-card">
                     <img src={p.image || "https://i.ibb.co/4pDNDk1/avatar-default.png"} alt={p.name} />
-                    <h4>{p.name} {!p.isPublic && '🔒'}</h4>
+                    <h4>
+                      {p.name} {!p.isPublic && "🔒"}
+                    </h4>
                     <p>{p.songs?.length || 0} canciones</p>
-                    
+
                     <PlaylistShare playlist={p} user={user} />
                     <PlaylistActions playlist={p} user={user} refreshPlaylists={fetchPlaylists} />
                   </div>
@@ -733,24 +810,26 @@ export default function Formulario() {
             <div className="shared-playlists">
               <h3>📥 Playlists Compartidas Conmigo</h3>
               <div className="playlist-grid">
-                {sharedPlaylists.map(p => (
+                {sharedPlaylists.map((p) => (
                   <div key={p._id} className="playlist-card shared">
                     <img src={p.image || "https://i.ibb.co/4pDNDk1/avatar-default.png"} alt={p.name} />
                     <h4>{p.name} 🔒</h4>
                     <p>{p.songs?.length || 0} canciones</p>
                     <small>Por: {p.owner}</small>
                     <span className="read-only-badge">Solo lectura</span>
+
+                    <RemoveFromLibrary playlist={p} user={user} refreshPlaylists={fetchPlaylists} />
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          <SongList 
-            songs={songs} 
-            search={search} 
-            setSearch={setSearch} 
-            refreshSongs={fetchSongs} 
+          <SongList
+            songs={songs}
+            search={search}
+            setSearch={setSearch}
+            refreshSongs={fetchSongs}
             user={user}
             playlists={allPlaylists}
             refreshPlaylists={fetchPlaylists}
@@ -771,47 +850,35 @@ function FormularioSubida({ user, refreshSongs }) {
     if (!file) return setMsg("Sube un archivo");
 
     const fd = new FormData();
-    fd.append("file", file); 
+    fd.append("file", file);
     fd.append("name", name);
-    fd.append("artist", artist); 
+    fd.append("artist", artist);
     fd.append("username", user.username);
 
     try {
       const res = await fetch("/upload", { method: "POST", body: fd });
       const data = await res.json();
 
-      if (res.ok) { 
-        setMsg("✔ subida"); 
-        setName(""); 
-        setArtist(""); 
-        setFile(null); 
-        refreshSongs(); 
+      if (res.ok) {
+        setMsg("✔ subida");
+        setName("");
+        setArtist("");
+        setFile(null);
+        refreshSongs();
       } else {
         setMsg(data.error || "Error");
       }
-    } catch { 
-      setMsg("Falló el servidor"); 
+    } catch {
+      setMsg("Falló el servidor");
     }
   };
 
   return (
     <div className="formulario">
       <h3>Subir Canción</h3>
-      <input 
-        placeholder="Nombre" 
-        value={name} 
-        onChange={(e) => setName(e.target.value)} 
-      />
-      <input 
-        placeholder="Artista" 
-        value={artist} 
-        onChange={(e) => setArtist(e.target.value)} 
-      />
-      <input 
-        type="file" 
-        accept="audio/*" 
-        onChange={(e) => setFile(e.target.files[0])} 
-      />
+      <input placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} />
+      <input placeholder="Artista" value={artist} onChange={(e) => setArtist(e.target.value)} />
+      <input type="file" accept="audio/*" onChange={(e) => setFile(e.target.files[0])} />
       <button onClick={handleUpload}>Subir</button>
       {msg && <p>{msg}</p>}
     </div>
