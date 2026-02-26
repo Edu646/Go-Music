@@ -892,3 +892,28 @@ body {
     display: flex;
   }
 }
+
+
+.user-avatar-img {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-user-text h2 {
+  margin: 0;
+}
+
+.header-user-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
