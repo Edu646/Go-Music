@@ -4,7 +4,7 @@ import "./playlist_usuario.css";
 
 export default function UserPlaylists() {
   const [user, setUser] = useState(null);
-  const [playlists, setPlaylists] = useState([]); // Inicializado como array vacío
+  const [playlists, setPlaylists] = useState([]);
   const [selected, setSelected] = useState(null);
   const [allSongs, setAllSongs] = useState([]);
   const [search, setSearch] = useState("");
@@ -19,7 +19,7 @@ export default function UserPlaylists() {
     if (storedUser) setUser(storedUser);
   }, []);
 
-  // Fetch playlists del usuario con validación de Array
+  // Fetch playlists del usuario con validación
   const fetchPlaylists = async () => {
     if (!user) return;
     const url = `/playlists/${user.username}`;
@@ -30,21 +30,29 @@ export default function UserPlaylists() {
 
       if (data && typeof data === "object" && Array.isArray(data.own) && Array.isArray(data.shared)) {
         const allPlaylists = [...data.own, ...data.shared];
-
         setPlaylists(allPlaylists);
 
-        // Si tengo algo seleccionado, refrescarlo
+        // refrescar selected o cerrarlo si ya no existe / no eres owner
         if (selected) {
           const updated = allPlaylists.find((p) => p._id === selected._id);
-          setSelected(updated || null);
+          if (!updated) {
+            setSelected(null);
+          } else if (updated.owner !== user.username) {
+            // Si por cualquier motivo estaba seleccionada una compartida, cerramos editor
+            setSelected(null);
+          } else {
+            setSelected(updated);
+          }
         }
       } else {
         console.warn("La API no devolvió el formato esperado {own: [], shared: []}:", data);
         setPlaylists([]);
+        setSelected(null);
       }
     } catch (err) {
       console.error("Error cargando playlists:", err);
       setPlaylists([]);
+      setSelected(null);
     }
   };
 
@@ -121,7 +129,41 @@ export default function UserPlaylists() {
     }
   };
 
-  // Abrir popup sin reproducir automáticamente
+  // ✅ NUEVO: quitar playlist compartida (sin borrar la del creador)
+  const removeSharedPlaylist = async (playlistId, playlistName) => {
+    if (!user?.username) return;
+
+    if (!window.confirm(`¿Quitar "${playlistName}" de tus playlists? (No se borra del creador)`)) return;
+
+    try {
+      const res = await fetch(`/playlists/${playlistId}/remove-from-library`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: user.username }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data?.removed === true) {
+        // si estaba abierta en popup y la quito, cerramos
+        if (popupPlaylist?._id === playlistId) setPopupPlaylist(null);
+        // si estaba seleccionada, cerramos editor
+        if (selected?._id === playlistId) setSelected(null);
+
+        fetchPlaylists();
+      } else if (res.ok && data?.removed === false) {
+        alert("Esa playlist ya no estaba en tu biblioteca.");
+        fetchPlaylists();
+      } else {
+        alert(data.error || "No se pudo quitar la playlist.");
+      }
+    } catch (err) {
+      console.error("Error quitando playlist compartida:", err);
+      alert("Error de conexión quitando la playlist.");
+    }
+  };
+
+  // Abrir popup
   const openPopup = (playlist) => {
     setPopupPlaylist(playlist);
     setCurrentIndex(0);
@@ -138,7 +180,7 @@ export default function UserPlaylists() {
       <div className="playlist-grid">
         {Array.isArray(playlists) && playlists.length > 0 ? (
           playlists.map((p) => {
-            const isOwner = p.owner === user.username; // ✅ clave
+            const isOwner = p.owner === user.username;
 
             return (
               <div key={p._id} className="playlist-card">
@@ -150,13 +192,22 @@ export default function UserPlaylists() {
                 <h4>{p.name}</h4>
                 <p>{p.songs?.length || 0} canciones</p>
 
-                {/* ✅ SOLO el dueño ve editar */}
                 {isOwner ? (
                   <button onClick={() => setSelected(p)}>Editar</button>
                 ) : (
-                  <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>
-                    🔒 Playlist compartida (solo lectura)
-                  </div>
+                  <>
+                    <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>
+                      🔒 Playlist compartida (solo lectura)
+                    </div>
+
+                    {/* ✅ BOTÓN QUITAR (solo compartidas) */}
+                    <button
+                      style={{ marginTop: 8 }}
+                      onClick={() => removeSharedPlaylist(p._id, p.name)}
+                    >
+                      Quitar
+                    </button>
+                  </>
                 )}
               </div>
             );
@@ -203,7 +254,7 @@ export default function UserPlaylists() {
         </div>
       )}
 
-      {/* Popup sin flechas */}
+      {/* Popup */}
       {popupPlaylist && (
         <div className="playlist-popup">
           <div className="popup-content">
