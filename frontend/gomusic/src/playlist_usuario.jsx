@@ -18,7 +18,7 @@ export default function Playlist_User() {
     if (storedUser) setUser(storedUser);
   }, []);
 
-  // Obtener playlists del usuario
+  // Obtener playlists del usuario (y mantener selected actualizado)
   const fetchPlaylists = async () => {
     if (!user) return;
 
@@ -27,20 +27,37 @@ export default function Playlist_User() {
       const data = await res.json();
 
       if (data?.own && data?.shared) {
-        setPlaylists([...data.own, ...data.shared]);
+        const merged = [...data.own, ...data.shared];
+        setPlaylists(merged);
+
+        // ✅ Mantener selected sincronizado con lo que viene del backend
+        setSelected((prev) => {
+          if (!prev) return null;
+          return merged.find((x) => String(x._id) === String(prev._id)) || null;
+        });
+
+        // ✅ Mantener popup sincronizado también
+        setPopupPlaylist((prev) => {
+          if (!prev) return null;
+          return merged.find((x) => String(x._id) === String(prev._id)) || null;
+        });
       } else {
         setPlaylists([]);
+        setSelected(null);
+        setPopupPlaylist(null);
       }
     } catch (err) {
       console.error("Error cargando playlists:", err);
       setPlaylists([]);
+      setSelected(null);
+      setPopupPlaylist(null);
     }
   };
 
-  // Obtener canciones
+  // Obtener canciones (lista general o búsqueda)
   const fetchSongs = async () => {
     try {
-      const query = search ? `/search?q=${search}` : "/songs";
+      const query = search ? `/search?q=${encodeURIComponent(search)}` : "/songs";
       const res = await fetch(query);
       const data = await res.json();
       setAllSongs(Array.isArray(data) ? data : []);
@@ -73,14 +90,14 @@ export default function Playlist_User() {
     }
   };
 
-  // Quitar canción
+  // Quitar canción (solo si es dueño)
   const removeSong = async (playlistId, songId) => {
     if (!user?.username) return;
 
-    const playlist = playlists.find((p) => p._id === playlistId);
+    const playlist = playlists.find((p) => String(p._id) === String(playlistId));
     if (!playlist || playlist.owner !== user.username) return;
 
-    const updatedSongs = playlist.songs.filter(
+    const updatedSongs = (playlist.songs || []).filter(
       (s) => String(s._id) !== String(songId)
     );
 
@@ -100,7 +117,7 @@ export default function Playlist_User() {
     }
   };
 
-  // Quitar playlist compartida
+  // Quitar playlist compartida de la biblioteca
   const removeSharedPlaylist = async (playlistId) => {
     if (!user?.username) return;
 
@@ -117,6 +134,18 @@ export default function Playlist_User() {
     }
   };
 
+  // ✅ Reproducir desde buscador SIN cola (no permite cambiar de canción)
+  const playFromSearchSingle = (song) => {
+    // cola = solo esta canción
+    play(song, [song], 0);
+  };
+
+  // ✅ Reproducir playlist desde el principio (con cola)
+  const playPlaylistFromStart = (playlist) => {
+    if (!playlist?.songs?.length) return;
+    play(playlist.songs[0], playlist.songs, 0);
+  };
+
   if (!user) return <p>Debes iniciar sesión para ver tus playlists.</p>;
 
   return (
@@ -130,22 +159,25 @@ export default function Playlist_User() {
 
             return (
               <div key={p._id} className="playlist-card">
+                {/* ✅ Click en imagen = reproducir playlist (NO abrir popup) */}
                 <img
                   src={p.image || "https://i.ibb.co/4pDNDk1/avatar-default.png"}
                   alt={p.name}
-                  onClick={() => setPopupPlaylist(p)}
+                  onClick={() => playPlaylistFromStart(p)}
+                  style={{ cursor: "pointer" }}
                 />
 
                 <h4>{p.name}</h4>
                 <p>{p.songs?.length || 0} canciones</p>
 
+                {/* ✅ Botón para abrir el popup (ver canciones) */}
+                <button onClick={() => setPopupPlaylist(p)}>Ver</button>
+
                 {isOwner ? (
                   <button onClick={() => setSelected(p)}>Editar</button>
                 ) : (
                   <>
-                    <div className="shared-label">
-                      🔒 Playlist compartida
-                    </div>
+                    <div className="shared-label">🔒 Playlist compartida</div>
                     <button onClick={() => removeSharedPlaylist(p._id)}>
                       Quitar
                     </button>
@@ -172,11 +204,15 @@ export default function Playlist_User() {
             onChange={(e) => setSearch(e.target.value)}
           />
 
-          <h4>Agregar canciones</h4>
+          <h4>Resultados del buscador (Play sin cola)</h4>
           <ul>
             {allSongs.map((s) => (
               <li key={s._id}>
                 {s.name} - {s.artist}
+
+                {/* ✅ Play desde buscador: NO puedes cambiar de canción */}
+                <button onClick={() => playFromSearchSingle(s)}>Play</button>
+
                 {!selected.songs?.some(
                   (song) => String(song._id) === String(s._id)
                 ) && (
@@ -214,11 +250,7 @@ export default function Playlist_User() {
               {popupPlaylist.songs?.map((s, i) => (
                 <li key={s._id}>
                   {s.name} - {s.artist}
-                  <button
-                    onClick={() =>
-                      play(s, popupPlaylist.songs, i) // ✅ con cola
-                    }
-                  >
+                  <button onClick={() => play(s, popupPlaylist.songs, i)}>
                     Play
                   </button>
                 </li>
