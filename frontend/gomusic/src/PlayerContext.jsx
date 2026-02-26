@@ -1,4 +1,11 @@
-import React, { createContext, useRef, useState, useContext, useEffect, useCallback } from "react";
+import React, {
+  createContext,
+  useRef,
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+} from "react";
 import "./PlayerContext.css";
 
 const PlayerContext = createContext();
@@ -13,11 +20,11 @@ export function PlayerProvider({ children }) {
   const [showPlayer, setShowPlayer] = useState(false);
   const hideTimerRef = useRef(null);
 
-  // ✅ NUEVO: cola de reproducción (playlist) + índice
+  // ✅ Cola + índice
   const [queue, setQueue] = useState([]);
   const [queueIndex, setQueueIndex] = useState(-1);
 
-  // Estado para la barra de progreso
+  // Barra de progreso
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
@@ -35,29 +42,42 @@ export function PlayerProvider({ children }) {
     }
   };
 
-  // ✅ Reproduce una canción y opcionalmente setea la cola y el índice
+  /**
+   * ✅ play(song, list, index)
+   * - Si list NO viene (null/undefined) -> modo single: queue = [song], queueIndex = 0
+   * - Si list viene array -> queue=list, queueIndex=index (si es número)
+   */
   const play = useCallback((song, list = null, index = null) => {
+    if (!song) return;
+
     setCurrentSong(song);
     setIsPlaying(true);
     setShowPlayer(true);
     clearHideTimer();
 
-    if (Array.isArray(list)) setQueue(list);
-    if (typeof index === "number") setQueueIndex(index);
+    // ✅ MUY IMPORTANTE: si NO me pasas lista, reseteo cola a SOLO esa canción
+    if (Array.isArray(list)) {
+      setQueue(list);
+      setQueueIndex(typeof index === "number" ? index : 0);
+    } else {
+      setQueue([song]);
+      setQueueIndex(0);
+    }
 
     setTimeout(() => {
       try {
-        if (audioRef.current && song) {
-          audioRef.current.src = song.audio;
-          audioRef.current.load();
+        const audio = audioRef.current;
+        if (!audio) return;
 
-          const playPromise = audioRef.current.play();
-          if (playPromise !== undefined) {
-            playPromise.catch((error) => {
-              console.log("Autoplay prevenido o error de carga:", error);
-              setIsPlaying(false);
-            });
-          }
+        audio.src = song.audio;
+        audio.load();
+
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((error) => {
+            console.log("Autoplay prevenido o error de carga:", error);
+            setIsPlaying(false);
+          });
         }
       } catch (e) {
         console.error("Audio play error:", e);
@@ -79,11 +99,15 @@ export function PlayerProvider({ children }) {
     setShowPlayer(true);
   };
 
-  // ✅ NEXT / PREV dentro de la cola
+  // ✅ NEXT / PREV: si queue <= 1 -> NO HACER NADA
   const next = useCallback(() => {
-    if (!Array.isArray(queue) || queue.length === 0) return;
+    if (!Array.isArray(queue) || queue.length <= 1) return;
 
-    const idx = queueIndex >= 0 ? queueIndex : queue.findIndex((s) => s?._id === currentSong?._id);
+    const idx =
+      queueIndex >= 0
+        ? queueIndex
+        : queue.findIndex((s) => String(s?._id) === String(currentSong?._id));
+
     const nextIndex = idx < 0 ? 0 : (idx + 1) % queue.length;
 
     setQueueIndex(nextIndex);
@@ -92,9 +116,13 @@ export function PlayerProvider({ children }) {
   }, [queue, queueIndex, currentSong, play]);
 
   const prev = useCallback(() => {
-    if (!Array.isArray(queue) || queue.length === 0) return;
+    if (!Array.isArray(queue) || queue.length <= 1) return;
 
-    const idx = queueIndex >= 0 ? queueIndex : queue.findIndex((s) => s?._id === currentSong?._id);
+    const idx =
+      queueIndex >= 0
+        ? queueIndex
+        : queue.findIndex((s) => String(s?._id) === String(currentSong?._id));
+
     const prevIndex = idx < 0 ? 0 : (idx - 1 + queue.length) % queue.length;
 
     setQueueIndex(prevIndex);
@@ -102,7 +130,7 @@ export function PlayerProvider({ children }) {
     if (prevSong) play(prevSong, queue, prevIndex);
   }, [queue, queueIndex, currentSong, play]);
 
-  // Actualizar tiempo y duración desde el elemento audio
+  // Eventos del audio
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -111,19 +139,23 @@ export function PlayerProvider({ children }) {
       if (!seekingRef.current) setCurrentTime(audio.currentTime);
     };
     const onLoaded = () => setDuration(audio.duration || 0);
+
     const onPlay = () => {
       setIsPlaying(true);
       setShowPlayer(true);
       clearHideTimer();
     };
+
     const onPause = () => {
       setIsPlaying(false);
       startHideTimer();
     };
 
-    // ✅ cuando acaba: si hay cola -> siguiente, si no -> ocultar
+    // ✅ cuando acaba:
+    // - si queue > 1 -> siguiente
+    // - si queue <= 1 -> parar y ocultar
     const onEnded = () => {
-      if (Array.isArray(queue) && queue.length > 0) {
+      if (Array.isArray(queue) && queue.length > 1) {
         next();
       } else {
         setIsPlaying(false);
@@ -159,7 +191,9 @@ export function PlayerProvider({ children }) {
   const formatTime = (t) => {
     if (!t || isNaN(t)) return "0:00";
     const m = Math.floor(t / 60);
-    const s = Math.floor(t % 60).toString().padStart(2, "0");
+    const s = Math.floor(t % 60)
+      .toString()
+      .padStart(2, "0");
     return `${m}:${s}`;
   };
 
@@ -198,13 +232,28 @@ export function PlayerProvider({ children }) {
     window.removeEventListener("pointerup", handlePointerUp);
   };
 
+  // ✅ Solo habilitar flechas si hay más de 1 canción en cola
   const hasQueue = Array.isArray(queue) && queue.length > 1;
 
   return (
-    <PlayerContext.Provider value={{ currentSong, play, pause, resume, isPlaying, next, prev }}>
+    <PlayerContext.Provider
+      value={{
+        currentSong,
+        play,
+        pause,
+        resume,
+        isPlaying,
+        next,
+        prev,
+      }}
+    >
       {children}
 
-      <div className={`audio-player ${showPlayer ? "" : "hidden"}`} role="region" aria-label="Audio player">
+      <div
+        className={`audio-player ${showPlayer ? "" : "hidden"}`}
+        role="region"
+        aria-label="Audio player"
+      >
         <div className="song-info">
           {currentSong ? (
             <>
@@ -227,7 +276,12 @@ export function PlayerProvider({ children }) {
           tabIndex={0}
           title="Barra de progreso"
         >
-          <div className="progress-bar" style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }} />
+          <div
+            className="progress-bar"
+            style={{
+              width: `${duration ? (currentTime / duration) * 100 : 0}%`,
+            }}
+          />
         </div>
 
         <div className="time-info">
@@ -237,7 +291,6 @@ export function PlayerProvider({ children }) {
         </div>
 
         <div className="controls">
-          {/* ✅ Flechas */}
           <button onClick={prev} title="Anterior" disabled={!hasQueue}>
             ◀
           </button>
