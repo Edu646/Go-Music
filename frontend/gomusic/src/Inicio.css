@@ -803,3 +803,61 @@ html {
   font-size: 1.1rem;
   color: #b3b3b3;
 }
+
+.login-popup-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.login-popup{
+  width: min(420px, 92vw);
+  background: #111;
+  color: #fff;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+}
+
+.login-popup h3{
+  margin: 0 0 8px 0;
+}
+
+.login-popup p{
+  margin: 0 0 14px 0;
+  opacity: .9;
+}
+
+.login-popup-actions{
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.login-popup-btn{
+  border: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.login-popup-btn.cancel{
+  background: #2a2a2a;
+  color: #fff;
+}
+
+.login-popup-btn.ok{
+  background: #1db954;
+  color: #000;
+  font-weight: 700;
+}
+
+.playlist-login-hint{
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: .85;
+}
