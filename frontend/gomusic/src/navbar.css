@@ -5,41 +5,33 @@
 :root {
   --color-primary: #1db954;
   --color-primary-hover: #17a74a;
-  --color-primary-dark: #148a3d;
   --color-bg-dark: #191414;
   --color-black: #000000;
-  
-  --color-surface: rgba(24, 24, 24, 0.93);
+
+  --color-surface: rgba(24, 24, 24, 0.95);
   --color-surface-hover: rgba(29, 185, 84, 0.08);
   --color-surface-active: rgba(29, 185, 84, 0.18);
-  
+
   --color-text-primary: #ffffff;
   --color-text-secondary: #e0e0e0;
-  --color-text-muted: #b3b3b3;
-  
+
   --navbar-height-desktop: 100px;
-  --navbar-height-mobile: 56px;
-  
+
   --radius-sm: 6px;
   --radius-md: 12px;
   --radius-lg: 24px;
   --radius-xl: 80px;
-  
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.10);
+
   --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.18);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.25);
-  --shadow-xl: 0 10px 30px rgba(0, 0, 0, 0.45);
-  
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.3s ease;
-  --transition-slow: 0.5s ease;
-  
+
+  /* Z-INDEX BIEN DEFINIDOS */
   --z-navbar: 1000;
-  --z-dropdown: 1500;
+  --z-dropdown: 3000;
 }
 
 /* ============================================ */
-/* === RESET Y BASE ========================== */
+/* === RESET ================================= */
 /* ============================================ */
 
 *, *::before, *::after {
@@ -47,9 +39,9 @@
 }
 
 html, body {
-  min-height: 100vh;
   margin: 0;
   padding: 0;
+  min-height: 100vh;
   font-family: 'Segoe UI', sans-serif;
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-bg-dark) 50%, var(--color-black) 100%);
   background-attachment: fixed;
@@ -62,20 +54,21 @@ html, body {
 /* ============================================ */
 
 .navbar {
-  position: relative; /* 🔥 CLAVE PARA QUE EL MENÚ SE POSICIONE DEBAJO */
+  position: relative; /* CLAVE */
+  z-index: var(--z-navbar);
+
   display: flex;
   justify-content: space-between;
   align-items: center;
+
   background: var(--color-surface);
   padding: 30px;
-  font-weight: bold;
   border-bottom: 4px solid var(--color-black);
   border-radius: 0 0 var(--radius-xl) var(--radius-xl);
   height: var(--navbar-height-desktop);
+
   box-shadow: var(--shadow-md);
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: all var(--transition-normal);
 }
 
 /* LOGO */
@@ -83,7 +76,6 @@ html, body {
 .logo img {
   max-height: 120px;
   width: auto;
-  border-radius: var(--radius-sm);
 }
 
 /* LINKS DESKTOP */
@@ -99,10 +91,9 @@ html, body {
 .nav-links a {
   text-decoration: none;
   color: var(--color-text-primary);
-  font-size: 1.08rem;
   padding: 6px 14px;
   border-radius: var(--radius-sm);
-  transition: var(--transition-normal);
+  transition: 0.3s;
 }
 
 .nav-links a:hover {
@@ -121,18 +112,13 @@ html, body {
 .nav-toggle {
   display: none;
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
   color: white;
   width: 44px;
   height: 44px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 1.4rem;
-  transition: var(--transition-fast);
-}
-
-.nav-toggle:hover {
-  background: rgba(255,255,255,0.05);
 }
 
 /* ============================================ */
@@ -147,6 +133,10 @@ html, body {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   text-align: center;
+
+  /* IMPORTANTE: evitar que corte el menú */
+  position: relative;
+  z-index: 1;
 }
 
 /* ============================================ */
@@ -156,9 +146,8 @@ html, body {
 @media (max-width: 700px){
 
   .navbar{
-    padding: 14px 20px;
+    padding: 16px 20px;
     height: auto;
-    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   }
 
   .logo img{
@@ -177,17 +166,23 @@ html, body {
     width: 100%;
   }
 
-  /* 🔥 MENÚ DESPLEGABLE CORREGIDO */
+  /* MENÚ DESPLEGABLE DEFINITIVO */
   .navbar.open .nav-links{
     display: flex;
-    position: absolute;   /* 👈 IMPORTANTE */
-    top: 100%;            /* 👈 JUSTO DEBAJO DEL NAVBAR */
+
+    position: absolute; /* Se posiciona respecto al navbar */
+    top: 100%;
     left: 0;
     width: 100%;
-    background: rgba(18,18,18,.98);
+
+    background: rgba(18,18,18,0.98);
     padding: 10px 0;
     border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+
     box-shadow: var(--shadow-lg);
+
+    z-index: var(--z-dropdown); /* MÁS ALTO QUE TODO */
+
     animation: slideDown .3s ease;
   }
 
