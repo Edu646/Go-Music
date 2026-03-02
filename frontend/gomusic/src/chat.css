@@ -917,3 +917,17 @@ body {
   flex-direction: column;
   gap: 2px;
 }
+
+.toast{
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(20,20,20,0.92);
+  color: #fff;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+  max-width: 320px;
+  font-size: 14px;
+}
