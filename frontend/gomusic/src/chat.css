@@ -931,3 +931,17 @@ body {
   max-width: 320px;
   font-size: 14px;
 }
+
+.user-avatar-img,
+.avatar-placeholder {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 10px;
+}
+
+.user-avatar-img.online,
+.avatar-placeholder.online {
+  outline: 2px solid #2ecc71;
+}
