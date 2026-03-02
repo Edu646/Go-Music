@@ -13,9 +13,10 @@ import {
 import "./formulario.css";
 
 /* ==========================================================================================
-  PERFIL PERSISTENTE POR USUARIO (NO se borra al cerrar sesión)
+  PERFIL PERSISTENTE POR USUARIO (SOLO displayName; NO guardamos avatar aquí)
+  - El avatar debe venir de Firebase Auth (photoURL) o de tu backend (URL estable)
 ========================================================================================== */
-const PROFILE_STORE_KEY = "gomusic_profiles_v1";
+const PROFILE_STORE_KEY = "gomusic_profiles_v2";
 
 function loadProfile(uid) {
   try {
@@ -35,6 +36,8 @@ function saveProfile(uid, data) {
     localStorage.setItem(PROFILE_STORE_KEY, JSON.stringify(map));
   } catch {}
 }
+
+const DEFAULT_AVATAR = "https://i.ibb.co/4pDNDk1/avatar-default.png";
 
 /* ==========================================================================================
   ACCIONES DE PLAYLIST (Cambiar privacidad, eliminar, compartir)
@@ -56,7 +59,7 @@ function PlaylistActions({ playlist, user, refreshPlaylists }) {
         setMsg(`Playlist "${playlist.name}" eliminada ✔️`);
         refreshPlaylists();
       } else {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         setMsg(data.error || "Error al borrar playlist");
       }
     } catch {
@@ -75,7 +78,7 @@ function PlaylistActions({ playlist, user, refreshPlaylists }) {
         setMsg(`Privacidad cambiada a ${!playlist.isPublic ? "pública" : "privada"} ✔️`);
         refreshPlaylists();
       } else {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         setMsg(data.error || "Error cambiando privacidad");
       }
     } catch {
@@ -134,11 +137,7 @@ function RemoveFromLibrary({ playlist, user, refreshPlaylists }) {
 
   return (
     <div className="playlist-actions">
-      <button
-        onClick={handleRemove}
-        className="btn-delete"
-        title="Quitar de mi biblioteca"
-      >
+      <button onClick={handleRemove} className="btn-delete" title="Quitar de mi biblioteca">
         ➖ Quitar de mis playlists
       </button>
       {msg && <p className="action-message">{msg}</p>}
@@ -157,6 +156,7 @@ function PlaylistCreator({ user, refreshPlaylists }) {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    setMsg("");
     if (!name.trim()) return setMsg("Pon un nombre a la playlist");
 
     const formData = new FormData();
@@ -167,7 +167,7 @@ function PlaylistCreator({ user, refreshPlaylists }) {
 
     try {
       const res = await fetch("/playlists", { method: "POST", body: formData });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setMsg(`Playlist creada ✔️ ${!isPublic ? "(Privada - se generó link)" : ""}`);
         setName("");
@@ -215,10 +215,15 @@ function PlaylistShare({ playlist, user }) {
     ? `${window.location.origin}/share/${playlist.shareToken}`
     : "";
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(shareLink);
-    setMsg("✔️ Link copiado al portapapeles");
-    setTimeout(() => setMsg(""), 3000);
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setMsg("✔️ Link copiado al portapapeles");
+      setTimeout(() => setMsg(""), 3000);
+    } catch {
+      setMsg("No se pudo copiar el link");
+      setTimeout(() => setMsg(""), 3000);
+    }
   };
 
   const regenerateToken = async () => {
@@ -248,12 +253,7 @@ function PlaylistShare({ playlist, user }) {
       </button>
       {showLink && (
         <div className="share-link-box">
-          <input
-            type="text"
-            value={shareLink}
-            readOnly
-            onClick={(e) => e.target.select()}
-          />
+          <input type="text" value={shareLink} readOnly onClick={(e) => e.target.select()} />
           <button onClick={copyLink}>📋 Copiar</button>
           <button onClick={regenerateToken} title="Invalida el link anterior">
             🔄 Nuevo Link
@@ -279,6 +279,7 @@ function ShareAcceptor({ user, refreshPlaylists }) {
   }, []);
 
   const handleAccept = async () => {
+    setMsg("");
     if (!token.trim()) return setMsg("Ingresa un código válido");
     try {
       const res = await fetch("/playlists/accept-share", {
@@ -286,9 +287,9 @@ function ShareAcceptor({ user, refreshPlaylists }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, username: user.username }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        setMsg(`✔️ Playlist "${data.playlist.name}" agregada a tu biblioteca`);
+        setMsg(`✔️ Playlist "${data.playlist?.name || "agregada"}" agregada a tu biblioteca`);
         setToken("");
         refreshPlaylists();
         window.history.replaceState({}, document.title, "/");
@@ -341,7 +342,7 @@ function SongActions({ song, playlists, user, refreshPlaylists }) {
         refreshPlaylists();
         setIsAdding(false);
       } else {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         setMsg(data.error || "Error al añadir");
       }
     } catch {
@@ -377,6 +378,7 @@ function SongActions({ song, playlists, user, refreshPlaylists }) {
 
 /* ==========================================================================================
   EDITOR DE PERFIL - CAMBIAR NOMBRE E IMAGEN
+  - Subimos la imagen con /upload-avatar y guardamos su URL (persistente) en Firebase Auth photoURL
 ========================================================================================== */
 function ProfileEditor({ user, setUser, setMessage }) {
   const [editing, setEditing] = useState(false);
@@ -391,13 +393,30 @@ function ProfileEditor({ user, setUser, setMessage }) {
   }, [user, editing]);
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setPhotoPreview(reader.result);
-      reader.readAsDataURL(file);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPhotoFile(file);
+
+    // Preview local SOLO para previsualizar (no persistimos base64)
+    const reader = new FileReader();
+    reader.onloadend = () => setPhotoPreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const uploadAvatarIfNeeded = async () => {
+    if (!photoFile) return null;
+
+    const fd = new FormData();
+    fd.append("file", photoFile);
+
+    const res = await fetch("/upload-avatar", { method: "POST", body: fd });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data?.url) {
+      throw new Error(data?.error || "No se pudo subir el avatar");
     }
+    return data.url;
   };
 
   const handleSave = async () => {
@@ -406,26 +425,38 @@ function ProfileEditor({ user, setUser, setMessage }) {
       setMessage("No hay usuario autenticado");
       return;
     }
+
     setSaving(true);
     setMessage("");
-    try {
-      const finalDisplayName =
-        displayName?.trim() || user.displayName || user.username;
-      await updateProfile(fbUser, { displayName: finalDisplayName, photoURL: null });
 
+    try {
+      const finalDisplayName = (displayName || "").trim() || user.displayName || user.username;
+
+      // 1) Subir avatar si hay
+      const uploadedUrl = await uploadAvatarIfNeeded();
+
+      // 2) Guardar en Firebase Auth (displayName + photoURL persistente)
+      await updateProfile(fbUser, {
+        displayName: finalDisplayName,
+        photoURL: uploadedUrl || fbUser.photoURL || null,
+      });
+
+      // 3) Guardar en tu estado local (avatar debe ser URL, no base64)
       const updated = {
         ...user,
         displayName: finalDisplayName,
-        avatar: photoFile ? photoPreview : user.avatar,
+        avatar: uploadedUrl || user.avatar || fbUser.photoURL || DEFAULT_AVATAR,
       };
+
       setUser(updated);
       localStorage.setItem("gomusic_user", JSON.stringify(updated));
-      if (fbUser?.uid) saveProfile(fbUser.uid, { displayName: updated.displayName, avatar: updated.avatar });
+
+      // Guardamos solo displayName en localStorage por uid (opcional)
+      if (fbUser?.uid) saveProfile(fbUser.uid, { displayName: finalDisplayName });
 
       setMessage("Perfil actualizado ✔");
       setEditing(false);
       setPhotoFile(null);
-      setDisplayName(finalDisplayName);
     } catch (err) {
       console.error("Error actualizando perfil:", err);
       setMessage(`Error: ${err.message}`);
@@ -439,18 +470,22 @@ function ProfileEditor({ user, setUser, setMessage }) {
       <button className="btn-action" onClick={() => setEditing(!editing)}>
         {editing ? "Cancelar" : "✏️ Editar perfil"}
       </button>
+
       {editing && (
         <div className="profile-editor-box">
           <div className="profile-preview">
-            <img src={photoPreview} alt="Preview" className="avatar-preview" />
+            <img src={photoPreview || DEFAULT_AVATAR} alt="Preview" className="avatar-preview" />
           </div>
+
           <input
             type="text"
             placeholder="Nombre de perfil"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
           />
+
           <input type="file" accept="image/*" onChange={handleFileChange} />
+
           <button onClick={handleSave} disabled={saving}>
             {saving ? "Guardando..." : "Guardar cambios"}
           </button>
@@ -475,9 +510,19 @@ function SongList({ songs, search, setSearch, refreshSongs, user, playlists, ref
             <li key={s._id || i}>
               <div className="song-details">
                 <b>{s.name}</b> - {s.artist} ({s.uploadedBy})
-                <a href={s.audio} target="_blank" rel="noopener noreferrer"> 🎧 </a>
+                <a href={s.audio} target="_blank" rel="noopener noreferrer">
+                  {" "}
+                  🎧{" "}
+                </a>
               </div>
-              {user && <SongActions song={s} playlists={playlists} user={user} refreshPlaylists={refreshPlaylists} />}
+              {user && (
+                <SongActions
+                  song={s}
+                  playlists={playlists}
+                  user={user}
+                  refreshPlaylists={refreshPlaylists}
+                />
+              )}
             </li>
           ))
         ) : (
@@ -505,8 +550,9 @@ export default function Formulario() {
 
   const fetchSongs = useCallback(async () => {
     try {
-      const res = await fetch(search ? `/search?q=${search}` : "/songs");
-      setSongs(await res.json());
+      const res = await fetch(search ? `/search?q=${encodeURIComponent(search)}` : "/songs");
+      const data = await res.json().catch(() => []);
+      setSongs(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error("Error fetching songs:", e);
     }
@@ -516,9 +562,9 @@ export default function Formulario() {
     if (!user) return;
     try {
       const res = await fetch(`/playlists/${user.username}`);
-      const data = await res.json();
-      setOwnPlaylists(data.own || []);
-      setSharedPlaylists(data.shared || []);
+      const data = await res.json().catch(() => ({}));
+      setOwnPlaylists(Array.isArray(data.own) ? data.own : []);
+      setSharedPlaylists(Array.isArray(data.shared) ? data.shared : []);
     } catch (e) {
       console.error("Error fetching playlists:", e);
     }
@@ -530,18 +576,21 @@ export default function Formulario() {
   }, [fetchSongs, fetchPlaylists]);
 
   useEffect(() => {
+    // Resultado de redirect (si se usó signInWithRedirect)
     getRedirectResult(auth)
       .then((result) => {
         if (result) {
           const uid = result.user.uid;
           const storedProfile = loadProfile(uid);
+
           const username = result.user.displayName || result.user.email.split("@")[0];
-          const displayName = storedProfile?.displayName || result.user.displayName || username;
-          const avatar = storedProfile?.avatar || result.user.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png";
+          const displayName = (storedProfile?.displayName || result.user.displayName || username).trim();
+          const avatar = result.user.photoURL || DEFAULT_AVATAR;
+
           const u = { uid, username, displayName, email: result.user.email, avatar };
           setUser(u);
           localStorage.setItem("gomusic_user", JSON.stringify(u));
-          saveProfile(uid, { displayName, avatar });
+          saveProfile(uid, { displayName });
           setMessage("Inicio con Google ✔");
         }
       })
@@ -550,67 +599,82 @@ export default function Formulario() {
         setMessage(`Error Google: ${error.code} - ${error.message}`);
       });
 
-    return onAuthStateChanged(auth, (firebaseUser) => {
+    // Listener de sesión
+    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         const uid = firebaseUser.uid;
         const storedProfile = loadProfile(uid);
+
         const username = firebaseUser.displayName || firebaseUser.email.split("@")[0];
-        const displayName = storedProfile?.displayName || firebaseUser.displayName || username;
-        const avatar = storedProfile?.avatar || firebaseUser.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png";
+        const displayName = (storedProfile?.displayName || firebaseUser.displayName || username).trim();
+        const avatar = firebaseUser.photoURL || DEFAULT_AVATAR;
+
         const u = { uid, username, displayName, email: firebaseUser.email, avatar };
         setUser(u);
         localStorage.setItem("gomusic_user", JSON.stringify(u));
-        saveProfile(uid, { displayName, avatar });
+        saveProfile(uid, { displayName });
       } else {
         setUser(null);
         localStorage.removeItem("gomusic_user");
       }
     });
+
+    return () => unsub();
   }, []);
 
   const handleAuth = async (e) => {
     e.preventDefault();
     setMessage("");
+
     try {
       if (isLogin) {
         const cred = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+
         const uid = cred.user.uid;
         const storedProfile = loadProfile(uid);
+
         const username = cred.user.displayName || cred.user.email.split("@")[0];
-        const displayName = storedProfile?.displayName || cred.user.displayName || username;
-        const avatar = storedProfile?.avatar || cred.user.photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png";
+        const displayName = (storedProfile?.displayName || cred.user.displayName || username).trim();
+        const avatar = cred.user.photoURL || DEFAULT_AVATAR;
+
         const u = { uid, username, displayName, email: cred.user.email, avatar };
         setUser(u);
         localStorage.setItem("gomusic_user", JSON.stringify(u));
-        saveProfile(uid, { displayName, avatar });
+        saveProfile(uid, { displayName });
+
         setMessage("Sesión iniciada ✔");
       } else {
         const cred = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+
         let photoURL = null;
+
+        // Subimos avatar si seleccionó archivo (URL estable)
         if (photoFile) {
           const uploadFormData = new FormData();
           uploadFormData.append("file", photoFile);
-          try {
-            const res = await fetch("/upload-avatar", { method: "POST", body: uploadFormData });
-            const data = await res.json();
-            if (res.ok && data.url) photoURL = data.url;
-          } catch (err) {
-            console.error("Error uploadando avatar:", err);
-          }
+
+          const res = await fetch("/upload-avatar", { method: "POST", body: uploadFormData });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data?.url) photoURL = data.url;
         }
+
         await updateProfile(cred.user, { displayName: formData.username, photoURL });
+
         const u = {
           uid: cred.user.uid,
           username: cred.user.email.split("@")[0],
           displayName: formData.username,
           email: cred.user.email,
-          avatar: photoURL || "https://i.ibb.co/4pDNDk1/avatar-default.png",
+          avatar: photoURL || DEFAULT_AVATAR,
         };
+
         setUser(u);
         localStorage.setItem("gomusic_user", JSON.stringify(u));
-        saveProfile(u.uid, { displayName: u.displayName, avatar: u.avatar });
+        saveProfile(u.uid, { displayName: u.displayName });
+
         setMessage("Cuenta creada ✔");
       }
+
       setFormData({ username: "", email: "", password: "" });
       setPhotoFile(null);
     } catch (err) {
@@ -623,6 +687,7 @@ export default function Formulario() {
     setMessage("Redirigiendo a Google...");
     try {
       await signInWithPopup(auth, googleProvider);
+      setMessage("");
     } catch (error) {
       console.error("Error en popup, intentando redirect:", error);
       if (error.code === "auth/popup-blocked" || error.code === "auth/cancelled-popup-request") {
@@ -665,27 +730,39 @@ export default function Formulario() {
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 />
-                <input type="file" accept="image/*" onChange={(e) => setPhotoFile(e.target.files[0])} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                />
               </>
             )}
+
             <input
               type="email"
               placeholder="Correo"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
+
             <input
               type="password"
               placeholder="Contraseña"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
+
             <button onClick={handleAuth}>{isLogin ? "Entrar" : "Registrar"}</button>
           </div>
-          <button onClick={handleGoogle} className="google-btn">Continuar con Google</button>
+
+          <button onClick={handleGoogle} className="google-btn">
+            Continuar con Google
+          </button>
+
           <button onClick={toggleForm} className="auth-toggle">
             {isLogin ? "Crear cuenta" : "Iniciar sesión"}
           </button>
+
           {message && <p className="message">{message}</p>}
         </>
       )}
@@ -693,7 +770,7 @@ export default function Formulario() {
       {user && (
         <>
           <div className="user-info-box">
-            <img src={user.avatar} alt="Avatar" className="avatar-img" />
+            <img src={user.avatar || DEFAULT_AVATAR} alt="Avatar" className="avatar-img" />
             <h3>{user.displayName || user.username}</h3>
             <p>{user.email}</p>
             <button onClick={handleLogout}>Cerrar sesión</button>
@@ -712,7 +789,9 @@ export default function Formulario() {
             {showPlaylistCreator ? "Ocultar Creador" : "➕ Crear Nueva Playlist"}
           </button>
 
-          {showPlaylistCreator && <PlaylistCreator user={user} refreshPlaylists={fetchPlaylists} />}
+          {showPlaylistCreator && (
+            <PlaylistCreator user={user} refreshPlaylists={fetchPlaylists} />
+          )}
 
           {ownPlaylists.length > 0 && (
             <div className="user-playlists">
@@ -720,8 +799,10 @@ export default function Formulario() {
               <div className="playlist-grid">
                 {ownPlaylists.map((p) => (
                   <div key={p._id} className="playlist-card">
-                    <img src={p.image || "https://i.ibb.co/4pDNDk1/avatar-default.png"} alt={p.name} />
-                    <h4>{p.name} {!p.isPublic && "🔒"}</h4>
+                    <img src={p.image || DEFAULT_AVATAR} alt={p.name} />
+                    <h4>
+                      {p.name} {!p.isPublic && "🔒"}
+                    </h4>
                     <p>{p.songs?.length || 0} canciones</p>
                     <PlaylistShare playlist={p} user={user} />
                     <PlaylistActions playlist={p} user={user} refreshPlaylists={fetchPlaylists} />
@@ -737,12 +818,16 @@ export default function Formulario() {
               <div className="playlist-grid">
                 {sharedPlaylists.map((p) => (
                   <div key={p._id} className="playlist-card shared">
-                    <img src={p.image || "https://i.ibb.co/4pDNDk1/avatar-default.png"} alt={p.name} />
+                    <img src={p.image || DEFAULT_AVATAR} alt={p.name} />
                     <h4>{p.name} 🔒</h4>
                     <p>{p.songs?.length || 0} canciones</p>
                     <small>Por: {p.owner}</small>
                     <span className="read-only-badge">Solo lectura</span>
-                    <RemoveFromLibrary playlist={p} user={user} refreshPlaylists={fetchPlaylists} />
+                    <RemoveFromLibrary
+                      playlist={p}
+                      user={user}
+                      refreshPlaylists={fetchPlaylists}
+                    />
                   </div>
                 ))}
               </div>
@@ -764,6 +849,9 @@ export default function Formulario() {
   );
 }
 
+/* ==========================================================================================
+  SUBIDA DE CANCIONES
+========================================================================================== */
 function FormularioSubida({ user, refreshSongs }) {
   const [file, setFile] = useState(null);
   const [name, setName] = useState("");
@@ -771,7 +859,9 @@ function FormularioSubida({ user, refreshSongs }) {
   const [msg, setMsg] = useState("");
 
   const handleUpload = async () => {
+    setMsg("");
     if (!file) return setMsg("Sube un archivo");
+
     const fd = new FormData();
     fd.append("file", file);
     fd.append("name", name);
@@ -780,7 +870,8 @@ function FormularioSubida({ user, refreshSongs }) {
 
     try {
       const res = await fetch("/upload", { method: "POST", body: fd });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+
       if (res.ok) {
         setMsg("✔ subida");
         setName("");
@@ -799,8 +890,12 @@ function FormularioSubida({ user, refreshSongs }) {
     <div className="formulario">
       <h3>Subir Canción</h3>
       <input placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} />
-      <input placeholder="Artista" value={artist} onChange={(e) => setArtist(e.target.value)} />
-      <input type="file" accept="audio/*" onChange={(e) => setFile(e.target.files[0])} />
+      <input
+        placeholder="Artista"
+        value={artist}
+        onChange={(e) => setArtist(e.target.value)}
+      />
+      <input type="file" accept="audio/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
       <button onClick={handleUpload}>Subir</button>
       {msg && <p>{msg}</p>}
     </div>
