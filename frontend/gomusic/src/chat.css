@@ -784,3 +784,37 @@ body {
 @media (min-width: 769px) {
   .back-btn { display: none; }
 }
+
+/* =========================================
+   FIX SOLO MÓVIL - NAV SUPERIOR FIJO
+   ========================================= */
+
+@media (max-width: 768px) {
+
+  /* Ajusta esta altura a la real de tu navbar */
+  :root {
+    --mobile-nav-height: 65px;
+  }
+
+  .chat-container {
+    position: fixed !important;
+    top: var(--mobile-nav-height) !important;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(100dvh - var(--mobile-nav-height)) !important;
+  }
+
+  .chat-area {
+    height: calc(100dvh - var(--mobile-nav-height));
+  }
+
+  .sidebar {
+    top: var(--mobile-nav-height) !important;
+    height: calc(100dvh - var(--mobile-nav-height)) !important;
+  }
+
+  .sidebar-overlay {
+    top: var(--mobile-nav-height) !important;
+  }
+}
