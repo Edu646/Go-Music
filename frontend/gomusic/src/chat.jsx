@@ -36,8 +36,22 @@ export default function Chat() {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [sentMessageIds, setSentMessageIds] = useState(new Set());
 
+  // ✅ TOAST tipo Inicio (arriba derecha)
+  const [toast, setToast] = useState({ show: false, title: "", text: "" });
+  const toastTimerRef = useRef(null);
+
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  const showToast = useCallback((title, text) => {
+    // limpia timer anterior
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+
+    setToast({ show: true, title: title || "", text: text || "" });
+    toastTimerRef.current = setTimeout(() => {
+      setToast({ show: false, title: "", text: "" });
+    }, 2500);
+  }, []);
 
   // ✅ helper: normaliza lo que venga de /users a { username, avatar }
   const normalizeUsers = (data) => {
@@ -177,6 +191,12 @@ export default function Chat() {
     socket.on("newMessage", msg => {
       const msgId = `${msg.sender}-${msg.createdAt}-${msg.text}`;
       if (!sentMessageIds.has(msgId)) setGlobalMessages(prev => [...prev, msg]);
+
+      // ✅ TOAST: solo si NO es tuyo
+      if (msg.sender && msg.sender !== username) {
+        const preview = msg.text?.trim() ? msg.text : (msg.file ? "📎 Archivo" : "");
+        if (preview) showToast(msg.sender, preview);
+      }
     });
 
     socket.on("privateMessage", msg => {
@@ -184,11 +204,21 @@ export default function Chat() {
       if (msg.sender === username && sentMessageIds.has(msgId)) return;
 
       const otherUser = msg.sender === username ? msg.recipient : msg.sender;
+
       setPrivateChats(prev => {
         const existingMsgs = prev[otherUser] || [];
         if (existingMsgs.some(m => m.sender === msg.sender && m.text === msg.text && m.createdAt === msg.createdAt)) return prev;
         return { ...prev, [otherUser]: [...existingMsgs, msg] };
       });
+
+      // ✅ TOAST: si NO es tuyo y NO estás dentro del chat con ese usuario abierto
+      if (msg.sender && msg.sender !== username) {
+        const isCurrentlyOpenPrivate = (view === "private" && selectedUser === msg.sender);
+        if (!isCurrentlyOpenPrivate) {
+          const preview = msg.text?.trim() ? msg.text : (msg.file ? "📎 Archivo" : "");
+          if (preview) showToast(msg.sender, preview);
+        }
+      }
     });
 
     return () => {
@@ -198,7 +228,7 @@ export default function Chat() {
       socket.off("privateMessage");
       socket.disconnect();
     };
-  }, [username, isChatDataLoaded, sentMessageIds]);
+  }, [username, isChatDataLoaded, sentMessageIds, showToast, view, selectedUser]);
 
   useEffect(() => {
     if (view === 'private' && selectedUser) {
@@ -357,6 +387,14 @@ export default function Chat() {
 
   return (
     <div className="chat-container">
+      {/* ✅ TOAST arriba derecha */}
+      {toast.show && (
+        <div className="toast">
+          <div style={{ fontWeight: 700 }}>{toast.title}</div>
+          <div>{toast.text}</div>
+        </div>
+      )}
+
       <div className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
       <div className={`sidebar ${sidebarOpen ? 'mobile-open' : ''}`}>
