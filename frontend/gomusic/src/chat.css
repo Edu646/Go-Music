@@ -147,7 +147,6 @@ body {
   font-size: 1.15em;
 }
 
-/* Nota: ::after no siempre pinta en <img>, pero en placeholder sí. */
 .avatar-placeholder.online::after {
   content: '';
   position: absolute;
@@ -215,6 +214,7 @@ body {
   position: relative;
 }
 
+/* ===== HEADER ===== */
 .chat-header {
   padding: 20px 24px;
   border-bottom: 1px solid var(--spotify-gray);
@@ -223,6 +223,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;              /* ✅ para que no se pise */
   flex-shrink: 0;
   min-height: 70px;
 }
@@ -230,20 +231,8 @@ body {
 .header-info {
   display: flex;
   flex-direction: column;
-  margin-left: 10px;
   flex-grow: 1;
-}
-
-.header-user {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.header-user-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  min-width: 0;           /* ✅ permite ellipsis */
 }
 
 .chat-header h2 {
@@ -253,14 +242,36 @@ body {
   font-weight: 800;
 }
 
-.header-user-text h2 { margin: 0; }
+/* Header privado: avatar + texto */
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
 
+.header-user-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.header-user-text h2 {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Estado */
 .status-indicator {
   display: inline-flex;
   align-items: center;
   font-size: 0.85em;
   color: var(--spotify-light-gray);
   font-weight: 400;
+  white-space: nowrap;
 }
 
 .status-indicator::before {
@@ -274,30 +285,35 @@ body {
   font-weight: 700;
 }
 
+/* Botón Chat Global */
 .global-chat-btn {
   background-color: var(--spotify-green);
   color: var(--spotify-black);
   border: none;
   border-radius: 500px;
-  padding: 10px 24px;
-  font-size: 0.9em;
+  padding: 10px 18px;
+  font-size: 0.85em;
   font-weight: 800;
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
 }
 
 .global-chat-btn:hover {
   background-color: #1ed760;
-  transform: scale(1.04);
+  transform: scale(1.03);
 }
 
-.global-chat-btn:active { transform: scale(0.96); }
+.global-chat-btn:active { transform: scale(0.97); }
 
-/* Desktop: oculto el botón back */
+/* Botón menú (solo móvil; en desktop oculto) */
 .back-btn { display: none; }
+
+/* Overlay (solo móvil) */
+.sidebar-overlay { display: none; }
 
 .messages-container {
   flex-grow: 1;
@@ -602,12 +618,12 @@ body {
 }
 
 /* ======================================================
- * ✅ MÓVIL: SLIDE (sidebar oculto + overlay)
+ * ✅ MÓVIL: SLIDE REAL + HEADER COMPLETO
  * ====================================================== */
 @media (max-width: 768px) {
   body { overflow: hidden; }
 
-  /* El chat ocupa toda la pantalla */
+  /* Ocupa toda la pantalla */
   .chat-container {
     position: fixed;
     inset: 0;
@@ -618,23 +634,21 @@ body {
     border-radius: 0;
   }
 
-  /* Sidebar en modo slide */
+  /* Sidebar slide */
   .sidebar {
     position: fixed;
     top: 0;
     left: 0;
     z-index: 100;
     width: 85%;
-    max-width: 320px;
+    max-width: 340px;
     height: 100vh;
     transform: translateX(-100%);
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
     border-right: 1px solid var(--spotify-gray);
   }
 
-  .sidebar.mobile-open {
-    transform: translateX(0);
-  }
+  .sidebar.mobile-open { transform: translateX(0); }
 
   /* Overlay */
   .sidebar-overlay {
@@ -645,18 +659,15 @@ body {
     display: none;
     backdrop-filter: blur(4px);
   }
+  .sidebar-overlay.active { display: block; }
 
-  .sidebar-overlay.active {
-    display: block;
-  }
-
-  /* Chat area completa */
+  /* Chat ocupa todo */
   .chat-area {
     width: 100%;
     height: 100vh;
   }
 
-  /* Mostrar botón de menú (abre sidebar) */
+  /* ✅ BOTÓN MENÚ VISIBLE SIEMPRE */
   .back-btn {
     display: flex;
     align-items: center;
@@ -664,34 +675,50 @@ body {
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 1.8em;
+    font-size: 1.9em;
     color: var(--spotify-green);
     padding: 0;
-    margin-right: 12px;
-    min-width: 40px;
-    height: 40px;
+    min-width: 44px;
+    height: 44px;
     flex-shrink: 0;
+    z-index: 2;
   }
 
-  /* Ajustes compactos en móvil */
+  /* Header compacto pero con todo visible */
   .chat-header {
-    padding: 12px 16px;
-    min-height: 60px;
+    padding: 12px 14px;
+    min-height: 64px;
+    gap: 10px;
   }
 
-  .chat-header h2 {
-    font-size: 1.2em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
+  /* ✅ El bloque central (avatar+nombre+estado) puede recortar texto */
+  .header-info { min-width: 0; }
+
+  .header-user-text h2 {
+    font-size: 1.05em;
+    max-width: 170px;
   }
 
+  .status-indicator {
+    font-size: 0.78em;
+  }
+
+  /* ✅ Botón Chat Global visible en móvil */
+  .global-chat-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    font-size: 0.78em;
+    border-radius: 999px;
+  }
+
+  /* Mensajes con espacio para input */
   .messages-container {
-    padding: 15px 12px 100px 12px;
+    padding: 14px 12px 92px 12px;
   }
 
-  /* Input fijo al fondo como app */
+  /* Input fijo al fondo */
   .input-area {
     position: fixed;
     left: 0;
@@ -705,19 +732,19 @@ body {
 
   .icon-btn,
   .send-btn {
-    font-size: 1.3em;
+    font-size: 1.25em;
     width: 40px;
     height: 40px;
     padding: 0;
   }
 
   .chat-input {
-    padding: 10px 16px;
+    padding: 10px 14px;
     min-height: 40px;
     font-size: 0.9em;
   }
 
-  /* Preview + emoji en fijo */
+  /* Preview y emojis fijos */
   .file-preview {
     position: fixed;
     bottom: 75px;
@@ -743,7 +770,7 @@ body {
     padding: 6px;
   }
 
-  /* Ajuste avatar en lista en móvil */
+  /* Avatar un pelín más pequeño en lista móvil */
   .user-avatar-img,
   .avatar-placeholder {
     width: 44px;
