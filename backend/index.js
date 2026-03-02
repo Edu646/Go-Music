@@ -8,22 +8,36 @@ const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
 const http = require("http");
 const { Server } = require("socket.io");
+const crypto = require("crypto");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
-const crypto = require("crypto");
 
+// -----------------
+// MIDDLEWARES
+// -----------------
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true }));
 
-// --- VALIDACIÓN VARIABLES ENTORNO ---
-if (!process.env.MONGO_URI || !process.env.CLOUDINARY_CLOUD_NAME) {
+// -----------------
+// VALIDACIÓN VARIABLES ENTORNO
+// -----------------
+if (
+  !process.env.MONGO_URI ||
+  !process.env.CLOUDINARY_CLOUD_NAME ||
+  !process.env.CLOUDINARY_API_KEY ||
+  !process.env.CLOUDINARY_API_SECRET
+) {
   console.error("❌ Faltan variables de entorno críticas");
+  console.error("Necesitas: MONGO_URI, CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET");
   process.exit(1);
 }
 
-// --- CONEXIÓN MONGODB ---
+// -----------------
+// CONEXIÓN MONGODB
+// -----------------
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Conectado a MongoDB Atlas"))
@@ -35,7 +49,6 @@ mongoose
 // -----------------
 // MODELOS
 // -----------------
-
 const SongSchema = new mongoose.Schema({
   name: String,
   artist: String,
@@ -62,7 +75,6 @@ const PrivateMessageSchema = new mongoose.Schema({
 });
 const PrivateMessage = mongoose.model("PrivateMessage", PrivateMessageSchema);
 
-// --- MODELO PLAYLIST ---
 const PlaylistSchema = new mongoose.Schema({
   name: String,
   owner: String,
@@ -73,29 +85,59 @@ const PlaylistSchema = new mongoose.Schema({
   sharedWith: [String],
   createdAt: { type: Date, default: Date.now },
 });
-
 const Playlist = mongoose.model("Playlist", PlaylistSchema);
 
-// --- CONFIG CLOUDINARY ---
+// -----------------
+// CONFIG CLOUDINARY
+// -----------------
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// --- MULTER ---
+// -----------------
+// MULTER (MEMORY)
+// -----------------
 const storage = multer.memoryStorage();
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
 
-// --- SUBIR A CLOUDINARY ---
+// -----------------
+// SUBIR A CLOUDINARY
+// -----------------
 const uploadToCloudinary = (buffer, folder = "gomusic_uploads", resource_type = "auto") => {
   return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream({ folder, resource_type }, (err, result) =>
-      err ? reject(err) : resolve(result)
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder, resource_type },
+      (err, result) => (err ? reject(err) : resolve(result))
     );
     streamifier.createReadStream(buffer).pipe(uploadStream);
   });
 };
+
+// ============================================================================
+// ✅ AVATARS (PERSISTENTES EN CLOUDINARY)
+// Endpoint: POST /upload-avatar  (FormData -> file)
+// Devuelve: { url, public_id }
+// ============================================================================
+app.post("/upload-avatar", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "Falta archivo (campo: file)" });
+
+    // Validación básica de mimetype (evita subir cosas raras)
+    const ok = ["image/jpeg", "image/png", "image/webp", "image/jpg"].includes(req.file.mimetype);
+    if (!ok) return res.status(400).json({ error: "Formato no permitido. Usa JPG/PNG/WebP" });
+
+    const result = await uploadToCloudinary(req.file.buffer, "gomusic_avatars", "image");
+    return res.json({ url: result.secure_url, public_id: result.public_id });
+  } catch (err) {
+    console.error("❌ Error subiendo avatar:", err);
+    return res.status(500).json({ error: "Error subiendo avatar: " + err.message });
+  }
+});
 
 // -----------------
 // RUTAS SONGS
@@ -146,6 +188,7 @@ app.delete("/songs/:id", async (req, res) => {
     if (song.public_id) {
       console.log("☁️ Eliminando de Cloudinary:", song.public_id);
       try {
+        // Tus audios suelen ir como video en Cloudinary (por compatibilidad)
         await cloudinary.uploader.destroy(song.public_id, { resource_type: "video" });
         console.log("✅ Eliminado de Cloudinary");
       } catch (cloudErr) {
@@ -193,6 +236,7 @@ app.post("/playlists", upload.single("image"), async (req, res) => {
       shareToken,
       sharedWith: [],
     });
+
     res.json(playlist);
   } catch (err) {
     console.error("Error creando playlist:", err);
@@ -203,7 +247,9 @@ app.post("/playlists", upload.single("image"), async (req, res) => {
 // 2. Obtener playlists públicas
 app.get("/playlists", async (req, res) => {
   try {
-    const playlists = await Playlist.find({ isPublic: true }).populate("songs").sort({ createdAt: -1 });
+    const playlists = await Playlist.find({ isPublic: true })
+      .populate("songs")
+      .sort({ createdAt: -1 });
     res.json(playlists);
   } catch (err) {
     res.status(500).json({ error: "Error obteniendo playlists públicas" });
@@ -237,23 +283,13 @@ app.post("/playlists/accept-share", async (req, res) => {
   try {
     const { token, username } = req.body;
 
-    if (!token || !username) {
-      return res.status(400).json({ error: "Faltan datos" });
-    }
+    if (!token || !username) return res.status(400).json({ error: "Faltan datos" });
 
     const playlist = await Playlist.findOne({ shareToken: token });
+    if (!playlist) return res.status(404).json({ error: "Link inválido o expirado" });
 
-    if (!playlist) {
-      return res.status(404).json({ error: "Link inválido o expirado" });
-    }
-
-    if (playlist.owner === username) {
-      return res.status(400).json({ error: "Ya eres el dueño de esta playlist" });
-    }
-
-    if (playlist.sharedWith.includes(username)) {
-      return res.status(400).json({ error: "Ya tienes acceso a esta playlist" });
-    }
+    if (playlist.owner === username) return res.status(400).json({ error: "Ya eres el dueño de esta playlist" });
+    if (playlist.sharedWith.includes(username)) return res.status(400).json({ error: "Ya tienes acceso a esta playlist" });
 
     playlist.sharedWith.push(username);
     await playlist.save();
@@ -275,9 +311,7 @@ app.post("/playlists/:id/regenerate-token", async (req, res) => {
     const playlist = await Playlist.findById(id);
     if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
 
-    if (playlist.owner !== username) {
-      return res.status(403).json({ error: "Solo el dueño puede hacer esto" });
-    }
+    if (playlist.owner !== username) return res.status(403).json({ error: "Solo el dueño puede hacer esto" });
 
     playlist.shareToken = crypto.randomBytes(16).toString("hex");
     await playlist.save();
@@ -297,9 +331,7 @@ app.patch("/playlists/:id/privacy", async (req, res) => {
     const playlist = await Playlist.findById(id);
     if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
 
-    if (playlist.owner !== username) {
-      return res.status(403).json({ error: "Solo el dueño puede cambiar la privacidad" });
-    }
+    if (playlist.owner !== username) return res.status(403).json({ error: "Solo el dueño puede cambiar la privacidad" });
 
     playlist.isPublic = isPublic;
 
@@ -325,15 +357,14 @@ app.post("/playlists/:id/add", async (req, res) => {
     const playlist = await Playlist.findById(id);
     if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
 
-    if (playlist.owner !== username) {
-      return res.status(403).json({ error: "Solo el dueño puede editar esta playlist" });
-    }
+    if (playlist.owner !== username) return res.status(403).json({ error: "Solo el dueño puede editar esta playlist" });
 
-    if (playlist.songs.includes(song._id || song.id)) {
-      return res.status(400).json({ error: "La canción ya está en la playlist" });
-    }
+    const songId = song._id || song.id;
+    if (!songId) return res.status(400).json({ error: "Song inválida (sin id)" });
 
-    playlist.songs.push(song._id || song.id);
+    if (playlist.songs.includes(songId)) return res.status(400).json({ error: "La canción ya está en la playlist" });
+
+    playlist.songs.push(songId);
     await playlist.save();
 
     const updated = await Playlist.findById(id).populate("songs");
@@ -343,10 +374,7 @@ app.post("/playlists/:id/add", async (req, res) => {
   }
 });
 
-/* ==========================================================================================
-   ✅ 7b. ACTUALIZAR PLAYLIST (esto es lo que faltaba para que "Quitar" funcione)
-   Tu frontend hace PUT /playlists/:id con { songs: [...], username }
-========================================================================================== */
+// 7b. Actualizar playlist (para “Quitar”)
 app.put("/playlists/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -358,11 +386,8 @@ app.put("/playlists/:id", async (req, res) => {
     const playlist = await Playlist.findById(id);
     if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
 
-    if (playlist.owner !== username) {
-      return res.status(403).json({ error: "Solo el dueño puede editar esta playlist" });
-    }
+    if (playlist.owner !== username) return res.status(403).json({ error: "Solo el dueño puede editar esta playlist" });
 
-    // Guardamos solo IDs (por si llegan objetos)
     playlist.songs = songs.map((s) => s?._id || s);
     await playlist.save();
 
@@ -383,9 +408,7 @@ app.delete("/playlists/:id", async (req, res) => {
     const playlist = await Playlist.findById(id);
     if (!playlist) return res.status(404).json({ error: "No encontrada" });
 
-    if (playlist.owner !== username) {
-      return res.status(403).json({ error: "Solo el dueño puede eliminar" });
-    }
+    if (playlist.owner !== username) return res.status(403).json({ error: "Solo el dueño puede eliminar" });
 
     await Playlist.findByIdAndDelete(id);
     res.json({ success: true, message: "Playlist eliminada" });
@@ -413,17 +436,42 @@ app.delete("/playlists/:id/remove-from-library", async (req, res) => {
 
     const before = playlist.sharedWith.length;
     playlist.sharedWith = playlist.sharedWith.filter((u) => u !== username);
-
     const removed = playlist.sharedWith.length !== before;
 
-    if (removed) {
-      await playlist.save();
-    }
+    if (removed) await playlist.save();
 
     res.json({ ok: true, removed });
   } catch (err) {
     console.error("Error remove-from-library:", err);
     res.status(500).json({ error: "Error quitando playlist compartida" });
+  }
+});
+
+// 9b. Añadir playlist compartida a la biblioteca (desde públicas)
+app.post("/playlists/:id/add-to-library", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username } = req.body;
+
+    if (!username) return res.status(400).json({ error: "Falta username" });
+
+    const playlist = await Playlist.findById(id);
+    if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
+
+    if (playlist.owner === username) return res.status(200).json({ ok: true, already: true, reason: "owner" });
+
+    if (!Array.isArray(playlist.sharedWith)) playlist.sharedWith = [];
+
+    if (playlist.sharedWith.includes(username)) return res.status(200).json({ ok: true, already: true });
+
+    playlist.sharedWith.push(username);
+    await playlist.save();
+
+    const updated = await Playlist.findById(id).populate("songs");
+    return res.json({ ok: true, added: true, playlist: updated });
+  } catch (err) {
+    console.error("Error add-to-library:", err);
+    res.status(500).json({ error: "Error añadiendo playlist a la biblioteca" });
   }
 });
 
@@ -454,6 +502,7 @@ app.get("/users", async (req, res) => {
     allUsers = Array.from(new Set(allUsers)).filter(
       (u) => u && u.trim() && u !== "Anónimo" && u !== "Desconocido"
     );
+
     res.json(allUsers);
   } catch (err) {
     console.error("Error obteniendo lista de usuarios:", err);
@@ -492,9 +541,11 @@ app.get("/private-messages", async (req, res) => {
   try {
     const { username } = req.query;
     if (!username) return res.status(400).json({ error: "Falta parámetro username" });
+
     const msgs = await PrivateMessage.find({
       $or: [{ sender: username }, { recipient: username }],
     }).sort({ createdAt: 1 });
+
     res.json(msgs);
   } catch (err) {
     res.status(500).json({ error: "Error obteniendo mensajes privados" });
@@ -508,41 +559,6 @@ app.post("/private-messages/mark-read", async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Error marcando mensajes como leídos" });
-  }
-});
-
-// 9b. Añadir playlist compartida a la biblioteca (desde playlists públicas)
-app.post("/playlists/:id/add-to-library", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { username } = req.body;
-
-    if (!username) return res.status(400).json({ error: "Falta username" });
-
-    const playlist = await Playlist.findById(id);
-    if (!playlist) return res.status(404).json({ error: "Playlist no encontrada" });
-
-    // No permitir que el dueño se la añada
-    if (playlist.owner === username) {
-      return res.status(200).json({ ok: true, already: true, reason: "owner" });
-    }
-
-    if (!Array.isArray(playlist.sharedWith)) playlist.sharedWith = [];
-
-    // Ya la tiene
-    if (playlist.sharedWith.includes(username)) {
-      return res.status(200).json({ ok: true, already: true });
-    }
-
-    playlist.sharedWith.push(username);
-    await playlist.save();
-
-    // Devolver también la playlist actualizada (opcional)
-    const updated = await Playlist.findById(id).populate("songs");
-    return res.json({ ok: true, added: true, playlist: updated });
-  } catch (err) {
-    console.error("Error add-to-library:", err);
-    res.status(500).json({ error: "Error añadiendo playlist a la biblioteca" });
   }
 });
 
@@ -575,7 +591,9 @@ io.on("connection", (socket) => {
         recipient: data.recipient,
         text: data.text,
       });
+
       socket.emit("privateMessage", message);
+
       const recipientSocketId = onlineUsers[data.recipient];
       if (recipientSocketId) io.to(recipientSocketId).emit("privateMessage", message);
     } catch (err) {
@@ -592,13 +610,13 @@ io.on("connection", (socket) => {
 });
 
 // -----------------
-// FRONTEND REACT
+// FRONTEND REACT (BUILD)
 // -----------------
 const frontendPath = path.join(__dirname, "../frontend/gomusic/build");
 app.use(express.static(frontendPath));
 
-// IMPORTANTE: colocar rutas API **antes** de este catch-all
-app.use((req, res) => {
+// ✅ MUY IMPORTANTE: el catch-all SOLO para GET (si no, te rompe 404 de APIs en POST/PUT/etc)
+app.get("*", (req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
 
