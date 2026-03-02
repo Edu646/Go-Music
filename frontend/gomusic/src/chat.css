@@ -59,6 +59,7 @@ body {
   margin: 0 auto;
   max-width: 1400px;
   background-color: var(--spotify-black);
+  position: relative;
 }
 
 /* --- Sidebar (Lista de Chats) --- */
@@ -69,8 +70,9 @@ body {
   border-right: 1px solid var(--spotify-gray);
   display: flex;
   flex-direction: column;
-  transition: none;
+  transition: transform 0.3s ease-in-out;
   overflow-y: auto;
+  will-change: transform;
 }
 
 .sidebar-header {
@@ -145,7 +147,7 @@ body {
   font-size: 1.15em;
 }
 
-.user-avatar-img.online::after,
+/* Nota: ::after no siempre pinta en <img>, pero en placeholder sí. */
 .avatar-placeholder.online::after {
   content: '';
   position: absolute;
@@ -158,10 +160,6 @@ body {
   border: 2px solid var(--spotify-dark-gray);
   box-shadow: 0 0 0 2px var(--spotify-dark-gray);
 }
-
-/* (si tu <img> no acepta ::after por compatibilidad, el placeholder sí.
-   El online-dot al menos se ve en placeholder. En <img> depende del navegador,
-   pero no rompe nada.) */
 
 .user-details {
   flex-grow: 1;
@@ -298,8 +296,8 @@ body {
 
 .global-chat-btn:active { transform: scale(0.96); }
 
+/* Desktop: oculto el botón back */
 .back-btn { display: none; }
-.sidebar-overlay { display: none; }
 
 .messages-container {
   flex-grow: 1;
@@ -311,9 +309,7 @@ body {
 
 /* Scrollbar personalizado estilo Spotify */
 .messages-container::-webkit-scrollbar,
-.users-list::-webkit-scrollbar {
-  width: 12px;
-}
+.users-list::-webkit-scrollbar { width: 12px; }
 
 .messages-container::-webkit-scrollbar-track,
 .users-list::-webkit-scrollbar-track { background: transparent; }
@@ -606,81 +602,158 @@ body {
 }
 
 /* ======================================================
- * ✅ MÓVIL: MISMA VISTA QUE ESCRITORIO
- * - No overlay
- * - No sidebar "slide"
- * - No fixed debajo del nav
- * - Mantiene layout 2 columnas
+ * ✅ MÓVIL: SLIDE (sidebar oculto + overlay)
  * ====================================================== */
 @media (max-width: 768px) {
   body { overflow: hidden; }
 
+  /* El chat ocupa toda la pantalla */
   .chat-container {
-    position: static;
-    height: 100vh;
-    max-height: 100vh;
+    position: fixed;
+    inset: 0;
     width: 100%;
+    height: 100vh;
     max-width: 100%;
     margin: 0;
     border-radius: 0;
   }
 
-  /* Sidebar fija y visible */
+  /* Sidebar en modo slide */
   .sidebar {
-    position: relative;
-    transform: none;
-    width: 320px;          /* parecido a escritorio */
-    min-width: 260px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    width: 85%;
     max-width: 320px;
     height: 100vh;
-    box-shadow: none;
+    transform: translateX(-100%);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+    border-right: 1px solid var(--spotify-gray);
   }
 
-  /* Sin overlay en móvil */
-  .sidebar-overlay { display: none !important; }
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
 
-  /* No se usa el modo "mobile-open" */
-  .sidebar.mobile-open { transform: none; }
+  /* Overlay */
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 99;
+    display: none;
+    backdrop-filter: blur(4px);
+  }
 
-  /* Chat area normal */
+  .sidebar-overlay.active {
+    display: block;
+  }
+
+  /* Chat area completa */
   .chat-area {
-    position: relative;
+    width: 100%;
     height: 100vh;
-    width: auto;
   }
 
-  /* Ocultar botón back (ya no hace falta) */
-  .back-btn { display: none !important; }
-
-  /* Input NO fijo (para que sea igual que escritorio) */
-  .input-area {
-    position: relative;
-    left: auto;
-    right: auto;
-    bottom: auto;
-    width: auto;
-    padding: 16px 20px;
+  /* Mostrar botón de menú (abre sidebar) */
+  .back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.8em;
+    color: var(--spotify-green);
+    padding: 0;
+    margin-right: 12px;
+    min-width: 40px;
+    height: 40px;
+    flex-shrink: 0;
   }
 
-  .messages-container {
-    padding: 20px;
-  }
-
+  /* Ajustes compactos en móvil */
   .chat-header {
-    padding: 20px 24px;
-    min-height: 70px;
+    padding: 12px 16px;
+    min-height: 60px;
   }
 
   .chat-header h2 {
+    font-size: 1.2em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+
+  .messages-container {
+    padding: 15px 12px 100px 12px;
+  }
+
+  /* Input fijo al fondo como app */
+  .input-area {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    padding: 12px;
+    gap: 6px;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .icon-btn,
+  .send-btn {
     font-size: 1.3em;
-    max-width: none;
-    white-space: normal;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+  }
+
+  .chat-input {
+    padding: 10px 16px;
+    min-height: 40px;
+    font-size: 0.9em;
+  }
+
+  /* Preview + emoji en fijo */
+  .file-preview {
+    position: fixed;
+    bottom: 75px;
+    left: 12px;
+    right: 12px;
   }
 
   .emoji-picker {
-    position: absolute;
-    left: 20px;
-    right: auto;
+    position: fixed;
+    left: 12px;
+    right: 12px;
     bottom: 75px;
+    width: auto;
+    max-width: unset;
+    grid-template-columns: repeat(8, 1fr);
+    padding: 10px;
+    max-height: 200px;
+    overflow-y: auto;
   }
+
+  .emoji-btn {
+    font-size: 1.6em;
+    padding: 6px;
+  }
+
+  /* Ajuste avatar en lista en móvil */
+  .user-avatar-img,
+  .avatar-placeholder {
+    width: 44px;
+    height: 44px;
+    font-size: 1em;
+    margin-right: 12px;
+  }
+}
+
+/* Desktop: botón back oculto */
+@media (min-width: 769px) {
+  .back-btn { display: none; }
 }
