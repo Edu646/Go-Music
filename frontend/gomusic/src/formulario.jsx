@@ -853,7 +853,7 @@ export default function Formulario() {
             <button onClick={handleLogout}>Cerrar sesión</button>
 
             {/* Botón de administrador para usuarios @gomusic */}
-            {user.email && user.email.endsWith("@gomusic") && (
+            {user.email && user.email.endsWith("@gomusic.com") && (
               <button
                 onClick={() => (window.location.href = "/admin")}
                 className="btn-admin"
