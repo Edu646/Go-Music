@@ -1,31 +1,101 @@
 .admin-container {
-  max-width: 800px;
-  margin: 20px auto;
-  padding: 20px;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f0f0f, #181818);
+  color: white;
+  font-family: "Segoe UI", sans-serif;
+  padding: 40px;
 }
-.admin-container h2 {
-  text-align: center;
-  color: #333;
-  margin-bottom: 20px;
-}
-.admin-container p {
-  color: #666;
-  line-height: 1.6;
-}   
 
-.admin-container .btn {
-  display: inline-block;
-  padding: 10px 20px;
-  margin: 10px;
-  border: none;
-  border-radius: 5px;
-  background-color: #1db954;
-  color: #fff;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  text-decoration: none;
+/* HERO SECTION */
+.admin-hero {
+  background: linear-gradient(135deg, #1db954, #148a3d);
+  padding: 50px;
+  border-radius: 20px;
+  margin-bottom: 50px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  animation: fadeIn 0.8s ease-in-out;
+}
+
+.hero-content h1 {
+  font-size: 36px;
+  margin-bottom: 15px;
+}
+
+.hero-content p {
+  font-size: 18px;
+  opacity: 0.95;
+  max-width: 700px;
+  margin-bottom: 40px;
+}
+
+/* HERO STATS */
+.hero-stats {
+  display: flex;
+  gap: 60px;
+  flex-wrap: wrap;
+}
+
+.hero-stats div {
+  text-align: center;
+}
+
+.hero-stats span {
+  font-size: 42px;
+  font-weight: bold;
+  display: block;
+}
+
+.hero-stats p {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* INFO SECTION */
+.admin-info {
+  background: #1c1c1c;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+.admin-info h2 {
+  margin-bottom: 20px;
+  color: #1db954;
+}
+
+.admin-info p {
+  margin-bottom: 15px;
+  line-height: 1.6;
+  color: #cccccc;
+}
+
+/* Animación suave */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .admin-hero {
+    padding: 30px;
+  }
+
+  .hero-content h1 {
+    font-size: 24px;
+  }
+
+  .hero-stats {
+    gap: 30px;
+  }
+
+  .hero-stats span {
+    font-size: 30px;
+  }
 }
