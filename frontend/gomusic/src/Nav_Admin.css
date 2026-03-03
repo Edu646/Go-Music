@@ -1,51 +1,34 @@
-.nav-admin {
-  position: fixed;
-  left: 0;
-  top: 0;
-  height: 100vh;
-  background: #1a1a1a;
-  color: white;
-  width: 250px;
-  transition: all 0.3s ease;
-  padding: 1rem;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-}
-
-.nav-admin.collapsed {
-  width: 70px;
-}
-
-.nav-admin-left {
+/* ===== CONTENEDOR GENERAL (usado por Layout_Admin) ===== */
+.admin-layout {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #333;
-  margin-bottom: 1rem;
+  min-height: 100vh;
+  background: #0f0f0f;
+}
+
+/* ===== SIDEBAR ===== */
+.nav-admin {
+  width: 250px;
+  background: #121212;
+  color: white;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #1f1f1f;
+}
+
+/* HEADER */
+.nav-admin-header {
+  margin-bottom: 40px;
 }
 
 .nav-admin-title {
-  font-size: 1.2rem;
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #1db954;
   margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.collapse-btn {
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 50%;
-  transition: background 0.3s ease;
-}
-
-.collapse-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
+/* LINKS */
 .nav-admin-links {
   list-style: none;
   padding: 0;
@@ -53,71 +36,71 @@
 }
 
 .nav-admin-links li {
-  margin-bottom: 0.5rem;
+  margin-bottom: 10px;
 }
 
-.nav-admin-links a,
-.nav-admin-logout {
+.nav-admin-links a {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 12px;
+  padding: 12px 14px;
   text-decoration: none;
+  color: #b3b3b3;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+}
+
+/* Hover */
+.nav-admin-links a:hover {
+  background: #1e1e1e;
   color: white;
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  transition: background 0.3s ease;
-  width: 100%;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 1rem;
 }
 
-.nav-admin-links a:hover,
-.nav-admin-logout:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
+/* Link activo */
 .nav-admin-links a.active {
-  background: rgba(255, 255, 255, 0.2);
+  background: #1db954;
+  color: white;
+  font-weight: 500;
 }
 
-.nav-admin.collapsed .text {
-  display: none;
-}
-
+/* Iconos */
 .icon {
-  font-size: 1.2rem;
-  min-width: 24px;
+  font-size: 18px;
+  min-width: 22px;
   text-align: center;
 }
 
-/* Ajuste para el contenido principal */
-main {
-  margin-left: 250px;
-  transition: margin-left 0.3s ease;
-  padding: 2rem;
+/* ===== CONTENIDO PRINCIPAL ===== */
+.admin-main {
+  flex: 1;
+  padding: 40px;
 }
 
-.nav-admin.collapsed + main {
-  margin-left: 70px;
-}
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+  .admin-layout {
+    flex-direction: column;
+  }
 
-/* Responsive para móviles */
-@media (max-width: 768px) {
   .nav-admin {
-    width: 70px;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 20px;
   }
-  
-  .nav-admin .text {
-    display: none;
+
+  .nav-admin-links {
+    display: flex;
+    gap: 15px;
   }
-  
-  .nav-admin-title {
-    font-size: 1rem;
+
+  .nav-admin-links li {
+    margin-bottom: 0;
   }
-  
-  main {
-    margin-left: 70px;
+
+  .admin-main {
+    padding: 20px;
   }
 }
