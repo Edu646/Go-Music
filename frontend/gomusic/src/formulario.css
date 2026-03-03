@@ -634,3 +634,20 @@ body {
     width: auto;
   }
 }
+
+.btn-admin {
+  margin-top: 10px;
+  background: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.btn-admin:hover {
+  background: #e60000;
+  transform: scale(1.05);
+}
