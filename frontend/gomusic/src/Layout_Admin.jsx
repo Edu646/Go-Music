@@ -1,16 +1,16 @@
-// Layout_Admin.jsx
-import React from "react";
-import { Outlet } from "react-router-dom";
 import Nav_Admin from "./Nav_Admin";
-import "./Layout_Admin.css";
+import { Outlet } from "react-router-dom";
+import "./Nav_Admin.css";
 
-export default function Layout_Admin() {
+function Layout_Admin() {
   return (
-    <div className="layout-admin">
+    <div className="admin-layout">
       <Nav_Admin />
-      <main className="admin-content">
+      <main className="admin-main">
         <Outlet />
       </main>
     </div>
   );
 }
+
+export default Layout_Admin;
