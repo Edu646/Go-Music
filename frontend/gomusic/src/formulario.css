@@ -657,3 +657,13 @@ body {
 .btn-admin:active {
   transform: translateY(0);
 }
+
+.playlist-card {
+  overflow: visible;
+}
+
+.playlist-share {
+  overflow: visible;
+  height: auto;
+  min-height: 0;
+}
