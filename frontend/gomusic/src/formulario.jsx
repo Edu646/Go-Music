@@ -261,7 +261,8 @@ function PlaylistShare({ playlist, user }) {
     }
   };
 
-  if (playlist.owner !== user.username || playlist.isPublic) return null;
+  if (playlist.owner !== user.username) return null;
+if (playlist.isPublic && !playlist.shareToken) return null;
 
   return (
     <div className="playlist-share">
