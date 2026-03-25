@@ -327,9 +327,11 @@ app.patch("/playlists/:id/privacy", async (req, res) => {
     if (playlist.owner !== username) {
       return res.status(403).json({ error: "Solo el dueño puede cambiar la privacidad" });
     }
-playlist.isPublic = isPublic;
+// 🔥 Convertimos correctamente a boolean
+playlist.isPublic = isPublic === true || isPublic === "true";
 
-if (!isPublic && !playlist.shareToken) {
+// 🔥 Usamos el valor ya convertido
+if (!playlist.isPublic && !playlist.shareToken) {
   playlist.shareToken = crypto.randomBytes(16).toString("hex");
 }
 
