@@ -328,10 +328,11 @@ app.patch("/playlists/:id/privacy", async (req, res) => {
       return res.status(403).json({ error: "Solo el dueño puede cambiar la privacidad" });
     }
 
-    playlist.isPublic = isPublic === true || isPublic === "true";
+playlist.isPublic = isPublicBool;
 
-if ((isPublic === false || isPublic === "false") && !playlist.shareToken) {
-  playlist.shareToken = crypto.randomBytes(16).toString("hex");
+// 🔥 AÑADE ESTO SIEMPRE
+if (!isPublicBool) {
+  playlist.shareToken = playlist.shareToken || crypto.randomBytes(16).toString("hex");
 }
 
     await playlist.save();
