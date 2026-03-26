@@ -224,15 +224,30 @@ function PlaylistCreator({ user, refreshPlaylists }) {
 /* ==========================================================================================
    COMPONENTE PARA COMPARTIR PLAYLISTS PRIVADAS
 ========================================================================================== */
-function PlaylistShare({ playlist, user }) {
+function PlaylistShare({ playlist, user, refreshPlaylists }) {
   const [showLink, setShowLink] = useState(false);
   const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  if (!user || playlist.owner !== user.username) return null;
+
+  // Mostrar compartir siempre en privadas.
+  // En públicas solo si ya existe token.
+  const canShowShare = !playlist.isPublic || !!playlist.shareToken;
+
+  if (!canShowShare) return null;
 
   const shareLink = playlist.shareToken
     ? `${window.location.origin}/share/${playlist.shareToken}`
     : "";
 
   const copyLink = async () => {
+    if (!shareLink) {
+      setMsg("Primero genera un link");
+      setTimeout(() => setMsg(""), 3000);
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(shareLink);
       setMsg("✔️ Link copiado al portapapeles");
@@ -243,46 +258,69 @@ function PlaylistShare({ playlist, user }) {
     }
   };
 
-  const regenerateToken = async () => {
+  const generateOrRegenerateToken = async () => {
+    setLoading(true);
+    setMsg("");
+
     try {
       const res = await fetch(`/playlists/${playlist._id}/regenerate-token`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: user.username }),
       });
+
+      const data = await res.json().catch(() => ({}));
+
       if (res.ok) {
-        setMsg("✔️ Nuevo link generado");
-        window.location.reload();
+        setMsg(playlist.shareToken ? "✔️ Nuevo link generado" : "✔️ Link generado");
+        if (refreshPlaylists) {
+          await refreshPlaylists();
+        } else {
+          window.location.reload();
+        }
       } else {
-        setMsg("Error generando link");
+        setMsg(data.error || "Error generando link");
       }
     } catch {
       setMsg("Error de conexión");
+    } finally {
+      setLoading(false);
     }
   };
-
-  if (playlist.owner !== user.username) return null;
-if (playlist.isPublic && !playlist.shareToken) return null;
 
   return (
     <div className="playlist-share">
       <button onClick={() => setShowLink(!showLink)} className="btn-share">
         🔗 Compartir Playlist
       </button>
+
       {showLink && (
         <div className="share-link-box">
-          <input
-            type="text"
-            value={shareLink}
-            readOnly
-            onClick={(e) => e.target.select()}
-          />
-          <button onClick={copyLink}>📋 Copiar</button>
-          <button onClick={regenerateToken} title="Invalida el link anterior">
-            🔄 Nuevo Link
-          </button>
+          {playlist.shareToken ? (
+            <>
+              <input
+                type="text"
+                value={shareLink}
+                readOnly
+                onClick={(e) => e.target.select()}
+              />
+              <button onClick={copyLink}>📋 Copiar</button>
+              <button
+                onClick={generateOrRegenerateToken}
+                disabled={loading}
+                title="Invalida el link anterior"
+              >
+                {loading ? "Generando..." : "🔄 Nuevo Link"}
+              </button>
+            </>
+          ) : (
+            <button onClick={generateOrRegenerateToken} disabled={loading}>
+              {loading ? "Generando..." : "🔗 Generar Link"}
+            </button>
+          )}
         </div>
       )}
+
       {msg && <p className="share-message">{msg}</p>}
     </div>
   );
@@ -898,7 +936,11 @@ export default function Formulario() {
                       {p.name} {!p.isPublic && "🔒"}
                     </h4>
                     <p>{p.songs?.length || 0} canciones</p>
-                    <PlaylistShare playlist={p} user={user} />
+                    <PlaylistShare
+                    playlist={p}
+                    user={user}
+                    refreshPlaylists={fetchPlaylists}
+                    />
                     <PlaylistActions
                       playlist={p}
                       user={user}
